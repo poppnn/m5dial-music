@@ -41,6 +41,20 @@ python tools/png2logo.py mon_logo.png
 Le script réduit l'image à 150 × 130 max, la convertit en RGB565 et écrit `src/logo.h` (stocké en flash, pas en RAM).
 Recompile ensuite (`pio run -t upload`).
 
+## Support volant (impression 3D)
+
+[`hardware/support_volant.stl`](hardware/support_volant.stl) : coupelle pour le M5Dial entre la branche du bas
+et la branche droite d'un volant GT2i Race 350 mm (tulipage 75 mm). Fixation par l'arrière, dans les deux trous
+ovales intérieurs : vis M5 × 20 passée de l'avant, rondelle, écrou nylstop derrière la patte.
+
+- Les cotes viennent d'une photo : mesure d'abord les valeurs `MESURER` de [`support_volant.py`](hardware/support_volant.py)
+  (position des trous, centre du M5Dial, pente des branches), puis régénère le STL :
+  `pip install manifold3d trimesh` puis `python hardware/support_volant.py`.
+- Imprimer en PETG ou ASA (le PLA se déforme au soleil dans une voiture), 4 périmètres, 40 % de remplissage, supports activés.
+- Le M5Dial tient par serrage (nervures) ; un adhésif double face au fond le fige. Avec l'IMU sur le Port A,
+  l'écran reste droit quand le volant tourne.
+- Vérifie que rien ne touche les commodos en tournant le volant de butée à butée avant de rouler.
+
 ## Compiler
 
 ```bash
