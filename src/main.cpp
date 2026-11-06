@@ -58,6 +58,13 @@ enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD
 #define PAGE_IN_MS     280
 #define FADE_MS        300  // fondu écran de démarrage <-> interface (sortie puis entrée)
 
+// Batterie
+#define CPU_MHZ        80     // largement assez pour l'UI ; 80 MHz = minimum pour la radio BLE
+#define DIM_AFTER_MS   20000  // sans geste : écran atténué...
+#define DIM_LEVEL      0.12f  // ... à 12 % de la luminosité normale
+#define DIM_TAU_S      0.35f
+#define SLEEP_AFTER_MS (10UL * 60 * 1000)  // aucun appareil connecté pendant 10 min : extinction
+
 // ---------- État partagé (écrit par la tâche BLE, lu par loop) ----------
 struct Media {
   std::string title, artist;
@@ -354,6 +361,8 @@ static float slideOffset(uint32_t now, bool& outPhase) {
 static bool bootShown = true, fadeTo = true;
 static uint32_t fadeStart = 0;  // 0 = pas de fondu en cours
 static uint8_t baseBri = 128;
+static float fadeLevel = 1, dimLevel = 1;  // rétroéclairage = baseBri x fondu x atténuation
+static uint32_t lastInput = 0;             // dernier geste (molette, bouton, toucher)
 
 // Fondu au noir par le rétroéclairage : l'écran courant s'éteint, bascule, le nouveau s'allume.
 static void updateFade(uint32_t now) {
@@ -369,7 +378,18 @@ static void updateFade(uint32_t now) {
     level = t < 2 * FADE_MS ? easeOutCubic((t - FADE_MS) / (float)FADE_MS) : 1.f;
     if (t >= 2 * FADE_MS) fadeStart = 0;
   }
-  M5Dial.Display.setBrightness(baseBri * level);
+  fadeLevel = level;
+}
+
+// Atténue l'écran après DIM_AFTER_MS sans geste, le rallume en douceur au premier geste.
+// Retourne true pendant la transition (-> FPS élevé).
+static bool updateBacklight(uint32_t now, float dt) {
+  static uint8_t applied = 0;
+  float target = now - lastInput > DIM_AFTER_MS ? DIM_LEVEL : 1.f;
+  dimLevel += (target - dimLevel) * smoothK(dt, DIM_TAU_S);
+  uint8_t bri = baseBri * fadeLevel * dimLevel;
+  if (bri != applied) M5Dial.Display.setBrightness(applied = bri);
+  return fabsf(target - dimLevel) > 0.01f;
 }
 
 // Logo centré + arc qui tourne sur le bord de l'écran + texte discret.
@@ -504,6 +524,7 @@ static bool draw(float dt) {
   const int c = 120;
   canvas.fillScreen(TFT_BLACK);
   updateFade(now);
+  bool dimming = updateBacklight(now, dt);
   frameShift = bootShown ? 0 : pageOffset(now);  // avant de dessiner : la page bascule à mi-glissement
   if (bootShown) {
     drawBoot(now);
@@ -516,7 +537,7 @@ static bool draw(float dt) {
   if (page == PAGE_LED) {
     bool anim = drawLedPage(dt, off, outPhase);
     pushFrame();
-    return anim || fadeStart || slideDir || pageDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
+    return anim || dimming || fadeStart || slideDir || pageDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
   }
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
   if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
@@ -558,11 +579,30 @@ static bool draw(float dt) {
   }
 
   pushFrame();
-  return fadeStart || slideDir || pageDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
+  return dimming || fadeStart || slideDir || pageDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
 }
 
 // ---------- Programme ----------
+// Message, puis coupure : sur batterie, le maintien d'alimentation (GPIO46) est relâché -> 0 mA, le bouton
+// WAKE rallume. Sur USB le courant reste : M5Unified passe en veille profonde (débrancher/rebrancher pour relancer).
+// Le bouton du M5Dial (GPIO42) n'est pas une broche RTC : il ne peut pas réveiller une veille profonde.
+static void shutdown(const char* msg) {
+  canvas.fillScreen(TFT_BLACK);
+  canvas.setTextDatum(middle_center);
+  canvas.setFont(&fonts::efontJA_24);
+  canvas.setTextColor(TFT_WHITE);
+  canvas.drawString(msg, 120, 120);
+  frameShift = 0;
+  M5Dial.Display.setBrightness(baseBri);
+  pushFrame();
+  M5Dial.Display.endWrite();  // attend la fin du DMA et libère le bus
+  delay(800);
+  M5Dial.Display.sleep();
+  M5Dial.Power.powerOff();
+}
+
 void setup() {
+  setCpuFrequencyMhz(CPU_MHZ);  // ~-20 mA ; le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas
   auto cfg = M5.config();
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
@@ -598,6 +638,7 @@ void setup() {
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setScanCallbacks(new GoveeScanCB());
   scan->setActiveScan(true);  // le nom "..._H7090_..." est souvent dans la réponse au scan
+  lastInput = millis();
 }
 
 void loop() {
@@ -630,6 +671,14 @@ void loop() {
   if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; }
 
   auto t = M5Dial.Touch.getDetail();
+  uint32_t now = millis();
+  if (detents || M5Dial.BtnA.isPressed() || t.isPressed()) lastInput = now;  // réveille l'écran atténué
+
+  // Aucun appareil connecté (ni geste) pendant 10 min : extinction pour ne pas vider la batterie
+  static uint32_t lastActive = 0;
+  if (linkMode != LINK_NONE || lastInput == now) lastActive = now;
+  if (now - lastActive > SLEEP_AFTER_MS) shutdown("Veille...");
+
   if (!bootShown && (M5Dial.BtnA.wasClicked() || t.wasClicked())) {  // au relâcher, pour distinguer l'appui long
     if (page == PAGE_LED) {
       ledOn = !ledOn;
@@ -639,20 +688,7 @@ void loop() {
     }
   }
 
-  // Appui long : coupe l'alimentation batterie (relâche le maintien GPIO46).
-  // Sur USB, le courant reste : le M5Dial passe en veille profonde, débrancher/rebrancher pour relancer.
-  if (M5Dial.BtnA.wasHold()) {
-    canvas.fillScreen(TFT_BLACK);
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Arrêt...", 120, 120);
-    frameShift = 0;
-    pushFrame();
-    M5Dial.Display.endWrite();  // attend la fin du DMA et libère le bus
-    delay(800);
-    M5Dial.Display.sleep();
-    M5Dial.Power.powerOff();
-  }
+  if (M5Dial.BtnA.wasHold()) shutdown("Arrêt...");  // appui long 2 s
   if (!bootShown && (t.wasFlicked() || t.wasDragged())) {
     // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
     float r = rot * DEG_TO_RAD;
@@ -688,4 +724,7 @@ void loop() {
     lastDraw = millis();
     animating = draw(fdt);
   }
+  // Rend la main à FreeRTOS : le cœur s'arrête (tâche idle) au lieu de tourner à vide. 10 ms au repos suffisent :
+  // l'encodeur compte en matériel (PCNT) et le BLE vit dans sa propre tâche.
+  delay(animating || dirty ? 1 : 10);
 }
