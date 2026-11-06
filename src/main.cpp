@@ -6,6 +6,9 @@
  * d'iOS : commandes (play/pause, piste +/-, volume +/-) ET métadonnées (titre, artiste,
  * durée, temps écoulé), sans app tierce. Il ne fournit pas la pochette -> fallback titre/artiste.
  *
+ * Rendu : sprite 240x240 hors écran (M5GFX), animations à easing, et rotation "toujours droit"
+ * via une IMU EXTERNE sur le Port A (le M5Dial n'en a pas d'intégrée). Sans IMU : pas de rotation.
+ *
  * Android / Windows n'ont pas d'AMS : le M5Dial est aussi une télécommande BLE HID (touches
  * multimédia standard), reconnue nativement. Commandes seules, sans métadonnées.
  *
@@ -25,7 +28,7 @@ static const char* AMS_RC  = "9B3C81D8-57B1-4A8A-B8DF-0E56F7CA51C2";  // Remote 
 static const char* AMS_EU  = "2F7CABCE-808D-411F-9A0C-BB92BA96C102";  // Entity Update
 
 enum : uint8_t { ENT_PLAYER = 0, ENT_TRACK = 2 };
-enum : uint8_t { PLAYER_PLAYBACK_INFO = 1 };
+enum : uint8_t { PLAYER_PLAYBACK_INFO = 1, PLAYER_VOLUME = 2 };
 enum : uint8_t { TRACK_ARTIST = 0, TRACK_TITLE = 2, TRACK_DURATION = 3 };
 enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6 };
 
@@ -33,18 +36,33 @@ enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD
 #define ENC_STEPS_PER_DETENT 4
 #define SWIPE_MIN_PX         40
 
+// "Toujours droit" (IMU externe). Calibration : IMU_DIR = -1 si l'écran tourne dans le mauvais sens.
+#define IMU_DIR        1
+#define IMU_TAU_S      0.40f  // passe-bas de la gravité : les vibrations (> ~1 Hz) sont écrasées
+#define MIN_TILT_G     0.35f  // gravité dans le plan de l'écran trop faible (posé à plat) : angle gelé
+#define ROT_HYST_DEG   8.0f   // hystérésis : on ne suit un nouvel angle qu'au-delà de 8°
+#define ROT_TAU_S      0.12f  // lissage visuel de la rotation affichée
+
+// Animations
+#define ARC_TAU_S      0.25f  // l'arc de progression rejoint sa valeur en douceur
+#define VOL_TAU_S      0.12f
+#define VOL_SHOW_MS    1500
+#define SLIDE_OUT_MS   200
+#define SLIDE_IN_MS    280
+
 // ---------- État partagé (écrit par la tâche BLE, lu par loop) ----------
 struct Media {
   std::string title, artist;
   float duration = 0, elapsed = 0, rate = 0;
   uint32_t stamp = 0;  // millis() de la dernière mise à jour de elapsed
+  float volume = -1;  // 0..1 (AMS), -1 = inconnu
   bool playing = false;
 };
 static Media media;
 static std::mutex mtx;
 enum Link : uint8_t { LINK_NONE, LINK_HID, LINK_AMS };  // HID = Android/Windows, AMS = iPhone
 static volatile Link linkMode = LINK_NONE;
-static volatile bool dirty = true, needSetup = false;
+static volatile bool dirty = true, needSetup = false, titleChanged = false, volPing = false;
 static volatile uint16_t connHandle = 0;
 static NimBLERemoteCharacteristic* rcChar = nullptr;
 static NimBLECharacteristic* hidInput = nullptr;
@@ -70,9 +88,15 @@ static void onEntityUpdate(NimBLERemoteCharacteristic*, uint8_t* d, size_t len, 
   std::string v((const char*)d + 3, len - 3);
   std::lock_guard<std::mutex> lock(mtx);
   if (d[0] == ENT_TRACK) {
-    if (d[1] == TRACK_TITLE) media.title = v;
+    if (d[1] == TRACK_TITLE) {
+      titleChanged = v != media.title;
+      media.title = v;
+    }
     else if (d[1] == TRACK_ARTIST) media.artist = v;
     else if (d[1] == TRACK_DURATION) media.duration = atof(v.c_str());
+  } else if (d[0] == ENT_PLAYER && d[1] == PLAYER_VOLUME) {
+    media.volume = atof(v.c_str());
+    volPing = true;
   } else if (d[0] == ENT_PLAYER && d[1] == PLAYER_PLAYBACK_INFO) {
     int state; float rate, el;
     if (parsePlaybackInfo(v, state, rate, el)) {
@@ -116,7 +140,7 @@ static void setupAms() {
     return;
   }
   // Demande à l'iPhone de nous notifier ces attributs (valeur courante envoyée immédiatement).
-  const uint8_t player[] = {ENT_PLAYER, PLAYER_PLAYBACK_INFO};
+  const uint8_t player[] = {ENT_PLAYER, PLAYER_PLAYBACK_INFO, PLAYER_VOLUME};
   const uint8_t track[]  = {ENT_TRACK, TRACK_ARTIST, TRACK_TITLE, TRACK_DURATION};
   eu->writeValue(player, sizeof(player), true);
   eu->writeValue(track, sizeof(track), true);
@@ -189,19 +213,85 @@ static String mmss(float sec) {
   return b;
 }
 
-static void draw() {
+// ---------- Maths : lissage, easing, angles ----------
+static float wrap180(float a) { while (a > 180) a -= 360; while (a < -180) a += 360; return a; }
+// Lissage exponentiel indépendant du FPS : x rejoint sa cible avec la constante de temps tau.
+static float smoothK(float dt, float tau) { return 1.f - expf(-dt / tau); }
+static float easeOutCubic(float t) { t = 1.f - t; return 1.f - t * t * t; }
+static float easeInCubic(float t) { return t * t * t; }
+
+// ---------- IMU : gravité filtrée -> angle de l'écran ----------
+static bool imuOk = false;
+static float gx = 0, gy = 0, refAngle = 0, targetRot = 0, rot = 0;
+
+static float rawAngle() { return IMU_DIR * atan2f(gx, gy) * RAD_TO_DEG; }
+
+static void updateImu(float dt) {
+  float ax, ay, az;
+  if (!imuOk) return;
+  M5.Imu.update();
+  if (!M5.Imu.getAccel(&ax, &ay, &az)) return;
+  float k = smoothK(dt, IMU_TAU_S);  // passe-bas sur le VECTEUR gravité (pas sur l'angle : pas de saut à ±180°)
+  gx += (ax - gx) * k;
+  gy += (ay - gy) * k;
+  if (gx * gx + gy * gy < MIN_TILT_G * MIN_TILT_G) return;
+  float a = wrap180(rawAngle() - refAngle);
+  if (fabsf(wrap180(a - targetRot)) > ROT_HYST_DEG) targetRot = a;
+}
+
+// ---------- Animations ----------
+static float arcShown = 0, volShown = 0;
+static uint32_t volUntil = 0, slideStart = 0;
+static int slideDir = 0;  // +1 le texte part à droite, -1 à gauche, 0 aucun glissement
+static std::string shownTitle, shownArtist;
+
+static void startSlide(int dir, bool inOnly) {
+  slideDir = dir;
+  slideStart = millis() - (inOnly ? SLIDE_OUT_MS : 0);
+}
+
+// Décalage horizontal du texte : sortie (easeIn) puis entrée par le côté opposé (easeOut).
+static float slideOffset(uint32_t now, bool& outPhase) {
+  outPhase = false;
+  if (!slideDir) return 0;
+  uint32_t t = now - slideStart;
+  if (t < SLIDE_OUT_MS) { outPhase = true; return slideDir * 240.f * easeInCubic(t / (float)SLIDE_OUT_MS); }
+  if (t < SLIDE_OUT_MS + SLIDE_IN_MS) return -slideDir * 240.f * (1.f - easeOutCubic((t - SLIDE_OUT_MS) / (float)SLIDE_IN_MS));
+  slideDir = 0;
+  return 0;
+}
+
+// Rend une frame. Retourne true tant qu'une animation est en cours (-> FPS élevé).
+static bool draw(float dt) {
   Media m;
   {
     std::lock_guard<std::mutex> lock(mtx);
     m = media;
   }
-  float el = m.elapsed + (m.playing ? m.rate * (millis() - m.stamp) / 1000.f : 0);
+  uint32_t now = millis();
+  float el = m.elapsed + (m.playing ? m.rate * (now - m.stamp) / 1000.f : 0);
   if (m.duration > 0 && el > m.duration) el = m.duration;
+
+  float arcTarget = m.duration > 0 ? el / m.duration : 0;
+  arcShown += (arcTarget - arcShown) * smoothK(dt, ARC_TAU_S);
+  if (m.volume >= 0) volShown += (m.volume - volShown) * smoothK(dt, VOL_TAU_S);
+  bool outPhase;
+  float off = slideOffset(now, outPhase);
+  if (!outPhase) { shownTitle = m.title; shownArtist = m.artist; }  // ancien texte figé pendant la sortie
 
   const int c = 120;
   canvas.fillScreen(TFT_BLACK);
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
-  if (m.duration > 0) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * el / m.duration, 0xFA20);
+  if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
+
+  // Anneau de volume intérieur : visible 1,5 s après un changement, fondu au noir sur les 300 dernières ms
+  bool volVisible = (int32_t)(volUntil - now) > 0 && m.volume >= 0;
+  if (volVisible) {
+    float a = std::min(1.f, (volUntil - now) / 300.f);
+    canvas.fillArc(c, c, 106, 101, 0, 360, canvas.color565(30 * a, 30 * a, 34 * a));
+    if (volShown > 0.005f)
+      canvas.fillArc(c, c, 106, 101, -90, -90 + 360.f * volShown, canvas.color565(70 * a, 160 * a, 255 * a));
+  }
   canvas.setTextDatum(middle_center);
 
   if (linkMode == LINK_NONE) {
@@ -226,27 +316,43 @@ static void draw() {
     } else {
       canvas.fillTriangle(c - 7, 52, c - 7, 70, c + 9, 61, TFT_WHITE);
     }
+    int x = c + (int)off;
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(fit(m.title.empty() ? "—" : m.title, 190).c_str(), c, 105);
+    canvas.drawString(fit(shownTitle.empty() ? "—" : shownTitle, 190).c_str(), x, 105);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
-    canvas.drawString(fit(m.artist, 170).c_str(), c, 137);
+    canvas.drawString(fit(shownArtist, 170).c_str(), x, 137);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString(mmss(el) + " / " + mmss(m.duration), c, 178);
   }
-  canvas.pushSprite(0, 0);
+
+  // Frame complète composée hors écran, puis envoyée en une seule transaction SPI.
+  // Rotation : la frame est tournée pixel par pixel pendant l'envoi, sans 2e buffer de 115 Ko.
+  M5Dial.Display.startWrite();
+  if (fabsf(rot) < 0.5f) canvas.pushSprite(0, 0);
+  else canvas.pushRotateZoom(&M5Dial.Display, c, c, rot, 1.f, 1.f);
+  M5Dial.Display.endWrite();
+
+  return slideDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
 }
 
 // ---------- Programme ----------
 void setup() {
   auto cfg = M5.config();
+  cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
   M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
 
-  int st; float r, e;  // auto-test du parseur AMS
+  int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
+  assert(fabsf(wrap180(350.f) + 10.f) < 1e-3f && fabsf(wrap180(-190.f) - 170.f) < 1e-3f);
+
+  // Référence "droit" = orientation au démarrage (volant au centre).
+  float az;
+  imuOk = M5.Imu.isEnabled() && M5.Imu.update() && M5.Imu.getAccel(&gx, &gy, &az);
+  if (imuOk) refAngle = rawAngle();
 
   canvas.setColorDepth(16);
   canvas.createSprite(240, 240);  // ~115 Ko en RAM interne, double buffer sans scintillement
@@ -254,14 +360,22 @@ void setup() {
 }
 
 void loop() {
+  static uint32_t lastUs = micros();
+  uint32_t nowUs = micros();
+  float dt = (nowUs - lastUs) / 1e6f;
+  lastUs = nowUs;
+
   M5Dial.update();
   if (needSetup) setupAms();
+  updateImu(dt);
+  rot = wrap180(rot + wrap180(targetRot - rot) * smoothK(dt, ROT_TAU_S));  // par le chemin le plus court
 
   // Encodeur -> volume (accumule les impulsions jusqu'à un cran complet)
   static long encLast = M5Dial.Encoder.read();
   long enc = M5Dial.Encoder.read();
-  while (enc - encLast >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_UP);   encLast += ENC_STEPS_PER_DETENT; }
-  while (encLast - enc >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_DOWN); encLast -= ENC_STEPS_PER_DETENT; }
+  while (enc - encLast >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_UP);   encLast += ENC_STEPS_PER_DETENT; volPing = true; }
+  while (encLast - enc >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_DOWN); encLast -= ENC_STEPS_PER_DETENT; volPing = true; }
+  if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; }
 
   auto t = M5Dial.Touch.getDetail();
   if (M5Dial.BtnA.wasClicked() || t.wasClicked()) sendCmd(CMD_TOGGLE);  // au relâcher, pour distinguer l'appui long
@@ -273,22 +387,31 @@ void loop() {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Arrêt...", 120, 120);
-    canvas.pushSprite(0, 0);
+    canvas.pushRotateZoom(&M5Dial.Display, 120, 120, rot, 1.f, 1.f);
     delay(800);
     M5Dial.Display.sleep();
     M5Dial.Power.powerOff();
   }
   if (t.wasFlicked() || t.wasDragged()) {
-    int dx = t.distanceX();
-    if (dx > SWIPE_MIN_PX) sendCmd(CMD_NEXT);
-    else if (dx < -SWIPE_MIN_PX) sendCmd(CMD_PREV);
+    // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
+    float r = rot * DEG_TO_RAD;
+    float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
+    if (dx > SWIPE_MIN_PX) { sendCmd(CMD_NEXT); startSlide(+1, false); }
+    else if (dx < -SWIPE_MIN_PX) { sendCmd(CMD_PREV); startSlide(-1, false); }
+  }
+  if (titleChanged) {  // piste changée depuis l'iPhone : le nouveau titre entre par la droite
+    titleChanged = false;
+    if (!slideDir) startSlide(-1, true);
   }
 
-  // Redessin : immédiat sur changement, sinon 4 Hz pour faire avancer l'arc
-  static uint32_t lastDraw = 0;
-  if (dirty || millis() - lastDraw > 250) {
+  // ~60 FPS max pendant une animation, 4 Hz au repos (économie de batterie)
+  static uint32_t lastDraw = 0, lastFrameUs = micros();
+  static bool animating = true;
+  if (dirty || millis() - lastDraw >= (animating ? 16u : 250u)) {
+    float fdt = (micros() - lastFrameUs) / 1e6f;
+    lastFrameUs = micros();
     dirty = false;
     lastDraw = millis();
-    draw();
+    animating = draw(fdt);
   }
 }

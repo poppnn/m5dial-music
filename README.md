@@ -13,6 +13,12 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
 
+## Interface
+
+- Animations avec easing : l'arc de progression et l'anneau de volume se remplissent en douceur, et le titre glisse lors d'un swipe ou d'un changement de piste.
+- Jusqu'à ~60 images/s pendant une animation, 4/s au repos pour économiser la batterie.
+- **Toujours droit** : avec une **Unit IMU M5Stack branchée sur le Port A**, l'interface pivote pour rester horizontale. Le M5Dial n'a pas d'IMU intégrée. Fixe l'unité à plat au dos du boîtier. L'orientation au démarrage sert de référence « droit ». Si l'écran tourne dans le mauvais sens, mets `IMU_DIR` à `-1` dans `main.cpp`.
+
 ## Compiler
 
 ```bash
