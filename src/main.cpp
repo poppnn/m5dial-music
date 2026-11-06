@@ -16,7 +16,7 @@
  *   Encodeur  gauche/droite : volume -/+
  *   Bouton central / tap    : play/pause
  *   Bouton central 2 s      : extinction (sur batterie)
- *   Swipe droite / gauche   : piste suivante / précédente
+ *   Swipe gauche / droite   : piste suivante / précédente
  */
 #include <M5Dial.h>
 #include <NimBLEDevice.h>
@@ -52,6 +52,10 @@ enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD
 #define VOL_SHOW_MS    1500
 #define SLIDE_OUT_MS   200
 #define SLIDE_IN_MS    280
+#define COLOR_TAU_S    0.18f  // fondu de la couleur de l'anneau LED
+#define POP_MS         380    // rebond de la pastille de couleur
+#define PAGE_OUT_MS    170    // glissement vertical Musique <-> LED : sortie puis entrée
+#define PAGE_IN_MS     280
 #define FADE_MS        300  // fondu écran de démarrage <-> interface (sortie puis entrée)
 
 // ---------- État partagé (écrit par la tâche BLE, lu par loop) ----------
@@ -222,7 +226,9 @@ static NimBLEAddress goveeAddr;
 static volatile bool goveeFound = false;
 static uint32_t goveeRetry = 0;
 static bool ledOn = true;  // état supposé : la barre ne renvoie pas son état
-static int ledColor = 0, ledBri = 255, ledBriSent = 255;
+// Luminosité en % : le H7090 attend 0-100 (au-delà il sature : avec 0-255, seul le bas de la course agissait).
+#define GOVEE_BRI_MAX 100
+static int ledColor = 0, ledBri = 100, ledBriSent = 100;
 
 class GoveeScanCB : public NimBLEScanCallbacks {
   void onResult(const NimBLEAdvertisedDevice* d) override {
@@ -253,7 +259,7 @@ static void goveeSendColor() {
 static void goveeService(bool ledPage) {
   if (goveeWr && goveeClient && goveeClient->isConnected()) {
     if (ledBri != ledBriSent && millis() - goveeRetry > 60) {  // luminosité limitée à ~16 trames/s
-      goveeSend({0x33, 0x04, (uint8_t)ledBri});
+      goveeSend({0x33, 0x04, (uint8_t)(ledBri * GOVEE_BRI_MAX / 100)});
       ledBriSent = ledBri;
       goveeRetry = millis();
     }
@@ -301,6 +307,7 @@ static float wrap180(float a) { while (a > 180) a -= 360; while (a < -180) a += 
 static float smoothK(float dt, float tau) { return 1.f - expf(-dt / tau); }
 static float easeOutCubic(float t) { t = 1.f - t; return 1.f - t * t * t; }
 static float easeInCubic(float t) { return t * t * t; }
+static float easeOutBack(float t) { t -= 1.f; return 1.f + 2.70158f * t * t * t + 1.70158f * t * t; }  // dépasse puis revient
 
 // ---------- IMU : gravité filtrée -> angle de l'écran ----------
 static bool imuOk = false;
@@ -384,17 +391,30 @@ enum Page : uint8_t { PAGE_MUSIC, PAGE_LED };
 static Page page = PAGE_MUSIC;
 static float ledBriShown = 1;
 
-// Page LED : anneau = luminosité dans la couleur choisie, pastille de couleur, nom qui glisse.
-static bool drawLedPage(float dt, float off) {
+// Page LED : anneau = luminosité, en fondu vers la nouvelle couleur ; la pastille et le nom de l'ancienne
+// couleur sortent en glissant, la nouvelle pastille entre avec un rebond.
+static bool drawLedPage(float dt, float off, bool outPhase) {
+  static int shownColor = 0;
+  static float rgb[3] = {255, 255, 255};
+  static uint32_t popStart = 0;
   const int c = 120;
-  const LedColor& lc = LED_COLORS[ledColor];
-  float target = ledOn ? ledBri / 255.f : 0;
+  uint32_t now = millis();
+  if (!outPhase && shownColor != ledColor) { shownColor = ledColor; popStart = now; }
+  const LedColor& lc = LED_COLORS[shownColor];
+  const LedColor& tc = LED_COLORS[ledColor];
+  const float trgb[3] = {(float)tc.r, (float)tc.g, (float)tc.b};
+  float k = smoothK(dt, COLOR_TAU_S), dist = 0;
+  for (int i = 0; i < 3; i++) { rgb[i] += (trgb[i] - rgb[i]) * k; dist += fabsf(trgb[i] - rgb[i]); }
+
+  float target = ledOn ? ledBri / 100.f : 0;
   ledBriShown += (target - ledBriShown) * smoothK(dt, VOL_TAU_S);
-  uint16_t col = canvas.color565(lc.r, lc.g, lc.b);
+  uint16_t arcCol = canvas.color565(rgb[0], rgb[1], rgb[2]);
+  uint32_t tp = now - popStart;
+  float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
 
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
-  if (ledBriShown > 0.005f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, col);
-  canvas.fillCircle(c + (int)off, 92, 34, ledOn ? col : 0x2104);
+  if (ledBriShown > 0.005f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, arcCol);
+  canvas.fillCircle(c + (int)off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
@@ -403,7 +423,36 @@ static bool drawLedPage(float dt, float off) {
   canvas.setTextColor(0xAD55);
   const char* status = !goveeWr ? "Recherche H7090..." : ledOn ? "LED allumées" : "LED éteintes";
   canvas.drawString(status, c, 182);
-  return fabsf(target - ledBriShown) > 0.004f;
+  return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS;
+}
+
+// Changement de page : tout l'écran glisse verticalement (sortie easeIn, puis entrée easeOut), la page
+// bascule à mi-parcours. Le décalage est appliqué au moment de l'envoi (pushFrame), sans 2e tampon d'image.
+static int pageDir = 0;  // -1 = le contenu part vers le haut, +1 vers le bas, 0 = aucun glissement
+static bool pageFlipped = false;
+static uint32_t pageStart = 0;
+static float frameShift = 0;  // décalage vertical de l'image (px, repère de l'interface)
+
+static void startPageSlide(int dir) {
+  if (pageDir) return;
+  pageDir = dir;
+  pageFlipped = false;
+  pageStart = millis();
+}
+
+static float pageOffset(uint32_t now) {
+  if (!pageDir) return 0;
+  uint32_t t = now - pageStart;
+  if (t < PAGE_OUT_MS) return pageDir * 240.f * easeInCubic(t / (float)PAGE_OUT_MS);
+  if (!pageFlipped) {
+    pageFlipped = true;
+    page = page == PAGE_MUSIC ? PAGE_LED : PAGE_MUSIC;
+    goveeRetry = 0;  // cherche les LED tout de suite
+  }
+  if (t < PAGE_OUT_MS + PAGE_IN_MS)
+    return -pageDir * 240.f * (1.f - easeOutCubic((t - PAGE_OUT_MS) / (float)PAGE_IN_MS));
+  pageDir = 0;
+  return 0;
 }
 
 // Envoie la frame : rendu de la bande k dans band[k&1] pendant que le DMA envoie band[(k-1)&1].
@@ -412,11 +461,23 @@ static bool drawLedPage(float dt, float off) {
 static void pushFrame() {
   auto& d = M5Dial.Display;
   const uint16_t* src = (const uint16_t*)canvas.getBuffer();
+  int s = (int)lroundf(frameShift);
+  float r = rot * DEG_TO_RAD;
   for (int k = 0; k < 240 / BAND_H; k++) {
     M5Canvas& b = band[k & 1];  // ce buffer a fini d'être envoyé : waitDMA() a précédé la bande k-1
     int y = k * BAND_H;
-    if (fabsf(rot) < 0.5f) memcpy(b.getBuffer(), src + y * 240, 240 * BAND_H * 2);
-    else canvas.pushRotateZoom(&b, 120, 120 - y, rot, 1.f, 1.f);  // coins hors du disque : invisibles sur l'écran rond
+    if (fabsf(rot) < 0.5f) {
+      uint16_t* dst = (uint16_t*)b.getBuffer();
+      for (int row = 0; row < BAND_H; row++) {  // ligne source décalée de s (glissement de page), noir hors image
+        int sr = y + row - s;
+        if (sr >= 0 && sr < 240) memcpy(dst + row * 240, src + sr * 240, 240 * 2);
+        else memset(dst + row * 240, 0, 240 * 2);
+      }
+    } else {
+      if (s) b.fillScreen(TFT_BLACK);  // image décalée : elle ne recouvre plus tout le disque
+      // décalage (0, s) de l'interface tourné de rot (sens horaire à l'écran)
+      canvas.pushRotateZoom(&b, 120 - s * sinf(r), 120 - y + s * cosf(r), rot, 1.f, 1.f);  // coins hors du disque : invisibles
+    }
     d.waitDMA();
     d.pushImageDMA(0, y, 240, BAND_H, (const lgfx::swap565_t*)b.getBuffer());  // format natif du panneau : 0 conversion
   }
@@ -443,6 +504,7 @@ static bool draw(float dt) {
   const int c = 120;
   canvas.fillScreen(TFT_BLACK);
   updateFade(now);
+  frameShift = bootShown ? 0 : pageOffset(now);  // avant de dessiner : la page bascule à mi-glissement
   if (bootShown) {
     drawBoot(now);
     pushFrame();
@@ -452,9 +514,9 @@ static bool draw(float dt) {
   canvas.fillCircle(c - 6, 212, 2, page == PAGE_MUSIC ? TFT_WHITE : 0x4208);
   canvas.fillCircle(c + 6, 212, 2, page == PAGE_LED ? TFT_WHITE : 0x4208);
   if (page == PAGE_LED) {
-    bool anim = drawLedPage(dt, off);
+    bool anim = drawLedPage(dt, off, outPhase);
     pushFrame();
-    return anim || fadeStart || slideDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
+    return anim || fadeStart || slideDir || pageDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
   }
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
   if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
@@ -496,7 +558,7 @@ static bool draw(float dt) {
   }
 
   pushFrame();
-  return fadeStart || slideDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
+  return fadeStart || slideDir || pageDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
 }
 
 // ---------- Programme ----------
@@ -511,6 +573,7 @@ void setup() {
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
   assert(fabsf(wrap180(350.f) + 10.f) < 1e-3f && fabsf(wrap180(-190.f) - 170.f) < 1e-3f);
+  assert(fabsf(easeOutBack(0)) < 1e-4f && fabsf(easeOutBack(1) - 1) < 1e-4f && easeOutBack(0.7f) > 1);  // rebond
 
   // Référence "droit" = orientation au démarrage (volant au centre).
   float az;
@@ -559,7 +622,7 @@ void loop() {
   if (bootShown) {
     // écran de démarrage : commandes ignorées (seul l'appui long d'extinction reste actif)
   } else if (page == PAGE_LED) {
-    if (detents) ledBri = constrain(ledBri + detents * 13, 5, 255);  // ~5 % par cran
+    if (detents) ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
   } else {
     for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
     if (detents) volPing = true;
@@ -583,6 +646,7 @@ void loop() {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Arrêt...", 120, 120);
+    frameShift = 0;
     pushFrame();
     M5Dial.Display.endWrite();  // attend la fin du DMA et libère le bus
     delay(800);
@@ -594,9 +658,8 @@ void loop() {
     float r = rot * DEG_TO_RAD;
     float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
     float dy = -sinf(r) * t.distanceX() + cosf(r) * t.distanceY();
-    if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) {  // vertical : change de page
-      page = page == PAGE_MUSIC ? PAGE_LED : PAGE_MUSIC;
-      goveeRetry = 0;  // cherche les LED tout de suite
+    if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) {  // vertical : change de page, l'écran suit le doigt
+      startPageSlide(dy < 0 ? -1 : +1);
     } else if (fabsf(dx) > SWIPE_MIN_PX) {
       int dir = dx > 0 ? +1 : -1;
       if (page == PAGE_LED) {
@@ -604,7 +667,7 @@ void loop() {
         ledOn = true;
         goveeSendColor();
       } else {
-        sendCmd(dir > 0 ? CMD_NEXT : CMD_PREV);
+        sendCmd(dir < 0 ? CMD_NEXT : CMD_PREV);  // vers la gauche = suivante (comme un carrousel)
       }
       startSlide(dir, false);
     }
