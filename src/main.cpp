@@ -6,12 +6,16 @@
  * d'iOS : commandes (play/pause, piste +/-, volume +/-) ET métadonnées (titre, artiste,
  * durée, temps écoulé), sans app tierce. Il ne fournit pas la pochette -> fallback titre/artiste.
  *
+ * Android / Windows n'ont pas d'AMS : le M5Dial est aussi une télécommande BLE HID (touches
+ * multimédia standard), reconnue nativement. Commandes seules, sans métadonnées.
+ *
  *   Encodeur  gauche/droite : volume -/+
  *   Bouton central / tap    : play/pause
  *   Swipe droite / gauche   : piste suivante / précédente
  */
 #include <M5Dial.h>
 #include <NimBLEDevice.h>
+#include <NimBLEHIDDevice.h>
 #include <mutex>
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
@@ -37,9 +41,19 @@ struct Media {
 };
 static Media media;
 static std::mutex mtx;
-static volatile bool dirty = true, connected = false, needSetup = false;
+enum Link : uint8_t { LINK_NONE, LINK_HID, LINK_AMS };  // HID = Android/Windows, AMS = iPhone
+static volatile Link linkMode = LINK_NONE;
+static volatile bool dirty = true, needSetup = false;
 static volatile uint16_t connHandle = 0;
 static NimBLERemoteCharacteristic* rcChar = nullptr;
+static NimBLECharacteristic* hidInput = nullptr;
+
+// Rapport HID "Consumer Control" : 1 bit par touche multimédia (bits 0..4), 3 bits de bourrage.
+static const uint8_t hidReportMap[] = {
+  0x05, 0x0C, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x01,  // Usage Page Consumer, Collection, Report ID 1
+  0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x05,  // 5 champs de 1 bit
+  0x09, 0xCD, 0x09, 0xB5, 0x09, 0xB6, 0x09, 0xE9, 0x09, 0xEA,  // Play/Pause, Next, Prev, Vol+, Vol-
+  0x81, 0x02, 0x95, 0x03, 0x81, 0x01, 0xC0};
 
 static M5Canvas canvas(&M5Dial.Display);
 
@@ -82,7 +96,8 @@ class ServerCB : public NimBLEServerCallbacks {
   }
   void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
     rcChar = nullptr;
-    connected = needSetup = false;
+    linkMode = LINK_NONE;
+    needSetup = false;
     dirty = true;
     NimBLEDevice::startAdvertising();
   }
@@ -95,7 +110,8 @@ static void setupAms() {
   NimBLERemoteCharacteristic* eu = svc ? svc->getCharacteristic(AMS_EU) : nullptr;
   NimBLERemoteCharacteristic* rc = svc ? svc->getCharacteristic(AMS_RC) : nullptr;
   if (!eu || !rc || !eu->subscribe(true, onEntityUpdate) || !rc->subscribe(true)) {
-    Serial.println("AMS introuvable ou abonnement refusé");
+    linkMode = LINK_HID;  // pas un iPhone (Android/Windows) : touches multimédia HID
+    dirty = true;
     return;
   }
   // Demande à l'iPhone de nous notifier ces attributs (valeur courante envoyée immédiatement).
@@ -104,12 +120,23 @@ static void setupAms() {
   eu->writeValue(player, sizeof(player), true);
   eu->writeValue(track, sizeof(track), true);
   rcChar = rc;
-  connected = true;
+  linkMode = LINK_AMS;
   dirty = true;
 }
 
 static void sendCmd(uint8_t cmd) {
-  if (connected && rcChar) rcChar->writeValue(&cmd, 1, true);
+  if (linkMode == LINK_AMS && rcChar) {
+    rcChar->writeValue(&cmd, 1, true);
+  } else if (linkMode == LINK_HID) {
+    static const uint8_t bit[] = {0, 0, 0x01, 0x02, 0x04, 0x08, 0x10};  // index = CMD_*
+    uint8_t v = bit[cmd];
+    hidInput->setValue(&v, 1);
+    hidInput->notify();
+    delay(10);  // touche "appuyée" puis relâchée
+    v = 0;
+    hidInput->setValue(&v, 1);
+    hidInput->notify();
+  }
 }
 
 static void startBle() {
@@ -117,7 +144,17 @@ static void startBle() {
   NimBLEDevice::setMTU(185);
   NimBLEDevice::setSecurityAuth(true, false, true);  // bonding, sans MITM, Secure Connections
   NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
-  NimBLEDevice::createServer()->setCallbacks(new ServerCB());
+  NimBLEServer* server = NimBLEDevice::createServer();
+  server->setCallbacks(new ServerCB());
+
+  NimBLEHIDDevice* hid = new NimBLEHIDDevice(server);
+  hid->setManufacturer("M5Stack");
+  hid->setPnp(0x02, 0xE502, 0xA111, 0x0100);
+  hid->setHidInfo(0x00, 0x01);
+  hid->setReportMap((uint8_t*)hidReportMap, sizeof(hidReportMap));
+  hid->setBatteryLevel(100);
+  hidInput = hid->getInputReport(1);
+  server->start();
 
   // "Service Solicitation" AMS (AD type 0x15, UUID 128 bits little-endian) : iOS sait qu'on veut AMS.
   const uint8_t solicit[] = {0x11, 0x15, 0xDC, 0xF8, 0x55, 0xAD, 0x02, 0xC5, 0xF4, 0x8E,
@@ -125,6 +162,8 @@ static void startBle() {
   NimBLEAdvertisementData adv, scan;
   adv.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
   adv.addData(solicit, sizeof(solicit));
+  adv.setAppearance(0x0180);                    // télécommande générique
+  adv.setCompleteServices16({NimBLEUUID((uint16_t)0x1812)});  // HID : visible sur Android/Windows
   scan.setName("M5Dial Music");
   NimBLEAdvertising* a = NimBLEDevice::getAdvertising();
   a->setAdvertisementData(adv);
@@ -164,12 +203,20 @@ static void draw() {
   if (m.duration > 0) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * el / m.duration, 0xFA20);
   canvas.setTextDatum(middle_center);
 
-  if (!connected) {
+  if (linkMode == LINK_NONE) {
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("iPhone > Réglages", c, 105);
-    canvas.drawString("> Bluetooth", c, 125);
-    canvas.drawString("M5Dial Music", c, 145);
+    canvas.drawString("Bluetooth :", c, 105);
+    canvas.drawString("M5Dial Music", c, 125);
+    canvas.setTextColor(0xAD55);
+    canvas.drawString("iPhone / Android / PC", c, 150);
+  } else if (linkMode == LINK_HID) {
+    canvas.setFont(&fonts::efontJA_24);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString("Connecté", c, 108);
+    canvas.setFont(&fonts::efontJA_16);
+    canvas.setTextColor(0xAD55);
+    canvas.drawString("Télécommande", c, 140);
   } else {
     // Icône lecture / pause
     if (m.playing) {
