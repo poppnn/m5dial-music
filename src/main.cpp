@@ -11,6 +11,7 @@
  *
  *   Encodeur  gauche/droite : volume -/+
  *   Bouton central / tap    : play/pause
+ *   Bouton central 2 s      : extinction (sur batterie)
  *   Swipe droite / gauche   : piste suivante / précédente
  */
 #include <M5Dial.h>
@@ -241,6 +242,7 @@ static void draw() {
 void setup() {
   auto cfg = M5.config();
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
+  M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
 
   int st; float r, e;  // auto-test du parseur AMS
@@ -262,7 +264,20 @@ void loop() {
   while (encLast - enc >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_DOWN); encLast -= ENC_STEPS_PER_DETENT; }
 
   auto t = M5Dial.Touch.getDetail();
-  if (M5Dial.BtnA.wasPressed() || t.wasClicked()) sendCmd(CMD_TOGGLE);
+  if (M5Dial.BtnA.wasClicked() || t.wasClicked()) sendCmd(CMD_TOGGLE);  // au relâcher, pour distinguer l'appui long
+
+  // Appui long : coupe l'alimentation batterie (relâche le maintien GPIO46).
+  // Sur USB, le courant reste : le M5Dial passe en veille profonde, débrancher/rebrancher pour relancer.
+  if (M5Dial.BtnA.wasHold()) {
+    canvas.fillScreen(TFT_BLACK);
+    canvas.setFont(&fonts::efontJA_24);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString("Arrêt...", 120, 120);
+    canvas.pushSprite(0, 0);
+    delay(800);
+    M5Dial.Display.sleep();
+    M5Dial.Power.powerOff();
+  }
   if (t.wasFlicked() || t.wasDragged()) {
     int dx = t.distanceX();
     if (dx > SWIPE_MIN_PX) sendCmd(CMD_NEXT);

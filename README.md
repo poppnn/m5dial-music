@@ -7,6 +7,7 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 
 - Molette : volume − / +
 - Appui molette ou tap écran : lecture / pause
+- Appui long (2 s) sur la molette : extinction sur batterie (sur USB : veille, débrancher/rebrancher pour relancer)
 - Swipe droite / gauche : piste suivante / précédente
 - Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire
 
