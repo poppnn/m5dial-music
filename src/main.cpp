@@ -13,9 +13,9 @@
  * Android / Windows n'ont pas d'AMS : le M5Dial est aussi une télécommande BLE HID (touches
  * multimédia standard), reconnue nativement. Commandes seules, sans métadonnées.
  *
- * 5 pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Micra (3D), Système.
- *   Encodeur  gauche/droite : volume -/+ (LED : luminosité, Micra : tourne la voiture)
- *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause, Micra : rotation auto)
+ * 4 pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Système.
+ *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
+ *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
  *   Bouton central 2 s      : extinction (sur batterie)
  *   Swipe gauche / droite   : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
  */
@@ -26,7 +26,6 @@
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
 #include <algorithm>
 #include "logo.h"
-#include "model.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -175,8 +174,9 @@ static void setupAms() {
 }
 
 static void sendCmd(uint8_t cmd) {
-  if (linkMode == LINK_AMS && rcChar) {
-    rcChar->writeValue(&cmd, 1, true);
+  NimBLERemoteCharacteristic* rc = rcChar;  // copie : la tâche BLE peut le remettre à nullptr entre-temps
+  if (linkMode == LINK_AMS && rc) {
+    rc->writeValue(&cmd, 1, true);
   } else if (linkMode == LINK_HID) {
     static const uint8_t bit[] = {0, 0, 0x01, 0x02, 0x04, 0x08, 0x10};  // index = CMD_*
     uint8_t v = bit[cmd];
@@ -414,7 +414,7 @@ static void drawBoot(uint32_t now) {
   canvas.drawString("M5Dial Music", c, 206);  // nom à choisir dans les réglages Bluetooth
 }
 
-enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CAR, PAGE_SYS, PAGE_COUNT };
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_SYS, PAGE_COUNT };
 static Page page = PAGE_MUSIC;
 
 // ---------- Page Système ----------
@@ -424,11 +424,13 @@ static float frameMsShown = 0;    // temps de rendu + envoi d'une image (ms, lis
 static bool drawSystem() {
   const int c = 120;
   char v[8][32];
-  int bat = M5Dial.Power.getBatteryLevel();  // -2 sur M5Dial : pas de mesure de tension batterie câblée
-  if (bat >= 0) snprintf(v[0], 32, "%d %%", bat); else snprintf(v[0], 32, "non mesurée");
+  esp_reset_reason_t rr = esp_reset_reason();  // cause du dernier démarrage : repère les plantages
+  snprintf(v[0], 32, "%s", rr == ESP_RST_PANIC ? "plantage" : rr == ESP_RST_BROWNOUT ? "tension basse"
+           : (rr == ESP_RST_INT_WDT || rr == ESP_RST_TASK_WDT || rr == ESP_RST_WDT) ? "blocage" : "normal");
   snprintf(v[1], 32, "%s", linkMode == LINK_AMS ? "iPhone" : linkMode == LINK_HID ? "Android / PC" : "aucun");
-  NimBLEClient* cl = linkMode != LINK_NONE ? NimBLEDevice::getServer()->getClient(connHandle) : nullptr;
-  int rssi = cl ? cl->getRssi() : 0;
+  // Pas de getServer()->getClient() ici : il efface les services GATT du lien (rcChar libéré -> plantage).
+  int8_t rssi = 0;
+  if (linkMode == LINK_NONE || ble_gap_conn_rssi(connHandle, &rssi) != 0) rssi = 0;
   if (rssi) snprintf(v[2], 32, "%d dBm", rssi); else snprintf(v[2], 32, "-");
   snprintf(v[3], 32, "%s", goveeWr ? "connectées" : "non connectées");
   snprintf(v[4], 32, "%u MHz  %.0f °C", (unsigned)getCpuFrequencyMhz(), temperatureRead());
@@ -436,7 +438,7 @@ static bool drawSystem() {
   snprintf(v[6], 32, "%u Ko", (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024));
   uint32_t s = millis() / 1000;
   snprintf(v[7], 32, "%u:%02u:%02u", (unsigned)(s / 3600), (unsigned)(s / 60 % 60), (unsigned)(s % 60));
-  static const char* labels[8] = {"Batterie", "Bluetooth", "Signal", "LED", "Processeur", "Images/s", "RAM libre", "Allumé"};
+  static const char* labels[8] = {"Démarrage", "Bluetooth", "Signal", "LED", "Processeur", "Images/s", "RAM libre", "Allumé"};
 
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextDatum(middle_center);
@@ -491,51 +493,6 @@ static bool drawChrono() {
   return chronoRun;
 }
 
-// ---------- Page Micra : maillage 3D (model.h) qui tourne sur lui-même ----------
-// Rendu logiciel : légère perspective, faces arrière éliminées, ombrage plat en niveaux de gris
-// (lumière principale en haut à gauche + contre-jour à droite), tri du plus loin au plus proche (peintre).
-#define CAR_SPEED   0.7f    // rad/s
-#define CAR_PITCH   0.28f   // caméra un peu au-dessus (16°) ; = PITCH de tools/stl2model.py
-#define CAR_DIST    3500.f  // distance caméra (unités model.h) ; = DIST de tools/stl2model.py
-#define CAR_SCALE   0.105f  // px par unité de model.h ([-1000, 1000])
-static float carYaw = 0.5f;
-static bool carSpin = true;
-static int16_t vsx[MODEL_NV], vsy[MODEL_NV], vsz[MODEL_NV];  // sommets projetés (x, y écran ; profondeur)
-struct CarTri { int16_t z; uint16_t i; uint8_t g; };
-static CarTri carTris[MODEL_VIS_MAX];
-
-static bool drawCar(float dt) {
-  if (carSpin) carYaw = fmodf(carYaw + dt * CAR_SPEED, 2 * PI);
-  const float cy = cosf(carYaw), sy = sinf(carYaw), cp = cosf(CAR_PITCH), sp = sinf(CAR_PITCH);
-  for (int i = 0; i < MODEL_NV; i++) {
-    float x = model_v[i][0], y = model_v[i][1], z = model_v[i][2];
-    float xr = x * cy + z * sy, zr = -x * sy + z * cy;
-    float yc = y * cp - zr * sp, zc = y * sp + zr * cp;
-    float k = CAR_SCALE * CAR_DIST / (CAR_DIST - zc);
-    vsx[i] = (int16_t)(120 + xr * k);
-    vsy[i] = (int16_t)(122 - yc * k);
-    vsz[i] = (int16_t)zc;
-  }
-  int n = 0;
-  for (int t = 0; t < MODEL_NT && n < MODEL_VIS_MAX; t++) {
-    int a = model_t[t][0], b = model_t[t][1], c = model_t[t][2];
-    int32_t cross = (vsx[b] - vsx[a]) * (vsy[c] - vsy[a]) - (vsy[b] - vsy[a]) * (vsx[c] - vsx[a]);
-    if (cross >= 0) continue;  // face arrière (y écran vers le bas : sens horaire = face avant)
-    float nx = model_n[t][0], ny = model_n[t][1], nz = model_n[t][2];  // normale précalculée, tournée comme les sommets
-    float nxr = nx * cy + nz * sy, nzr = -nx * sy + nz * cy;
-    float nyc = ny * cp - nzr * sp, nzc = ny * sp + nzr * cp;
-    float d1 = (-0.55f * nxr + 0.65f * nyc + 0.52f * nzc) / 127, d2 = (0.8f * nxr + 0.6f * nzc) / 127;
-    float I = 0.06f + 0.82f * (d1 > 0 ? d1 : 0) + 0.22f * (d2 > 0 ? d2 : 0);
-    carTris[n++] = {(int16_t)(vsz[a] + vsz[b] + vsz[c]), (uint16_t)t, (uint8_t)(255 * (I < 1 ? I : 1))};
-  }
-  std::sort(carTris, carTris + n, [](const CarTri& p, const CarTri& q) { return p.z < q.z; });
-  for (int k = 0; k < n; k++) {
-    const uint16_t* f = model_t[carTris[k].i];
-    uint8_t g = carTris[k].g;
-    canvas.fillTriangle(vsx[f[0]], vsy[f[0]], vsx[f[1]], vsy[f[1]], vsx[f[2]], vsy[f[2]], canvas.color565(g, g, g));
-  }
-  return carSpin;
-}
 static float ledBriShown = 1;
 
 // Page LED : anneau = luminosité, en fondu vers la nouvelle couleur ; la pastille et le nom de l'ancienne
@@ -658,8 +615,8 @@ static bool draw(float dt) {
     pushFrame();
     return true;  // spinner animé en continu
   }
-  if (page == PAGE_CHRONO || page == PAGE_CAR || page == PAGE_SYS) {
-    bool anim = page == PAGE_CHRONO ? drawChrono() : page == PAGE_CAR ? drawCar(dt) : drawSystem();
+  if (page == PAGE_CHRONO || page == PAGE_SYS) {
+    bool anim = page == PAGE_CHRONO ? drawChrono() : drawSystem();
     pushFrame();
     return anim || dimming || fadeStart || pageDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
   }
@@ -793,8 +750,6 @@ void loop() {
     // écran de démarrage : commandes ignorées (seul l'appui long d'extinction reste actif)
   } else if (page == PAGE_LED) {
     if (detents) ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
-  } else if (page == PAGE_CAR) {
-    if (detents) carYaw += detents * 15 * DEG_TO_RAD;  // tourner la voiture à la main
   } else {  // Musique et Chrono : volume
     for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
     if (detents) volPing = true;
@@ -817,8 +772,6 @@ void loop() {
       goveeSend({0x33, 0x01, (uint8_t)ledOn});
     } else if (page == PAGE_CHRONO) {
       chronoToggle();
-    } else if (page == PAGE_CAR) {
-      carSpin = !carSpin;
     } else {
       sendCmd(CMD_TOGGLE);
     }

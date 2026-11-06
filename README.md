@@ -5,10 +5,10 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - **iPhone** : service natif **Apple Media Service (AMS)** → commandes + titre, artiste, progression.
 - **Android / Windows** : télécommande **BLE HID** (touches multimédia standard) → commandes seules.
 
-5 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Micra** (3D), **Système**.
+4 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Système**.
 
-- Molette : volume − / + (LED : luminosité, Micra : tourne la voiture)
-- Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause, Micra : rotation auto)
+- Molette : volume − / + (LED : luminosité)
+- Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause)
 - Appui long (2 s) sur la molette : extinction sur batterie (sur USB : veille, débrancher/rebrancher pour relancer)
 - Économie de batterie : écran atténué après 20 s sans geste (le moindre geste le rallume), extinction automatique
   après 10 min sans appareil Bluetooth connecté ; le bouton WAKE le rallume.
@@ -23,18 +23,11 @@ Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protoc
 molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 couleurs).
 L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 
-## Chrono et Micra 3D
+## Chrono et Système
 
 - **Chrono** : afficheur 7 segments, centièmes, anneau trotteuse (1 tour par minute). Appui = départ / pause,
   swipe gauche ou droite = remise à zéro. Il continue de tourner quand on change de page.
-- **Micra** : la Nissan Micra K10 de 1982 en 3D, en niveaux de gris, qui tourne sur elle-même (rendu logiciel :
-  3 000 triangles lissés, légère perspective, faces cachées éliminées, ombrage plat à deux lumières, tri du plus
-  loin au plus proche).
-  Pour un autre modèle (STL, Z vers le haut) :
-  `pip install trimesh numpy scikit-image fast-simplification` puis `python tools/stl2model.py voiture.stl 3000`.
-  Le script reconstruit une enveloppe fermée (voxels), la lisse, la réduit au nombre de triangles voulu et écrit `src/model.h`.
-
-- **Système** : batterie (non mesurable sur le M5Dial : aucune mesure de tension n'est câblée), appareil Bluetooth
+- **Système** : cause du dernier démarrage (normal, plantage, blocage, tension basse), appareil Bluetooth
   connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
   RAM libre, durée depuis l'allumage.
 
