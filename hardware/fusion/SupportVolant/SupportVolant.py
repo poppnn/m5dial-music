@@ -24,7 +24,7 @@ NAME = "Support M5Dial"
 PARAMS = [
     ("DIAL_D", 51.0, "mm", "Ø extérieur de l'anneau = Ø du M5Dial (caché derrière)"),
     ("RING_T", 3.0, "mm", "Épaisseur de l'anneau"),
-    ("FLOOR_HOLE_D", 40.0, "mm", "Ø intérieur de l'anneau (connecteurs, IMU, câbles)"),
+    ("FLOOR_HOLE_D", 45.0, "mm", "Ø intérieur de l'anneau = découpe recommandée du M5Dial (le corps passe, la collerette Ø51 repose)"),
     ("DEV_X", 78.6, "mm", "MESURER : centre M5Dial, X"),
     ("DEV_Y", -73.8, "mm", "MESURER : centre M5Dial, Y"),
     ("R_X", 71.7, "mm", "MESURER : trou branche droite, X"),
