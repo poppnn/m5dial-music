@@ -38,6 +38,10 @@ enum : uint8_t { PLAYER_PLAYBACK_INFO = 1, PLAYER_VOLUME = 2 };
 enum : uint8_t { TRACK_ARTIST = 0, TRACK_TITLE = 2, TRACK_DURATION = 3 };
 enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6 };
 
+#ifndef FW_VERSION
+#define FW_VERSION "dev"  // le CI injecte 1.<nombre de commits>.0 (même numéro que le flasheur web)
+#endif
+
 // Calibration matérielle : impulsions de l'encodeur par cran.
 #define ENC_STEPS_PER_DETENT 2  // mesuré : 2 impulsions par cran sur ce M5Dial (4 donnait 1 pas tous les 2 crans)
 #define SWIPE_MIN_PX         40
@@ -437,7 +441,7 @@ static bool drawSystem() {
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextDatum(middle_center);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString("Système", c, 28);
+  canvas.drawString("Système  v" FW_VERSION, c, 28);
   for (int i = 0; i < 8; i++) {
     int y = 52 + i * 20;
     canvas.setTextDatum(middle_right);

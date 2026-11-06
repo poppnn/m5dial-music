@@ -15,11 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique complet : la version = nombre de commits
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - run: pip install platformio esptool==4.8.1
+      - name: Version 1.<nombre de commits>.0 (manifeste du flasheur + firmware)
+        run: |
+          V="1.$(git rev-list --count HEAD).0"
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$V\"/" docs/manifest.json
+          grep -q "\"version\": \"$V\"" docs/manifest.json
       - run: pio run
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
       - name: Merge firmware into one image (offset 0x0)
         run: |
           B=.pio/build/m5dial
