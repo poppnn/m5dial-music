@@ -26,6 +26,21 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 - Envoi à l'écran en DMA par bandes ping-pong (2 × 19 Ko), en SRAM interne : l'encodeur et le BLE restent réactifs pendant le transfert.
 - **Toujours droit** : avec une **Unit IMU M5Stack branchée sur le Port A**, l'interface pivote pour rester horizontale. Le M5Dial n'a pas d'IMU intégrée. Fixe l'unité à plat au dos du boîtier. L'orientation au démarrage sert de référence « droit ». Si l'écran tourne dans le mauvais sens, mets `IMU_DIR` à `-1` dans `main.cpp`.
 
+## Écran de démarrage
+
+Tant qu'aucun appareil n'est connecté, le M5Dial affiche un logo, un arc qui tourne et « Connexion Bluetooth... ».
+Les commandes sont bloquées, sauf l'appui long pour éteindre. À la connexion, un fondu mène à l'interface.
+
+Pour mettre ton logo (PNG ou BMP, idéalement sur fond transparent ou noir) :
+
+```bash
+pip install pillow
+python tools/png2logo.py mon_logo.png
+```
+
+Le script réduit l'image à 150 × 130 max, la convertit en RGB565 et écrit `src/logo.h` (stocké en flash, pas en RAM).
+Recompile ensuite (`pio run -t upload`).
+
 ## Compiler
 
 ```bash

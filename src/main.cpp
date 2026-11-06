@@ -23,6 +23,7 @@
 #include <NimBLEHIDDevice.h>
 #include <mutex>
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
+#include "logo.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -51,6 +52,7 @@ enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD
 #define VOL_SHOW_MS    1500
 #define SLIDE_OUT_MS   200
 #define SLIDE_IN_MS    280
+#define FADE_MS        300  // fondu écran de démarrage <-> interface (sortie puis entrée)
 
 // ---------- État partagé (écrit par la tâche BLE, lu par loop) ----------
 struct Media {
@@ -341,6 +343,43 @@ static float slideOffset(uint32_t now, bool& outPhase) {
   return 0;
 }
 
+// ---------- Écran de démarrage : affiché tant qu'aucun appareil n'est connecté ----------
+static bool bootShown = true, fadeTo = true;
+static uint32_t fadeStart = 0;  // 0 = pas de fondu en cours
+static uint8_t baseBri = 128;
+
+// Fondu au noir par le rétroéclairage : l'écran courant s'éteint, bascule, le nouveau s'allume.
+static void updateFade(uint32_t now) {
+  bool wantBoot = linkMode == LINK_NONE;
+  if (!fadeStart && wantBoot != bootShown) { fadeStart = now | 1; fadeTo = wantBoot; }
+  if (!fadeStart) return;
+  uint32_t t = now - fadeStart;
+  float level;
+  if (t < FADE_MS) {
+    level = 1.f - easeInCubic(t / (float)FADE_MS);
+  } else {
+    bootShown = fadeTo;
+    level = t < 2 * FADE_MS ? easeOutCubic((t - FADE_MS) / (float)FADE_MS) : 1.f;
+    if (t >= 2 * FADE_MS) fadeStart = 0;
+  }
+  M5Dial.Display.setBrightness(baseBri * level);
+}
+
+// Logo centré + arc qui tourne sur le bord de l'écran + texte discret.
+static void drawBoot(uint32_t now) {
+  const int c = 120;
+  if (LOGO_W) canvas.pushImage(c - LOGO_W / 2, 100 - LOGO_H / 2, LOGO_W, LOGO_H, logo_data);
+  float a = (now % 1200) * (360.f / 1200) - 180;  // 1 tour en 1,2 s
+  canvas.fillArc(c, c, 119, 114, 0, 360, 0x2104);
+  canvas.fillArc(c, c, 119, 114, a, a + 70, 0xFA20);
+  canvas.setTextDatum(middle_center);
+  canvas.setFont(&fonts::efontJA_16);
+  canvas.setTextColor(0xAD55);
+  canvas.drawString("Connexion Bluetooth...", c, 186);
+  canvas.setTextColor(0x5AEB);
+  canvas.drawString("M5Dial Music", c, 206);  // nom à choisir dans les réglages Bluetooth
+}
+
 enum Page : uint8_t { PAGE_MUSIC, PAGE_LED };
 static Page page = PAGE_MUSIC;
 static float ledBriShown = 1;
@@ -403,13 +442,19 @@ static bool draw(float dt) {
 
   const int c = 120;
   canvas.fillScreen(TFT_BLACK);
+  updateFade(now);
+  if (bootShown) {
+    drawBoot(now);
+    pushFrame();
+    return true;  // spinner animé en continu
+  }
   // Indicateur de page (2 points en bas) : swipe vertical pour changer de page
   canvas.fillCircle(c - 6, 212, 2, page == PAGE_MUSIC ? TFT_WHITE : 0x4208);
   canvas.fillCircle(c + 6, 212, 2, page == PAGE_LED ? TFT_WHITE : 0x4208);
   if (page == PAGE_LED) {
     bool anim = drawLedPage(dt, off);
     pushFrame();
-    return anim || slideDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
+    return anim || fadeStart || slideDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
   }
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
   if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
@@ -424,21 +469,14 @@ static bool draw(float dt) {
   }
   canvas.setTextDatum(middle_center);
 
-  if (linkMode == LINK_NONE) {
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Bluetooth :", c, 105);
-    canvas.drawString("M5Dial Music", c, 125);
-    canvas.setTextColor(0xAD55);
-    canvas.drawString("iPhone / Android / PC", c, 150);
-  } else if (linkMode == LINK_HID) {
+  if (linkMode == LINK_HID) {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Connecté", c, 108);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
     canvas.drawString("Télécommande", c, 140);
-  } else {
+  } else if (linkMode == LINK_AMS) {  // LINK_NONE : rien, l'interface est en train de disparaître
     // Icône lecture / pause
     if (m.playing) {
       canvas.fillRect(c - 9, 52, 6, 18, TFT_WHITE);
@@ -458,7 +496,7 @@ static bool draw(float dt) {
   }
 
   pushFrame();
-  return slideDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
+  return fadeStart || slideDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
 }
 
 // ---------- Programme ----------
@@ -467,6 +505,7 @@ void setup() {
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
   M5Dial.BtnA.setHoldThresh(2000);
+  baseBri = M5Dial.Display.getBrightness();
   Serial.begin(115200);
 
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
@@ -517,7 +556,9 @@ void loop() {
   int detents = 0;
   while (enc - encLast >= ENC_STEPS_PER_DETENT) { detents++; encLast += ENC_STEPS_PER_DETENT; }
   while (encLast - enc >= ENC_STEPS_PER_DETENT) { detents--; encLast -= ENC_STEPS_PER_DETENT; }
-  if (page == PAGE_LED) {
+  if (bootShown) {
+    // écran de démarrage : commandes ignorées (seul l'appui long d'extinction reste actif)
+  } else if (page == PAGE_LED) {
     if (detents) ledBri = constrain(ledBri + detents * 13, 5, 255);  // ~5 % par cran
   } else {
     for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
@@ -526,7 +567,7 @@ void loop() {
   if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; }
 
   auto t = M5Dial.Touch.getDetail();
-  if (M5Dial.BtnA.wasClicked() || t.wasClicked()) {  // au relâcher, pour distinguer l'appui long
+  if (!bootShown && (M5Dial.BtnA.wasClicked() || t.wasClicked())) {  // au relâcher, pour distinguer l'appui long
     if (page == PAGE_LED) {
       ledOn = !ledOn;
       goveeSend({0x33, 0x01, (uint8_t)ledOn});
@@ -548,7 +589,7 @@ void loop() {
     M5Dial.Display.sleep();
     M5Dial.Power.powerOff();
   }
-  if (t.wasFlicked() || t.wasDragged()) {
+  if (!bootShown && (t.wasFlicked() || t.wasDragged())) {
     // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
     float r = rot * DEG_TO_RAD;
     float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
