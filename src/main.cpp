@@ -797,12 +797,13 @@ void loop() {
   } else if (page == PAGE_LED) {
     if (detents) ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
   } else if (page == PAGE_CAR) {
-    if (detents) { carYaw += detents * 15 * DEG_TO_RAD; dirty = true; }  // tourner la voiture à la main
+    if (detents) carYaw += detents * 15 * DEG_TO_RAD;  // tourner la voiture à la main
   } else {  // Musique et Chrono : volume
     for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
     if (detents) volPing = true;
   }
-  if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; }
+  if (detents) dirty = true;  // image tout de suite : sinon jusqu'à 250 ms d'attente au repos
+  if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; dirty = true; }
 
   auto t = M5Dial.Touch.getDetail();
   uint32_t now = millis();
@@ -861,7 +862,8 @@ void loop() {
   static uint32_t lastDraw = 0, lastFrameUs = micros();
   static bool animating = true;
   if (dirty || millis() - lastDraw >= (animating ? 16u : 250u)) {
-    float fdt = (micros() - lastFrameUs) / 1e6f;
+    // Plafonné : après 250 ms de repos, un pas de temps entier ferait sauter les animations lissées (~87 % d'un coup)
+    float fdt = std::min((micros() - lastFrameUs) / 1e6f, 1 / 30.f);
     lastFrameUs = micros();
     dirty = false;
     lastDraw = millis();
