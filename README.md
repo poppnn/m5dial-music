@@ -8,7 +8,7 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - Molette : volume − / +
 - Appui molette ou tap écran : lecture / pause
 - Appui long (2 s) sur la molette : extinction sur batterie (sur USB : veille, débrancher/rebrancher pour relancer)
-- Swipe droite / gauche : piste suivante / précédente
+- Swipe gauche / droite : piste suivante / précédente
 - Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire
 
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
@@ -43,19 +43,18 @@ Recompile ensuite (`pio run -t upload`).
 
 ## Support volant (impression 3D)
 
-[`hardware/support_volant.stl`](hardware/support_volant.stl) : coupelle pour le M5Dial entre la branche du bas
-et la branche droite d'un volant GT2i Race 350 mm (tulipage 75 mm). Fixation par l'arrière, dans les deux trous
-ovales intérieurs : vis M5 × 20 passée de l'avant, rondelle, écrou nylstop derrière la patte.
+[`hardware/support_volant.stl`](hardware/support_volant.stl) : anneau fin (3 mm, Ø 51, sans paroi) caché derrière le
+M5Dial, entre la branche du bas et la branche droite d'un volant GT2i Race 350 mm (tulipage 75 mm). Fixation par
+l'arrière dans les deux trous ovales intérieurs : vis M5 × 16 passée de l'avant, rondelle et écrou nylstop dans le lamage.
 
-- Les cotes viennent d'une photo : mesure d'abord les valeurs `MESURER` de [`support_volant.py`](hardware/support_volant.py)
-  (position des trous, centre du M5Dial, pente des branches), puis régénère le STL :
-  `pip install manifold3d trimesh` puis `python hardware/support_volant.py`.
-- Version Fusion 360 : [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilitaires › Compléments › Scripts ›
-  « + » › choisir ce dossier › Exécuter. Les cotes deviennent des paramètres utilisateur (Modifier › Changer les paramètres) :
-  modifie-les puis relance le script, il remplace le composant.
-- Imprimer en PETG ou ASA (le PLA se déforme au soleil dans une voiture), 4 périmètres, 40 % de remplissage, supports activés.
-- Le M5Dial tient par serrage (nervures) ; un adhésif double face au fond le fige. Avec l'IMU sur le Port A,
-  l'écran reste droit quand le volant tourne.
+- Modèle source : script Fusion 360 [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilitaires ›
+  Compléments › Scripts › « + » › choisir ce dossier › Exécuter. Les cotes sont des paramètres utilisateur
+  (Modifier › Changer les paramètres) ; elles viennent d'une photo : mesure les valeurs `MESURER` (trous, centre du
+  M5Dial, pente des branches), relance le script, puis exporte le STL.
+- Impression : à plat tel quel (une seule face posée, 33 cm²), **sans supports** ; seuls les plafonds des lamages
+  (Ø 12) se font en pont. PETG ou ASA (le PLA se déforme au soleil), 4 périmètres, 40 % de remplissage.
+- Le M5Dial se colle sur l'anneau avec de l'adhésif double face VHB. Avec l'IMU sur le Port A, l'écran reste droit
+  quand le volant tourne.
 - Vérifie que rien ne touche les commodos en tournant le volant de butée à butée avant de rouler.
 
 ## Compiler
