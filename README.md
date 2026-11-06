@@ -5,7 +5,7 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - **iPhone** : service natif **Apple Media Service (AMS)** → commandes + titre, artiste, progression.
 - **Android / Windows** : télécommande **BLE HID** (touches multimédia standard) → commandes seules.
 
-4 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Micra** (3D).
+5 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Micra** (3D), **Système**.
 
 - Molette : volume − / + (LED : luminosité, Micra : tourne la voiture)
 - Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause, Micra : rotation auto)
@@ -32,6 +32,10 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
   Pour un autre modèle (STL, Z vers le haut) :
   `pip install trimesh numpy scikit-image fast-simplification` puis `python tools/stl2model.py voiture.stl 1200`.
   Le script reconstruit une enveloppe fermée (voxels), la réduit au nombre de triangles voulu et écrit `src/model.h`.
+
+- **Système** : batterie (non mesurable sur le M5Dial : aucune mesure de tension n'est câblée), appareil Bluetooth
+  connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
+  RAM libre, durée depuis l'allumage.
 
 ## Interface
 
