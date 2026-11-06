@@ -492,16 +492,17 @@ static bool drawChrono() {
 }
 
 // ---------- Page Micra : maillage 3D (model.h) qui tourne sur lui-même ----------
-// Rendu logiciel : projection orthographique, faces arrière éliminées, ombrage plat en niveaux de gris
-// (lumière fixe côté caméra), tri du plus loin au plus proche (algorithme du peintre).
+// Rendu logiciel : légère perspective, faces arrière éliminées, ombrage plat en niveaux de gris
+// (lumière principale en haut à gauche + contre-jour à droite), tri du plus loin au plus proche (peintre).
 #define CAR_SPEED   0.7f    // rad/s
-#define CAR_PITCH   0.31f   // caméra un peu au-dessus (18°)
-#define CAR_SCALE   0.095f  // px par unité de model.h ([-1000, 1000])
+#define CAR_PITCH   0.28f   // caméra un peu au-dessus (16°) ; = PITCH de tools/stl2model.py
+#define CAR_DIST    3500.f  // distance caméra (unités model.h) ; = DIST de tools/stl2model.py
+#define CAR_SCALE   0.105f  // px par unité de model.h ([-1000, 1000])
 static float carYaw = 0.5f;
 static bool carSpin = true;
-static float mvx[MODEL_NV], mvy[MODEL_NV], mvz[MODEL_NV];  // sommets dans le repère caméra
+static int16_t vsx[MODEL_NV], vsy[MODEL_NV], vsz[MODEL_NV];  // sommets projetés (x, y écran ; profondeur)
 struct CarTri { int16_t z; uint16_t i; uint8_t g; };
-static CarTri carTris[MODEL_NT];
+static CarTri carTris[MODEL_VIS_MAX];
 
 static bool drawCar(float dt) {
   if (carSpin) carYaw = fmodf(carYaw + dt * CAR_SPEED, 2 * PI);
@@ -509,35 +510,30 @@ static bool drawCar(float dt) {
   for (int i = 0; i < MODEL_NV; i++) {
     float x = model_v[i][0], y = model_v[i][1], z = model_v[i][2];
     float xr = x * cy + z * sy, zr = -x * sy + z * cy;
-    mvx[i] = xr;
-    mvy[i] = y * cp - zr * sp;
-    mvz[i] = y * sp + zr * cp;
+    float yc = y * cp - zr * sp, zc = y * sp + zr * cp;
+    float k = CAR_SCALE * CAR_DIST / (CAR_DIST - zc);
+    vsx[i] = (int16_t)(120 + xr * k);
+    vsy[i] = (int16_t)(122 - yc * k);
+    vsz[i] = (int16_t)zc;
   }
-  auto sx = [](int i) { return (int)(120 + mvx[i] * CAR_SCALE); };
-  auto sy2 = [](int i) { return (int)(128 - mvy[i] * CAR_SCALE); };
-  const float L[3] = {-0.42f, 0.63f, 0.65f};  // lumière (normée)
   int n = 0;
-  for (int t = 0; t < MODEL_NT; t++) {
+  for (int t = 0; t < MODEL_NT && n < MODEL_VIS_MAX; t++) {
     int a = model_t[t][0], b = model_t[t][1], c = model_t[t][2];
-    int32_t cross = (sx(b) - sx(a)) * (sy2(c) - sy2(a)) - (sy2(b) - sy2(a)) * (sx(c) - sx(a));
+    int32_t cross = (vsx[b] - vsx[a]) * (vsy[c] - vsy[a]) - (vsy[b] - vsy[a]) * (vsx[c] - vsx[a]);
     if (cross >= 0) continue;  // face arrière (y écran vers le bas : sens horaire = face avant)
-    float ux = mvx[b] - mvx[a], uy = mvy[b] - mvy[a], uz = mvz[b] - mvz[a];
-    float vx = mvx[c] - mvx[a], vy = mvy[c] - mvy[a], vz = mvz[c] - mvz[a];
-    float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
-    float len = sqrtf(nx * nx + ny * ny + nz * nz) + 1e-6f;
-    float d = (nx * L[0] + ny * L[1] + nz * L[2]) / len;
-    carTris[n++] = {(int16_t)((mvz[a] + mvz[b] + mvz[c]) / 3), (uint16_t)t, (uint8_t)(35 + 220 * (d > 0 ? d : 0))};
+    float nx = model_n[t][0], ny = model_n[t][1], nz = model_n[t][2];  // normale précalculée, tournée comme les sommets
+    float nxr = nx * cy + nz * sy, nzr = -nx * sy + nz * cy;
+    float nyc = ny * cp - nzr * sp, nzc = ny * sp + nzr * cp;
+    float d1 = (-0.55f * nxr + 0.65f * nyc + 0.52f * nzc) / 127, d2 = (0.8f * nxr + 0.6f * nzc) / 127;
+    float I = 0.06f + 0.82f * (d1 > 0 ? d1 : 0) + 0.22f * (d2 > 0 ? d2 : 0);
+    carTris[n++] = {(int16_t)(vsz[a] + vsz[b] + vsz[c]), (uint16_t)t, (uint8_t)(255 * (I < 1 ? I : 1))};
   }
   std::sort(carTris, carTris + n, [](const CarTri& p, const CarTri& q) { return p.z < q.z; });
   for (int k = 0; k < n; k++) {
     const uint16_t* f = model_t[carTris[k].i];
     uint8_t g = carTris[k].g;
-    canvas.fillTriangle(sx(f[0]), sy2(f[0]), sx(f[1]), sy2(f[1]), sx(f[2]), sy2(f[2]), canvas.color565(g, g, g));
+    canvas.fillTriangle(vsx[f[0]], vsy[f[0]], vsx[f[1]], vsy[f[1]], vsx[f[2]], vsy[f[2]], canvas.color565(g, g, g));
   }
-  canvas.setTextDatum(middle_center);
-  canvas.setFont(&fonts::efontJA_16);
-  canvas.setTextColor(0xAD55);
-  canvas.drawString("Nissan Micra K10 - 1982", 120, 38);
   return carSpin;
 }
 static float ledBriShown = 1;
@@ -662,9 +658,6 @@ static bool draw(float dt) {
     pushFrame();
     return true;  // spinner animé en continu
   }
-  // Indicateur de page (un point par page, en bas) : swipe vertical pour changer de page
-  for (int i = 0; i < PAGE_COUNT; i++)
-    canvas.fillCircle(c + (2 * i - (PAGE_COUNT - 1)) * 6, 212, 2, i == page ? TFT_WHITE : 0x4208);
   if (page == PAGE_CHRONO || page == PAGE_CAR || page == PAGE_SYS) {
     bool anim = page == PAGE_CHRONO ? drawChrono() : page == PAGE_CAR ? drawCar(dt) : drawSystem();
     pushFrame();

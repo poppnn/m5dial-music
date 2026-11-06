@@ -28,10 +28,11 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 - **Chrono** : afficheur 7 segments, centièmes, anneau trotteuse (1 tour par minute). Appui = départ / pause,
   swipe gauche ou droite = remise à zéro. Il continue de tourner quand on change de page.
 - **Micra** : la Nissan Micra K10 de 1982 en 3D, en niveaux de gris, qui tourne sur elle-même (rendu logiciel :
-  1 200 triangles, faces cachées éliminées, ombrage plat, tri du plus loin au plus proche).
+  3 000 triangles lissés, légère perspective, faces cachées éliminées, ombrage plat à deux lumières, tri du plus
+  loin au plus proche).
   Pour un autre modèle (STL, Z vers le haut) :
-  `pip install trimesh numpy scikit-image fast-simplification` puis `python tools/stl2model.py voiture.stl 1200`.
-  Le script reconstruit une enveloppe fermée (voxels), la réduit au nombre de triangles voulu et écrit `src/model.h`.
+  `pip install trimesh numpy scikit-image fast-simplification` puis `python tools/stl2model.py voiture.stl 3000`.
+  Le script reconstruit une enveloppe fermée (voxels), la lisse, la réduit au nombre de triangles voulu et écrit `src/model.h`.
 
 - **Système** : batterie (non mesurable sur le M5Dial : aucune mesure de tension n'est câblée), appareil Bluetooth
   connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
