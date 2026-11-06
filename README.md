@@ -86,4 +86,4 @@ pio run -t upload
 - L'ESP32-S3 n'a pas de Bluetooth Classic : A2DP/AVRCP sont impossibles, d'où AMS (BLE).
 - AMS ne transmet pas la pochette d'album : affichage titre + artiste à la place.
 - Android et Windows n'exposent pas les infos du morceau en BLE : il faudrait une app compagnon.
-- `ENC_STEPS_PER_DETENT` (main.cpp) est à ajuster si un cran de molette ne donne pas un pas de volume.
+- `ENC_STEPS_PER_DETENT` (main.cpp) = impulsions par cran de molette (2 sur ce M5Dial) ; à ajuster si un cran ne donne pas un pas.

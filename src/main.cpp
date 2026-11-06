@@ -38,8 +38,8 @@ enum : uint8_t { PLAYER_PLAYBACK_INFO = 1, PLAYER_VOLUME = 2 };
 enum : uint8_t { TRACK_ARTIST = 0, TRACK_TITLE = 2, TRACK_DURATION = 3 };
 enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6 };
 
-// Calibration matérielle : impulsions de l'encodeur par cran (4 sur le M5Dial testé par M5Stack).
-#define ENC_STEPS_PER_DETENT 4
+// Calibration matérielle : impulsions de l'encodeur par cran.
+#define ENC_STEPS_PER_DETENT 2  // mesuré : 2 impulsions par cran sur ce M5Dial (4 donnait 1 pas tous les 2 crans)
 #define SWIPE_MIN_PX         40
 
 // "Toujours droit" (IMU externe). Calibration : IMU_DIR = -1 si l'écran tourne dans le mauvais sens.
