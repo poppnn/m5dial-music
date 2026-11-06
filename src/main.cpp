@@ -196,6 +196,81 @@ static void startBle() {
   a->start();
 }
 
+// ---------- LED Govee H7090 : le M5Dial est client BLE de la barre LED ----------
+// Protocole Govee non officiel (rétro-ingénierie communautaire) : trames de 20 octets
+// 0x33 <cmd> <données...> 0x00... <XOR des 19 premiers octets>. Le H7090 n'a pas de variante connue.
+static const char* GOVEE_SVC = "00010203-0405-0607-0809-0a0b0c0d1910";
+static const char* GOVEE_WR  = "00010203-0405-0607-0809-0a0b0c0d2b11";
+
+struct LedColor { const char* name; uint8_t r, g, b; };
+static const LedColor LED_COLORS[] = {
+  {"Blanc", 255, 255, 255}, {"Rouge", 255, 0, 0},   {"Orange", 255, 90, 0},
+  {"Jaune", 255, 200, 0},   {"Vert", 0, 255, 40},   {"Cyan", 0, 220, 255},
+  {"Bleu", 0, 60, 255},     {"Violet", 150, 0, 255}, {"Rose", 255, 0, 140}};
+static const int LED_COLOR_COUNT = sizeof(LED_COLORS) / sizeof(LED_COLORS[0]);
+
+static NimBLEClient* goveeClient = nullptr;
+static NimBLERemoteCharacteristic* goveeWr = nullptr;
+static NimBLEAddress goveeAddr;
+static volatile bool goveeFound = false;
+static uint32_t goveeRetry = 0;
+static bool ledOn = true;  // état supposé : la barre ne renvoie pas son état
+static int ledColor = 0, ledBri = 255, ledBriSent = 255;
+
+class GoveeScanCB : public NimBLEScanCallbacks {
+  void onResult(const NimBLEAdvertisedDevice* d) override {
+    if (d->getName().find("H7090") == std::string::npos) return;  // nom annoncé : "ihoment_H7090_XXXX" / "Govee_H7090_XXXX"
+    goveeAddr = d->getAddress();
+    goveeFound = true;
+    NimBLEDevice::getScan()->stop();
+  }
+};
+
+static void goveeSend(std::initializer_list<uint8_t> payload) {
+  if (!goveeWr) return;
+  uint8_t p[20] = {0};
+  size_t i = 0;
+  for (uint8_t b : payload) p[i++] = b;
+  for (i = 0; i < 19; i++) p[19] ^= p[i];
+  goveeWr->writeValue(p, sizeof(p), false);
+}
+
+static void goveeSendColor() {
+  const LedColor& c = LED_COLORS[ledColor];
+  goveeSend({0x33, 0x05, 0x02, c.r, c.g, c.b});  // RVB "manuel" standard Govee
+  // shortcut: format RGBIC étendu envoyé aussi, ignoré par les modèles qui ne le gèrent pas ; garder le seul qui marche une fois testé sur le H7090.
+  goveeSend({0x33, 0x05, 0x15, 0x01, c.r, c.g, c.b, 0, 0, 0, 0, 0, 0xFF, 0x7F});
+}
+
+// Connexion / reconnexion. Ne scanne que sur la page LED, pour ne pas vider la batterie.
+static void goveeService(bool ledPage) {
+  if (goveeWr && goveeClient && goveeClient->isConnected()) {
+    if (ledBri != ledBriSent && millis() - goveeRetry > 60) {  // luminosité limitée à ~16 trames/s
+      goveeSend({0x33, 0x04, (uint8_t)ledBri});
+      ledBriSent = ledBri;
+      goveeRetry = millis();
+    }
+    return;
+  }
+  goveeWr = nullptr;
+  if (goveeFound) {
+    goveeFound = false;
+    if (!goveeClient) {
+      goveeClient = NimBLEDevice::createClient();
+      goveeClient->setConnectTimeout(3000);
+    }
+    if (goveeClient->connect(goveeAddr)) {
+      NimBLERemoteService* s = goveeClient->getService(GOVEE_SVC);
+      goveeWr = s ? s->getCharacteristic(GOVEE_WR) : nullptr;
+    }
+    goveeRetry = millis();
+    dirty = true;
+  } else if (ledPage && !NimBLEDevice::getScan()->isScanning() && millis() - goveeRetry > 8000) {
+    goveeRetry = millis();
+    NimBLEDevice::getScan()->start(4000, false);  // asynchrone : l'UI continue de tourner
+  }
+}
+
 // ---------- Affichage ----------
 static std::string fit(std::string s, int maxW) {  // tronque proprement en UTF-8 + "…"
   if (canvas.textWidth(s.c_str()) <= maxW) return s;
@@ -261,6 +336,41 @@ static float slideOffset(uint32_t now, bool& outPhase) {
   return 0;
 }
 
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED };
+static Page page = PAGE_MUSIC;
+static float ledBriShown = 1;
+
+// Page LED : anneau = luminosité dans la couleur choisie, pastille de couleur, nom qui glisse.
+static bool drawLedPage(float dt, float off) {
+  const int c = 120;
+  const LedColor& lc = LED_COLORS[ledColor];
+  float target = ledOn ? ledBri / 255.f : 0;
+  ledBriShown += (target - ledBriShown) * smoothK(dt, VOL_TAU_S);
+  uint16_t col = canvas.color565(lc.r, lc.g, lc.b);
+
+  canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
+  if (ledBriShown > 0.005f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, col);
+  canvas.fillCircle(c + (int)off, 92, 34, ledOn ? col : 0x2104);
+  canvas.setTextDatum(middle_center);
+  canvas.setFont(&fonts::efontJA_24);
+  canvas.setTextColor(TFT_WHITE);
+  canvas.drawString(lc.name, c + (int)off, 150);
+  canvas.setFont(&fonts::efontJA_16);
+  canvas.setTextColor(0xAD55);
+  const char* status = !goveeWr ? "Recherche H7090..." : ledOn ? "LED allumées" : "LED éteintes";
+  canvas.drawString(status, c, 182);
+  return fabsf(target - ledBriShown) > 0.004f;
+}
+
+static void pushFrame() {
+  // Frame complète composée hors écran, puis envoyée en une seule transaction SPI.
+  // Rotation : la frame est tournée pixel par pixel pendant l'envoi, sans 2e buffer de 115 Ko.
+  M5Dial.Display.startWrite();
+  if (fabsf(rot) < 0.5f) canvas.pushSprite(0, 0);
+  else canvas.pushRotateZoom(&M5Dial.Display, 120, 120, rot, 1.f, 1.f);
+  M5Dial.Display.endWrite();
+}
+
 // Rend une frame. Retourne true tant qu'une animation est en cours (-> FPS élevé).
 static bool draw(float dt) {
   Media m;
@@ -281,6 +391,14 @@ static bool draw(float dt) {
 
   const int c = 120;
   canvas.fillScreen(TFT_BLACK);
+  // Indicateur de page (2 points en bas) : swipe vertical pour changer de page
+  canvas.fillCircle(c - 6, 212, 2, page == PAGE_MUSIC ? TFT_WHITE : 0x4208);
+  canvas.fillCircle(c + 6, 212, 2, page == PAGE_LED ? TFT_WHITE : 0x4208);
+  if (page == PAGE_LED) {
+    bool anim = drawLedPage(dt, off);
+    pushFrame();
+    return anim || slideDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
+  }
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
   if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
 
@@ -327,13 +445,7 @@ static bool draw(float dt) {
     canvas.drawString(mmss(el) + " / " + mmss(m.duration), c, 178);
   }
 
-  // Frame complète composée hors écran, puis envoyée en une seule transaction SPI.
-  // Rotation : la frame est tournée pixel par pixel pendant l'envoi, sans 2e buffer de 115 Ko.
-  M5Dial.Display.startWrite();
-  if (fabsf(rot) < 0.5f) canvas.pushSprite(0, 0);
-  else canvas.pushRotateZoom(&M5Dial.Display, c, c, rot, 1.f, 1.f);
-  M5Dial.Display.endWrite();
-
+  pushFrame();
   return slideDir || volVisible || fabsf(wrap180(targetRot - rot)) > 0.3f || fabsf(arcTarget - arcShown) > 0.004f;
 }
 
@@ -357,6 +469,9 @@ void setup() {
   canvas.setColorDepth(16);
   canvas.createSprite(240, 240);  // ~115 Ko en RAM interne, double buffer sans scintillement
   startBle();
+  NimBLEScan* scan = NimBLEDevice::getScan();
+  scan->setScanCallbacks(new GoveeScanCB());
+  scan->setActiveScan(true);  // le nom "..._H7090_..." est souvent dans la réponse au scan
 }
 
 void loop() {
@@ -370,15 +485,31 @@ void loop() {
   updateImu(dt);
   rot = wrap180(rot + wrap180(targetRot - rot) * smoothK(dt, ROT_TAU_S));  // par le chemin le plus court
 
-  // Encodeur -> volume (accumule les impulsions jusqu'à un cran complet)
+  goveeService(page == PAGE_LED);
+
+  // Encodeur (accumule les impulsions jusqu'à un cran complet) : volume, ou luminosité sur la page LED
   static long encLast = M5Dial.Encoder.read();
   long enc = M5Dial.Encoder.read();
-  while (enc - encLast >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_UP);   encLast += ENC_STEPS_PER_DETENT; volPing = true; }
-  while (encLast - enc >= ENC_STEPS_PER_DETENT) { sendCmd(CMD_VOL_DOWN); encLast -= ENC_STEPS_PER_DETENT; volPing = true; }
+  int detents = 0;
+  while (enc - encLast >= ENC_STEPS_PER_DETENT) { detents++; encLast += ENC_STEPS_PER_DETENT; }
+  while (encLast - enc >= ENC_STEPS_PER_DETENT) { detents--; encLast -= ENC_STEPS_PER_DETENT; }
+  if (page == PAGE_LED) {
+    if (detents) ledBri = constrain(ledBri + detents * 13, 5, 255);  // ~5 % par cran
+  } else {
+    for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
+    if (detents) volPing = true;
+  }
   if (volPing) { volPing = false; volUntil = millis() + VOL_SHOW_MS; }
 
   auto t = M5Dial.Touch.getDetail();
-  if (M5Dial.BtnA.wasClicked() || t.wasClicked()) sendCmd(CMD_TOGGLE);  // au relâcher, pour distinguer l'appui long
+  if (M5Dial.BtnA.wasClicked() || t.wasClicked()) {  // au relâcher, pour distinguer l'appui long
+    if (page == PAGE_LED) {
+      ledOn = !ledOn;
+      goveeSend({0x33, 0x01, (uint8_t)ledOn});
+    } else {
+      sendCmd(CMD_TOGGLE);
+    }
+  }
 
   // Appui long : coupe l'alimentation batterie (relâche le maintien GPIO46).
   // Sur USB, le courant reste : le M5Dial passe en veille profonde, débrancher/rebrancher pour relancer.
@@ -396,8 +527,22 @@ void loop() {
     // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
     float r = rot * DEG_TO_RAD;
     float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
-    if (dx > SWIPE_MIN_PX) { sendCmd(CMD_NEXT); startSlide(+1, false); }
-    else if (dx < -SWIPE_MIN_PX) { sendCmd(CMD_PREV); startSlide(-1, false); }
+    float dy = -sinf(r) * t.distanceX() + cosf(r) * t.distanceY();
+    if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) {  // vertical : change de page
+      page = page == PAGE_MUSIC ? PAGE_LED : PAGE_MUSIC;
+      goveeRetry = 0;  // cherche les LED tout de suite
+    } else if (fabsf(dx) > SWIPE_MIN_PX) {
+      int dir = dx > 0 ? +1 : -1;
+      if (page == PAGE_LED) {
+        ledColor = (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
+        ledOn = true;
+        goveeSendColor();
+      } else {
+        sendCmd(dir > 0 ? CMD_NEXT : CMD_PREV);
+      }
+      startSlide(dir, false);
+    }
+    dirty = true;
   }
   if (titleChanged) {  // piste changée depuis l'iPhone : le nouveau titre entre par la droite
     titleChanged = false;

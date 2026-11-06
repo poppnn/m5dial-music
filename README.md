@@ -13,6 +13,12 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
 
+## LED Govee H7090
+
+Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protocole Govee non officiel) :
+molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 couleurs).
+L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
+
 ## Interface
 
 - Animations avec easing : l'arc de progression et l'anneau de volume se remplissent en douceur, et le titre glisse lors d'un swipe ou d'un changement de piste.
