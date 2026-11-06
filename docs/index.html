@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M5Dial Music</title>
+<script type="module" src="https://unpkg.com/esp-web-tools@10.1.0/dist/web/install-button.js?module"></script>
+<style>
+  :root { --bg:#f6f5f2; --fg:#1c1c1e; --muted:#6b6b70; --card:#ffffff; --line:#e3e1dc; --accent:#e8590c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#121214; --fg:#f2f2f4; --muted:#a0a0a8; --card:#1c1c1f; --line:#2c2c30; --accent:#ff7a2e; } }
+  :root[data-theme="dark"] { --bg:#121214; --fg:#f2f2f4; --muted:#a0a0a8; --card:#1c1c1f; --line:#2c2c30; --accent:#ff7a2e; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:48px 16px; }
+  .dial { width:120px; height:120px; border-radius:50%; margin:0 0 24px; background:#000;
+          border:8px solid var(--line); border-top-color:var(--accent); border-right-color:var(--accent);
+          display:grid; place-items:center; color:#fff; font-size:13px; text-align:center; }
+  h1 { margin:0 0 8px; font-size:28px; letter-spacing:-0.01em; }
+  p.lead { margin:0 0 28px; color:var(--muted); }
+  section { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px; }
+  h2 { margin:0 0 10px; font-size:17px; }
+  ol, ul { margin:0; padding-left:20px; }
+  li + li { margin-top:6px; }
+  esp-web-install-button button[slot="activate"] { font:inherit; font-weight:600; background:var(--accent); color:#fff;
+          border:0; border-radius:10px; padding:12px 20px; min-height:44px; cursor:pointer; }
+  esp-web-install-button button[slot="activate"]:focus-visible { outline:3px solid var(--fg); outline-offset:2px; }
+  .muted { color:var(--muted); font-size:14px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <div class="dial" aria-hidden="true">♪</div>
+  <h1>M5Dial Music</h1>
+  <p class="lead">Télécommande Apple Music pour iPhone en Bluetooth (BLE / Apple Media Service), avec le titre, l'artiste et un arc de progression.</p>
+
+  <section>
+    <h2>1. Installer le firmware</h2>
+    <p>Branche le M5Dial en USB-C, puis clique sur le bouton et choisis son port série.</p>
+    <esp-web-install-button manifest="manifest.json">
+      <button slot="activate">Installer sur le M5Dial</button>
+      <span slot="unsupported">Ton navigateur ne gère pas Web Serial : utilise Chrome ou Edge sur ordinateur.</span>
+      <span slot="not-allowed">La page doit être ouverte en HTTPS.</span>
+    </esp-web-install-button>
+    <p class="muted">Port absent ? Débranche le M5Dial, maintiens le bouton BOOT (G0) de la StampS3, puis rebranche-le.</p>
+  </section>
+
+  <section>
+    <h2>2. Appairer l'iPhone</h2>
+    <ol>
+      <li>iPhone → Réglages → Bluetooth → <strong>M5Dial Music</strong>, puis accepte l'appairage.</li>
+      <li>S'il n'apparaît pas, connecte-le une première fois avec l'app gratuite nRF Connect.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>3. Commandes</h2>
+    <ul>
+      <li>Tourner la molette : volume − / +</li>
+      <li>Appuyer sur la molette ou taper sur l'écran : lecture / pause</li>
+      <li>Glisser vers la droite / la gauche : piste suivante / précédente</li>
+    </ul>
+  </section>
+
+  <p class="muted">Code source : <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
+</main>
+</body>
+</html>
