@@ -13,17 +13,20 @@
  * Android / Windows n'ont pas d'AMS : le M5Dial est aussi une télécommande BLE HID (touches
  * multimédia standard), reconnue nativement. Commandes seules, sans métadonnées.
  *
- *   Encodeur  gauche/droite : volume -/+
- *   Bouton central / tap    : play/pause
+ * 4 pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Micra (3D).
+ *   Encodeur  gauche/droite : volume -/+ (LED : luminosité, Micra : tourne la voiture)
+ *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause, Micra : rotation auto)
  *   Bouton central 2 s      : extinction (sur batterie)
- *   Swipe gauche / droite   : piste suivante / précédente
+ *   Swipe gauche / droite   : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
  */
 #include <M5Dial.h>
 #include <NimBLEDevice.h>
 #include <NimBLEHIDDevice.h>
 #include <mutex>
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
+#include <algorithm>
 #include "logo.h"
+#include "model.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -407,8 +410,95 @@ static void drawBoot(uint32_t now) {
   canvas.drawString("M5Dial Music", c, 206);  // nom à choisir dans les réglages Bluetooth
 }
 
-enum Page : uint8_t { PAGE_MUSIC, PAGE_LED };
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CAR, PAGE_COUNT };
 static Page page = PAGE_MUSIC;
+
+// ---------- Page Chrono ----------
+static bool chronoRun = false;
+static uint32_t chronoStart = 0, chronoAcc = 0;  // temps cumulé des segments terminés (ms)
+
+static uint32_t chronoMs() { return chronoAcc + (chronoRun ? millis() - chronoStart : 0); }
+
+static void chronoToggle() {
+  if (chronoRun) chronoAcc += millis() - chronoStart;
+  else chronoStart = millis();
+  chronoRun = !chronoRun;
+}
+
+// Grand afficheur 7 segments, anneau = trotteuse (1 tour par minute), centièmes en dessous.
+static bool drawChrono() {
+  const int c = 120;
+  uint32_t ms = chronoMs(), s = ms / 1000;
+  canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
+  float sweep = (ms % 60000) / 60000.f;
+  if (sweep > 0.001f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * sweep, chronoRun ? 0xFA20 : TFT_WHITE);
+  char b[16];
+  if (s >= 3600) snprintf(b, sizeof(b), "%u:%02u:%02u", (unsigned)(s / 3600), (unsigned)(s / 60 % 60), (unsigned)(s % 60));
+  else snprintf(b, sizeof(b), "%02u:%02u", (unsigned)(s / 60), (unsigned)(s % 60));
+  canvas.setTextDatum(middle_center);
+  canvas.setFont(&fonts::Font7);
+  canvas.setTextSize(s >= 3600 ? 0.62f : 1.f);
+  canvas.setTextColor(TFT_WHITE);
+  canvas.drawString(b, c, 108);
+  canvas.setTextSize(1);
+  snprintf(b, sizeof(b), ".%02u", (unsigned)(ms / 10 % 100));
+  canvas.setFont(&fonts::efontJA_24);
+  canvas.drawString(b, c, 152);
+  canvas.setFont(&fonts::efontJA_16);
+  canvas.setTextColor(0xAD55);
+  canvas.drawString(chronoRun ? "Appui : pause" : ms ? "Glisser : remise à zéro" : "Appui : départ", c, 186);
+  return chronoRun;
+}
+
+// ---------- Page Micra : maillage 3D (model.h) qui tourne sur lui-même ----------
+// Rendu logiciel : projection orthographique, faces arrière éliminées, ombrage plat en niveaux de gris
+// (lumière fixe côté caméra), tri du plus loin au plus proche (algorithme du peintre).
+#define CAR_SPEED   0.7f    // rad/s
+#define CAR_PITCH   0.31f   // caméra un peu au-dessus (18°)
+#define CAR_SCALE   0.095f  // px par unité de model.h ([-1000, 1000])
+static float carYaw = 0.5f;
+static bool carSpin = true;
+static float mvx[MODEL_NV], mvy[MODEL_NV], mvz[MODEL_NV];  // sommets dans le repère caméra
+struct CarTri { int16_t z; uint16_t i; uint8_t g; };
+static CarTri carTris[MODEL_NT];
+
+static bool drawCar(float dt) {
+  if (carSpin) carYaw = fmodf(carYaw + dt * CAR_SPEED, 2 * PI);
+  const float cy = cosf(carYaw), sy = sinf(carYaw), cp = cosf(CAR_PITCH), sp = sinf(CAR_PITCH);
+  for (int i = 0; i < MODEL_NV; i++) {
+    float x = model_v[i][0], y = model_v[i][1], z = model_v[i][2];
+    float xr = x * cy + z * sy, zr = -x * sy + z * cy;
+    mvx[i] = xr;
+    mvy[i] = y * cp - zr * sp;
+    mvz[i] = y * sp + zr * cp;
+  }
+  auto sx = [](int i) { return (int)(120 + mvx[i] * CAR_SCALE); };
+  auto sy2 = [](int i) { return (int)(128 - mvy[i] * CAR_SCALE); };
+  const float L[3] = {-0.42f, 0.63f, 0.65f};  // lumière (normée)
+  int n = 0;
+  for (int t = 0; t < MODEL_NT; t++) {
+    int a = model_t[t][0], b = model_t[t][1], c = model_t[t][2];
+    int32_t cross = (sx(b) - sx(a)) * (sy2(c) - sy2(a)) - (sy2(b) - sy2(a)) * (sx(c) - sx(a));
+    if (cross >= 0) continue;  // face arrière (y écran vers le bas : sens horaire = face avant)
+    float ux = mvx[b] - mvx[a], uy = mvy[b] - mvy[a], uz = mvz[b] - mvz[a];
+    float vx = mvx[c] - mvx[a], vy = mvy[c] - mvy[a], vz = mvz[c] - mvz[a];
+    float nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    float len = sqrtf(nx * nx + ny * ny + nz * nz) + 1e-6f;
+    float d = (nx * L[0] + ny * L[1] + nz * L[2]) / len;
+    carTris[n++] = {(int16_t)((mvz[a] + mvz[b] + mvz[c]) / 3), (uint16_t)t, (uint8_t)(35 + 220 * (d > 0 ? d : 0))};
+  }
+  std::sort(carTris, carTris + n, [](const CarTri& p, const CarTri& q) { return p.z < q.z; });
+  for (int k = 0; k < n; k++) {
+    const uint16_t* f = model_t[carTris[k].i];
+    uint8_t g = carTris[k].g;
+    canvas.fillTriangle(sx(f[0]), sy2(f[0]), sx(f[1]), sy2(f[1]), sx(f[2]), sy2(f[2]), canvas.color565(g, g, g));
+  }
+  canvas.setTextDatum(middle_center);
+  canvas.setFont(&fonts::efontJA_16);
+  canvas.setTextColor(0xAD55);
+  canvas.drawString("Nissan Micra K10 - 1982", 120, 38);
+  return carSpin;
+}
 static float ledBriShown = 1;
 
 // Page LED : anneau = luminosité, en fondu vers la nouvelle couleur ; la pastille et le nom de l'ancienne
@@ -466,7 +556,7 @@ static float pageOffset(uint32_t now) {
   if (t < PAGE_OUT_MS) return pageDir * 240.f * easeInCubic(t / (float)PAGE_OUT_MS);
   if (!pageFlipped) {
     pageFlipped = true;
-    page = page == PAGE_MUSIC ? PAGE_LED : PAGE_MUSIC;
+    page = (Page)((page + (pageDir < 0 ? 1 : PAGE_COUNT - 1)) % PAGE_COUNT);  // vers le haut = page suivante
     goveeRetry = 0;  // cherche les LED tout de suite
   }
   if (t < PAGE_OUT_MS + PAGE_IN_MS)
@@ -531,9 +621,14 @@ static bool draw(float dt) {
     pushFrame();
     return true;  // spinner animé en continu
   }
-  // Indicateur de page (2 points en bas) : swipe vertical pour changer de page
-  canvas.fillCircle(c - 6, 212, 2, page == PAGE_MUSIC ? TFT_WHITE : 0x4208);
-  canvas.fillCircle(c + 6, 212, 2, page == PAGE_LED ? TFT_WHITE : 0x4208);
+  // Indicateur de page (un point par page, en bas) : swipe vertical pour changer de page
+  for (int i = 0; i < PAGE_COUNT; i++)
+    canvas.fillCircle(c + (2 * i - (PAGE_COUNT - 1)) * 6, 212, 2, i == page ? TFT_WHITE : 0x4208);
+  if (page == PAGE_CHRONO || page == PAGE_CAR) {
+    bool anim = page == PAGE_CHRONO ? drawChrono() : drawCar(dt);
+    pushFrame();
+    return anim || dimming || fadeStart || pageDir || fabsf(wrap180(targetRot - rot)) > 0.3f;
+  }
   if (page == PAGE_LED) {
     bool anim = drawLedPage(dt, off, outPhase);
     pushFrame();
@@ -664,7 +759,9 @@ void loop() {
     // écran de démarrage : commandes ignorées (seul l'appui long d'extinction reste actif)
   } else if (page == PAGE_LED) {
     if (detents) ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
-  } else {
+  } else if (page == PAGE_CAR) {
+    if (detents) { carYaw += detents * 15 * DEG_TO_RAD; dirty = true; }  // tourner la voiture à la main
+  } else {  // Musique et Chrono : volume
     for (int i = 0; i < abs(detents); i++) sendCmd(detents > 0 ? CMD_VOL_UP : CMD_VOL_DOWN);
     if (detents) volPing = true;
   }
@@ -683,9 +780,14 @@ void loop() {
     if (page == PAGE_LED) {
       ledOn = !ledOn;
       goveeSend({0x33, 0x01, (uint8_t)ledOn});
+    } else if (page == PAGE_CHRONO) {
+      chronoToggle();
+    } else if (page == PAGE_CAR) {
+      carSpin = !carSpin;
     } else {
       sendCmd(CMD_TOGGLE);
     }
+    dirty = true;
   }
 
   if (M5Dial.BtnA.wasHold()) shutdown("Arrêt...");  // appui long 2 s
@@ -702,10 +804,14 @@ void loop() {
         ledColor = (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
         ledOn = true;
         goveeSendColor();
-      } else {
+        startSlide(dir, false);
+      } else if (page == PAGE_CHRONO) {
+        chronoRun = false;  // remise à zéro
+        chronoAcc = 0;
+      } else if (page == PAGE_MUSIC) {
         sendCmd(dir < 0 ? CMD_NEXT : CMD_PREV);  // vers la gauche = suivante (comme un carrousel)
+        startSlide(dir, false);
       }
-      startSlide(dir, false);
     }
     dirty = true;
   }
