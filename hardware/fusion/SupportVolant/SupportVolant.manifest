@@ -1,0 +1,10 @@
+{
+	"autodeskProduct": "Fusion360",
+	"type": "script",
+	"author": "m5dial-music",
+	"description": {
+		"": "Support M5Dial pour volant GT2i Race 350 mm"
+	},
+	"supportedOS": "windows|mac",
+	"editEnabled": true
+}

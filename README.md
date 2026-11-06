@@ -50,6 +50,9 @@ ovales intérieurs : vis M5 × 20 passée de l'avant, rondelle, écrou nylstop d
 - Les cotes viennent d'une photo : mesure d'abord les valeurs `MESURER` de [`support_volant.py`](hardware/support_volant.py)
   (position des trous, centre du M5Dial, pente des branches), puis régénère le STL :
   `pip install manifold3d trimesh` puis `python hardware/support_volant.py`.
+- Version Fusion 360 : [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilitaires › Compléments › Scripts ›
+  « + » › choisir ce dossier › Exécuter. Les cotes deviennent des paramètres utilisateur (Modifier › Changer les paramètres) :
+  modifie-les puis relance le script, il remplace le composant.
 - Imprimer en PETG ou ASA (le PLA se déforme au soleil dans une voiture), 4 périmètres, 40 % de remplissage, supports activés.
 - Le M5Dial tient par serrage (nervures) ; un adhésif double face au fond le fige. Avec l'IMU sur le Port A,
   l'écran reste droit quand le volant tourne.
