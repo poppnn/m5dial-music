@@ -6,8 +6,9 @@
  * d'iOS : commandes (play/pause, piste +/-, volume +/-) ET métadonnées (titre, artiste,
  * durée, temps écoulé), sans app tierce. Il ne fournit pas la pochette -> fallback titre/artiste.
  *
- * Rendu : sprite 240x240 hors écran (M5GFX), animations à easing, et rotation "toujours droit"
- * via une IMU EXTERNE sur le Port A (le M5Dial n'en a pas d'intégrée). Sans IMU : pas de rotation.
+ * Rendu : l'UI est composée dans un sprite 240x240, puis tournée ("toujours droit", IMU EXTERNE
+ * sur le Port A, le M5Dial n'en a pas d'intégrée) bande par bande dans 2 petits buffers envoyés
+ * en DMA. Tous les buffers sont en SRAM interne (MALLOC_CAP_DMA) : la StampS3 n'a pas de PSRAM.
  *
  * Android / Windows n'ont pas d'AMS : le M5Dial est aussi une télécommande BLE HID (touches
  * multimédia standard), reconnue nativement. Commandes seules, sans métadonnées.
@@ -21,6 +22,7 @@
 #include <NimBLEDevice.h>
 #include <NimBLEHIDDevice.h>
 #include <mutex>
+#include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -74,7 +76,10 @@ static const uint8_t hidReportMap[] = {
   0x09, 0xCD, 0x09, 0xB5, 0x09, 0xB6, 0x09, 0xE9, 0x09, 0xEA,  // Play/Pause, Next, Prev, Vol+, Vol-
   0x81, 0x02, 0x95, 0x03, 0x81, 0x01, 0xC0};
 
-static M5Canvas canvas(&M5Dial.Display);
+static M5Canvas canvas(&M5Dial.Display);  // UI dans le repère "droit"
+// 2 bandes de sortie (ping-pong) : le CPU tourne la bande N pendant que le DMA envoie la bande N-1.
+#define BAND_H 40  // 240x40x2 = 19,2 Ko par bande, 6 bandes par image
+static M5Canvas band[2] = {M5Canvas(&M5Dial.Display), M5Canvas(&M5Dial.Display)};
 
 // PlaybackInfo AMS = "state,rate,elapsed" (state: 0 pause, 1 lecture, 2/3 avance/recul)
 static bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& elapsed) {
@@ -362,13 +367,20 @@ static bool drawLedPage(float dt, float off) {
   return fabsf(target - ledBriShown) > 0.004f;
 }
 
+// Envoie la frame : rendu de la bande k dans band[k&1] pendant que le DMA envoie band[(k-1)&1].
+// La transaction SPI reste ouverte (startWrite dans setup) : pushImageDMA rend la main tout de suite,
+// et le dernier transfert se termine pendant que loop() lit l'encodeur et compose la frame suivante.
 static void pushFrame() {
-  // Frame complète composée hors écran, puis envoyée en une seule transaction SPI.
-  // Rotation : la frame est tournée pixel par pixel pendant l'envoi, sans 2e buffer de 115 Ko.
-  M5Dial.Display.startWrite();
-  if (fabsf(rot) < 0.5f) canvas.pushSprite(0, 0);
-  else canvas.pushRotateZoom(&M5Dial.Display, 120, 120, rot, 1.f, 1.f);
-  M5Dial.Display.endWrite();
+  auto& d = M5Dial.Display;
+  const uint16_t* src = (const uint16_t*)canvas.getBuffer();
+  for (int k = 0; k < 240 / BAND_H; k++) {
+    M5Canvas& b = band[k & 1];  // ce buffer a fini d'être envoyé : waitDMA() a précédé la bande k-1
+    int y = k * BAND_H;
+    if (fabsf(rot) < 0.5f) memcpy(b.getBuffer(), src + y * 240, 240 * BAND_H * 2);
+    else canvas.pushRotateZoom(&b, 120, 120 - y, rot, 1.f, 1.f);  // coins hors du disque : invisibles sur l'écran rond
+    d.waitDMA();
+    d.pushImageDMA(0, y, 240, BAND_H, (const lgfx::swap565_t*)b.getBuffer());  // format natif du panneau : 0 conversion
+  }
 }
 
 // Rend une frame. Retourne true tant qu'une animation est en cours (-> FPS élevé).
@@ -466,8 +478,20 @@ void setup() {
   imuOk = M5.Imu.isEnabled() && M5.Imu.update() && M5.Imu.getAccel(&gx, &gy, &az);
   if (imuOk) refAngle = rawAngle();
 
+  // Buffers d'affichage alloués AVANT le BLE (blocs contigus) en SRAM interne : setPsram(false)
+  // => M5GFX utilise heap_caps_malloc(MALLOC_CAP_DMA). Total 115 + 2x19 = ~154 Ko.
+  canvas.setPsram(false);
   canvas.setColorDepth(16);
-  canvas.createSprite(240, 240);  // ~115 Ko en RAM interne, double buffer sans scintillement
+  bool ok = canvas.createSprite(240, 240);
+  for (auto& b : band) {
+    b.setPsram(false);
+    b.setColorDepth(16);
+    ok = ok && b.createSprite(240, BAND_H);
+  }
+  assert(ok && esp_ptr_dma_capable(canvas.getBuffer()) && esp_ptr_dma_capable(band[1].getBuffer()));
+  Serial.printf("Affichage : SRAM DMA libre %u o (plus grand bloc %u o)\n",
+                heap_caps_get_free_size(MALLOC_CAP_DMA), heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+  M5Dial.Display.startWrite();  // bus SPI gardé : les transferts DMA ne bloquent plus loop()
   startBle();
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setScanCallbacks(new GoveeScanCB());
@@ -518,7 +542,8 @@ void loop() {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Arrêt...", 120, 120);
-    canvas.pushRotateZoom(&M5Dial.Display, 120, 120, rot, 1.f, 1.f);
+    pushFrame();
+    M5Dial.Display.endWrite();  // attend la fin du DMA et libère le bus
     delay(800);
     M5Dial.Display.sleep();
     M5Dial.Power.powerOff();
