@@ -1,8 +1,9 @@
 #include <Preferences.h>
 #include "settings.h"
 #include "config.h"
+#include "clock.h"
 
-Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, false};
+Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7};
 static Preferences prefs;
 
 void settingsLoad() {
@@ -13,7 +14,9 @@ void settingsLoad() {
   settings.sleepAfterMin = prefs.getUShort("sleepM", settings.sleepAfterMin);
   settings.briDay = constrain(prefs.getUChar("briD", settings.briDay), 5, 100);
   settings.briNight = constrain(prefs.getUChar("briN", settings.briNight), 5, 100);
-  settings.night = prefs.getBool("night", settings.night);
+  settings.briMode = min<uint8_t>(prefs.getUChar("briMode", settings.briMode), 2);
+  settings.nightFrom = prefs.getUChar("nightFrom", settings.nightFrom) % 24;
+  settings.nightTo = prefs.getUChar("nightTo", settings.nightTo) % 24;
 }
 
 void settingsSave() {
@@ -23,10 +26,26 @@ void settingsSave() {
   prefs.putUShort("sleepM", settings.sleepAfterMin);
   prefs.putUChar("briD", settings.briDay);
   prefs.putUChar("briN", settings.briNight);
-  prefs.putBool("night", settings.night);
+  prefs.putUChar("briMode", settings.briMode);
+  prefs.putUChar("nightFrom", settings.nightFrom);
+  prefs.putUChar("nightTo", settings.nightTo);
 }
 
-uint8_t settingsBacklight() { return (settings.night ? settings.briNight : settings.briDay) * 255 / 100; }
+// Plage de nuit qui peut passer minuit (21 h -> 7 h) ou non (1 h -> 5 h).
+static bool inNight(int h, int from, int to) { return from > to ? h >= from || h < to : h >= from && h < to; }
+
+bool settingsNight() {
+  if (settings.briMode != 2) return settings.briMode == 1;
+  tm t;
+  return clockNow(t) && inNight(t.tm_hour, settings.nightFrom, settings.nightTo);  // heure inconnue : jour
+}
+
+uint8_t settingsBacklight() { return (settingsNight() ? settings.briNight : settings.briDay) * 255 / 100; }
+
+void settingsSelfTest() {
+  assert(inNight(23, 21, 7) && inNight(3, 21, 7) && !inNight(12, 21, 7) && !inNight(7, 21, 7));
+  assert(inNight(2, 1, 5) && !inNight(6, 1, 5));
+}
 
 // Clé NVS (15 caractères max) : "n" + adresse sans les ":" = 13 caractères.
 static String bondKey(const std::string& addr) {

@@ -5,7 +5,7 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - **iPhone** : service natif **Apple Media Service (AMS)** → commandes + titre, artiste, progression.
 - **Android / Windows** : télécommande **BLE HID** (touches multimédia standard) → commandes seules.
 
-5 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Système**, **Réglages**.
+6 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Horloge**, **Système**, **Réglages**.
 
 - Molette : volume − / + (LED : luminosité)
 - Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause)
@@ -13,7 +13,10 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - Économie de batterie : écran atténué après 20 s sans geste (le moindre geste le rallume), extinction automatique
   après 10 min sans appareil Bluetooth connecté ; le bouton WAKE le rallume. Les deux délais se règlent.
 - Swipe gauche / droite : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
-- Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire
+- Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire, heure
+- iPhone : icônes **aléatoire** et **répétition** en bas (orange = actif, « 1 » = répéter le morceau) : un tap
+  dessus les change. **Double tap** ailleurs = « J'aime » (un cœur s'affiche). Le tap simple (lecture / pause)
+  part après 0,3 s, le temps de voir si un second tap arrive ; l'appui sur la molette reste immédiat.
 
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
 Ou télécharger les binaires d'une version dans [Releases](https://github.com/poppnn/m5dial-music/releases).
@@ -36,10 +39,12 @@ Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protoc
 molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 couleurs).
 L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 
-## Chrono, Système et Réglages
+## Chrono, Horloge, Système et Réglages
 
 - **Chrono** : afficheur 7 segments, centièmes, anneau trotteuse (1 tour par minute). Appui = départ / pause,
   swipe gauche ou droite = remise à zéro. Il continue de tourner quand on change de page.
+- **Horloge** : heure et date de l'iPhone (Current Time Service), anneau des secondes. Le RTC du M5Dial garde
+  l'heure déconnecté et éteint ; elle est remise à l'heure à chaque connexion (et au passage à l'heure d'été).
 - **Système** : cause du dernier démarrage (normal, plantage, blocage, tension basse), appareil Bluetooth
   connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
   RAM libre, durée depuis l'allumage. Le niveau de batterie n'est pas mesurable : le M5Dial n'a aucune mesure de
@@ -47,7 +52,9 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 - **Réglages** (enregistrés dans la mémoire du M5Dial, gardés à l'extinction et aux mises à jour) : molette =
   choisir une ligne, appui = modifier (molette = valeur, appliquée tout de suite), appui = terminer.
   - Sens IMU (normal / inversé), impulsions par cran de molette (1 à 4), délai d'atténuation (jamais à 120 s),
-    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit, mode jour / nuit.
+    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit.
+  - Luminosité : jour, nuit ou **auto** (nuit entre « Nuit dès » et « Nuit jusqu'à », 21 h -> 7 h par défaut,
+    selon l'heure de l'iPhone ; heure inconnue = jour).
   - Appareils appairés (nom lu à la connexion) : « Oublier » un appareil, ou « Tout effacer ». Premier appui =
     « confirmer ? », second appui = action ; tourner la molette annule. L'appareil oublié doit aussi oublier
     « M5Dial Music » dans ses réglages Bluetooth avant de se réappairer.

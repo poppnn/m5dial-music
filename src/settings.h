@@ -9,12 +9,15 @@ struct Settings {
   uint16_t dimAfterS;      // atténuation de l'écran sans geste (s, 0 = jamais)
   uint16_t sleepAfterMin;  // extinction sans appareil connecté (min, 0 = jamais)
   uint8_t briDay, briNight;  // luminosité de l'écran (%)
-  bool night;              // luminosité de nuit active
+  uint8_t briMode;         // 0 jour, 1 nuit, 2 auto (nuit entre nightFrom et nightTo, heure de l'iPhone)
+  uint8_t nightFrom, nightTo;  // heures
 };
 extern Settings settings;
 
 void settingsLoad();
 void settingsSave();
+void settingsSelfTest();
+bool settingsNight();         // luminosité de nuit en ce moment
 uint8_t settingsBacklight();  // luminosité de base de l'écran, 0..255 (jour ou nuit)
 
 // Nom des appareils appairés (NimBLE ne garde que leur adresse) : mémorisé à la connexion.

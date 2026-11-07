@@ -3,8 +3,8 @@
 #include "../display.h"
 #include "../logo.h"
 
-extern const PageOps musicPage, ledPage, chronoPage, systemPage, settingsPage;
-const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &systemPage, &settingsPage};
+extern const PageOps musicPage, ledPage, chronoPage, clockPage, systemPage, settingsPage;
+const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &clockPage, &systemPage, &settingsPage};
 
 // Logo centré + arc qui tourne sur le bord de l'écran + texte discret.
 void drawBoot(uint32_t now) {

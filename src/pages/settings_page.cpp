@@ -6,7 +6,7 @@
 #include "../imu.h"
 #include "../settings.h"
 
-enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_VALUES };  // puis les appareils
+enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_VALUES };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
 static const uint16_t SLEEP_OPTS[] = {0, 5, 10, 20, 30, 60};   // min
@@ -26,7 +26,9 @@ static int nearest(const T* opts, int n, int v) {  // index de l'option la plus 
 
 static int optCount(int it) {
   switch (it) {
-    case IT_IMU: case IT_MODE: return 2;
+    case IT_IMU: return 2;
+    case IT_MODE: return 3;
+    case IT_NIGHT_FROM: case IT_NIGHT_TO: return 24;
     case IT_ENC: return 4;
     case IT_DIM: return COUNT(DIM_OPTS);
     case IT_SLEEP: return COUNT(SLEEP_OPTS);
@@ -38,7 +40,9 @@ static int optCount(int it) {
 static int optIndex(int it) {
   switch (it) {
     case IT_IMU: return settings.imuDir < 0;
-    case IT_MODE: return settings.night;
+    case IT_MODE: return settings.briMode;
+    case IT_NIGHT_FROM: return settings.nightFrom;
+    case IT_NIGHT_TO: return settings.nightTo;
     case IT_ENC: return settings.encSteps - 1;
     case IT_DIM: return nearest(DIM_OPTS, COUNT(DIM_OPTS), settings.dimAfterS);
     case IT_SLEEP: return nearest(SLEEP_OPTS, COUNT(SLEEP_OPTS), settings.sleepAfterMin);
@@ -54,7 +58,9 @@ static void setOpt(int it, int i) {
       if (dir != settings.imuDir) { settings.imuDir = dir; imuFlipped(); }
       break;
     }
-    case IT_MODE: settings.night = i; break;
+    case IT_MODE: settings.briMode = i; break;
+    case IT_NIGHT_FROM: settings.nightFrom = i; break;
+    case IT_NIGHT_TO: settings.nightTo = i; break;
     case IT_ENC: settings.encSteps = i + 1; break;
     case IT_DIM: settings.dimAfterS = DIM_OPTS[i]; break;
     case IT_SLEEP: settings.sleepAfterMin = SLEEP_OPTS[i]; break;
@@ -68,7 +74,8 @@ static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
     case IT_IMU: snprintf(b, n, "%s", i ? "inversé" : "normal"); break;
-    case IT_MODE: snprintf(b, n, "%s", i ? "nuit" : "jour"); break;
+    case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (nuit)" : "auto (jour)") : i ? "nuit" : "jour"); break;
+    case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d h", i); break;
     case IT_ENC: snprintf(b, n, "%d impulsion%s", i + 1, i ? "s" : ""); break;
     case IT_DIM: if (DIM_OPTS[i]) snprintf(b, n, "%u s", DIM_OPTS[i]); else snprintf(b, n, "jamais"); break;
     case IT_SLEEP: if (SLEEP_OPTS[i]) snprintf(b, n, "%u min", SLEEP_OPTS[i]); else snprintf(b, n, "jamais"); break;
@@ -78,7 +85,7 @@ static void valueText(int it, char* b, size_t n) {
 }
 
 static const char* LABELS[IT_VALUES] = {"Sens IMU", "Molette", "Atténuation", "Extinction", "Lum. jour",
-                                        "Lum. nuit", "Luminosité"};
+                                        "Lum. nuit", "Luminosité", "Nuit dès", "Nuit jusqu'à"};
 
 // Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {

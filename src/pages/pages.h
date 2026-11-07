@@ -3,13 +3,15 @@
 #pragma once
 #include <stdint.h>
 
-enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_SYS, PAGE_SET, PAGE_COUNT };
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CLOCK, PAGE_SYS, PAGE_SET, PAGE_COUNT };
 
 struct PageOps {
   bool (*draw)(float dt);      // true tant qu'une animation propre à la page est en cours
   void (*wheel)(int detents);  // crans de molette (signés)
   void (*click)();             // appui molette ou tap
   void (*swipeX)(int dir);     // +1 vers la droite, -1 vers la gauche
+  // Tap écran à la position (x, y) de l'interface, n-ième tap rapproché. nullptr : comme click().
+  void (*tap)(int x, int y, uint8_t clicks);
 };
 extern const PageOps* const PAGES[PAGE_COUNT];
 

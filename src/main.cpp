@@ -6,7 +6,7 @@
  * power (rétroéclairage, extinction), anim (easing, glissements), pages/ (une page par fichier).
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
- * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Système, Réglages.
+ * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
  *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
  *   Bouton central 2 s      : extinction (sur batterie)
@@ -22,6 +22,7 @@
 #include "govee.h"
 #include "imu.h"
 #include "power.h"
+#include "clock.h"
 #include "settings.h"
 #include "pages/pages.h"
 
@@ -84,6 +85,7 @@ void setup() {
   M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
   settingsLoad();
+  settingsSelfTest();
 
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
@@ -105,6 +107,7 @@ void loop() {
 
   M5Dial.update();
   if (needSetup) setupAms();
+  clockService();  // heure reçue de l'iPhone : appliquée ici (I2C du RTC hors de la tâche BLE)
   imuUpdate(dt);
   goveeService(page == PAGE_LED);
 
@@ -128,8 +131,17 @@ void loop() {
   if (linkMode != LINK_NONE || lastInput == now) lastActive = now;
   if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Veille...");
 
-  if (!bootShown && (M5Dial.BtnA.wasClicked() || t.wasClicked())) {  // au relâcher, pour distinguer l'appui long
+  if (!bootShown && M5Dial.BtnA.wasClicked()) {  // au relâcher, pour distinguer l'appui long
     PAGES[page]->click();
+    dirty = true;
+  }
+  if (!bootShown && t.wasClicked()) {
+    if (PAGES[page]->tap) {  // position ramenée dans le repère de l'interface, tournée de rot degrés
+      float r = rot * DEG_TO_RAD, x = t.x - 120, y = t.y - 120;
+      PAGES[page]->tap(120 + cosf(r) * x + sinf(r) * y, 120 - sinf(r) * x + cosf(r) * y, t.getClickCount());
+    } else {
+      PAGES[page]->click();
+    }
     dirty = true;
   }
 

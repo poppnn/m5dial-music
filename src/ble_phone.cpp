@@ -5,6 +5,7 @@
 #include "ble_phone.h"
 #include <NimBLEHIDDevice.h>
 #include "app.h"
+#include "clock.h"
 #include "settings.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
@@ -12,7 +13,8 @@ static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
 static const char* AMS_RC  = "9B3C81D8-57B1-4A8A-B8DF-0E56F7CA51C2";  // Remote Command
 static const char* AMS_EU  = "2F7CABCE-808D-411F-9A0C-BB92BA96C102";  // Entity Update
 
-enum : uint8_t { ENT_PLAYER = 0, ENT_TRACK = 2 };
+enum : uint8_t { ENT_PLAYER = 0, ENT_QUEUE = 1, ENT_TRACK = 2 };
+enum : uint8_t { QUEUE_SHUFFLE = 2, QUEUE_REPEAT = 3 };
 enum : uint8_t { PLAYER_PLAYBACK_INFO = 1, PLAYER_VOLUME = 2 };
 enum : uint8_t { TRACK_ARTIST = 0, TRACK_TITLE = 2, TRACK_DURATION = 3 };
 
@@ -54,6 +56,8 @@ static void onEntityUpdate(NimBLERemoteCharacteristic*, uint8_t* d, size_t len, 
     }
     else if (d[1] == TRACK_ARTIST) media.artist = v;
     else if (d[1] == TRACK_DURATION) media.duration = atof(v.c_str());
+  } else if (d[0] == ENT_QUEUE && (d[1] == QUEUE_SHUFFLE || d[1] == QUEUE_REPEAT)) {
+    (d[1] == QUEUE_SHUFFLE ? media.shuffle : media.repeat) = atoi(v.c_str());
   } else if (d[0] == ENT_PLAYER && d[1] == PLAYER_VOLUME) {
     media.volume = atof(v.c_str());
     volPing = true;
@@ -105,8 +109,18 @@ void setupAms() {
   // Demande à l'iPhone de nous notifier ces attributs (valeur courante envoyée immédiatement).
   const uint8_t player[] = {ENT_PLAYER, PLAYER_PLAYBACK_INFO, PLAYER_VOLUME};
   const uint8_t track[]  = {ENT_TRACK, TRACK_ARTIST, TRACK_TITLE, TRACK_DURATION};
+  const uint8_t queue[]  = {ENT_QUEUE, QUEUE_SHUFFLE, QUEUE_REPEAT};
   eu->writeValue(player, sizeof(player), true);
   eu->writeValue(track, sizeof(track), true);
+  eu->writeValue(queue, sizeof(queue), true);
+  // Heure de l'iPhone (Current Time Service) : lue maintenant, puis notifiée à chaque changement (heure d'été...).
+  NimBLERemoteService* cts = client->getService(NimBLEUUID((uint16_t)0x1805));
+  NimBLERemoteCharacteristic* ct = cts ? cts->getCharacteristic(NimBLEUUID((uint16_t)0x2A2B)) : nullptr;
+  if (ct) {
+    NimBLEAttValue v = ct->readValue();
+    clockFromCts(v.data(), v.size());
+    ct->subscribe(true, [](NimBLERemoteCharacteristic*, uint8_t* d, size_t len, bool) { clockFromCts(d, len); });
+  }
   rcChar = rc;
   linkMode = LINK_AMS;
   dirty = true;
@@ -118,6 +132,7 @@ void sendCmd(uint8_t cmd) {
     rc->writeValue(&cmd, 1, true);
   } else if (linkMode == LINK_HID) {
     static const uint8_t bit[] = {0, 0, 0x01, 0x02, 0x04, 0x08, 0x10};  // index = CMD_*
+    if (cmd >= sizeof(bit)) return;  // aléatoire, répétition, J'aime : pas d'équivalent HID
     uint8_t v = bit[cmd];
     hidInput->setValue(&v, 1);
     hidInput->notify();

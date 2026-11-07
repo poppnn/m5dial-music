@@ -5,7 +5,9 @@
 #include <mutex>
 #include <string>
 
-enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6 };
+// Remote Command AMS (les 5 premiers existent aussi en HID ; les autres sont propres à l'iPhone)
+enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6,
+                 CMD_REPEAT = 7, CMD_SHUFFLE = 8, CMD_LIKE = 11 };
 
 struct Media {
   std::string title, artist;
@@ -13,6 +15,7 @@ struct Media {
   uint32_t stamp = 0;  // millis() de la dernière mise à jour de elapsed
   float volume = -1;   // 0..1 (AMS), -1 = inconnu
   bool playing = false;
+  int8_t shuffle = -1, repeat = -1;  // AMS : 0 non, 1 un, 2 tout ; -1 = inconnu
 };
 
 enum Link : uint8_t { LINK_NONE, LINK_HID, LINK_AMS };  // HID = Android/Windows, AMS = iPhone
