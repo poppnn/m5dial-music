@@ -6,7 +6,7 @@
  * power (rétroéclairage, extinction), anim (easing, glissements), pages/ (une page par fichier).
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
- * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Système.
+ * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
  *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
  *   Bouton central 2 s      : extinction (sur batterie)
@@ -22,6 +22,7 @@
 #include "govee.h"
 #include "imu.h"
 #include "power.h"
+#include "settings.h"
 #include "pages/pages.h"
 
 volatile bool dirty = true;
@@ -81,8 +82,8 @@ void setup() {
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
   M5Dial.BtnA.setHoldThresh(2000);
-  backlightInit();
   Serial.begin(115200);
+  settingsLoad();
 
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
@@ -111,8 +112,9 @@ void loop() {
   static long encLast = M5Dial.Encoder.read();
   long enc = M5Dial.Encoder.read();
   int detents = 0;
-  while (enc - encLast >= ENC_STEPS_PER_DETENT) { detents++; encLast += ENC_STEPS_PER_DETENT; }
-  while (encLast - enc >= ENC_STEPS_PER_DETENT) { detents--; encLast -= ENC_STEPS_PER_DETENT; }
+  const long steps = settings.encSteps;
+  while (enc - encLast >= steps) { detents++; encLast += steps; }
+  while (encLast - enc >= steps) { detents--; encLast -= steps; }
   if (!bootShown && detents) PAGES[page]->wheel(detents);  // écran de démarrage : commandes ignorées
   if (detents) dirty = true;  // image tout de suite : sinon jusqu'à 250 ms d'attente au repos
   if (volPing) { volPing = false; musicVolumePing(); dirty = true; }
@@ -121,10 +123,10 @@ void loop() {
   uint32_t now = millis();
   if (detents || M5Dial.BtnA.isPressed() || t.isPressed()) lastInput = now;  // réveille l'écran atténué
 
-  // Aucun appareil connecté (ni geste) pendant 10 min : extinction pour ne pas vider la batterie
+  // Aucun appareil connecté (ni geste) pendant settings.sleepAfterMin : extinction (0 = jamais)
   static uint32_t lastActive = 0;
   if (linkMode != LINK_NONE || lastInput == now) lastActive = now;
-  if (now - lastActive > SLEEP_AFTER_MS) shutdown("Veille...");
+  if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Veille...");
 
   if (!bootShown && (M5Dial.BtnA.wasClicked() || t.wasClicked())) {  // au relâcher, pour distinguer l'appui long
     PAGES[page]->click();

@@ -5,13 +5,13 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - **iPhone** : service natif **Apple Media Service (AMS)** → commandes + titre, artiste, progression.
 - **Android / Windows** : télécommande **BLE HID** (touches multimédia standard) → commandes seules.
 
-4 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Système**.
+5 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Système**, **Réglages**.
 
 - Molette : volume − / + (LED : luminosité)
 - Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause)
 - Appui long (2 s) sur la molette : extinction sur batterie (sur USB : veille, débrancher/rebrancher pour relancer)
 - Économie de batterie : écran atténué après 20 s sans geste (le moindre geste le rallume), extinction automatique
-  après 10 min sans appareil Bluetooth connecté ; le bouton WAKE le rallume.
+  après 10 min sans appareil Bluetooth connecté ; le bouton WAKE le rallume. Les deux délais se règlent.
 - Swipe gauche / droite : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
 - Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire
 
@@ -36,20 +36,28 @@ Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protoc
 molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 couleurs).
 L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 
-## Chrono et Système
+## Chrono, Système et Réglages
 
 - **Chrono** : afficheur 7 segments, centièmes, anneau trotteuse (1 tour par minute). Appui = départ / pause,
   swipe gauche ou droite = remise à zéro. Il continue de tourner quand on change de page.
 - **Système** : cause du dernier démarrage (normal, plantage, blocage, tension basse), appareil Bluetooth
   connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
-  RAM libre, durée depuis l'allumage.
+  RAM libre, durée depuis l'allumage. Le niveau de batterie n'est pas mesurable : le M5Dial n'a aucune mesure de
+  tension ni signal de charge câblé vers l'ESP32 (il faudrait souder un pont diviseur sur un GPIO ADC).
+- **Réglages** (enregistrés dans la mémoire du M5Dial, gardés à l'extinction et aux mises à jour) : molette =
+  choisir une ligne, appui = modifier (molette = valeur, appliquée tout de suite), appui = terminer.
+  - Sens IMU (normal / inversé), impulsions par cran de molette (1 à 4), délai d'atténuation (jamais à 120 s),
+    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit, mode jour / nuit.
+  - Appareils appairés (nom lu à la connexion) : « Oublier » un appareil, ou « Tout effacer ». Premier appui =
+    « confirmer ? », second appui = action ; tourner la molette annule. L'appareil oublié doit aussi oublier
+    « M5Dial Music » dans ses réglages Bluetooth avant de se réappairer.
 
 ## Interface
 
 - Animations avec easing : l'arc de progression et l'anneau de volume se remplissent en douceur, et le titre glisse lors d'un swipe ou d'un changement de piste.
 - Jusqu'à ~60 images/s pendant une animation, 4/s au repos pour économiser la batterie.
 - Envoi à l'écran en DMA par bandes ping-pong (2 × 19 Ko), en SRAM interne : l'encodeur et le BLE restent réactifs pendant le transfert.
-- **Toujours droit** : avec une **Unit IMU M5Stack branchée sur le Port A**, l'interface pivote pour rester horizontale. Le M5Dial n'a pas d'IMU intégrée. Fixe l'unité à plat au dos du boîtier. L'orientation au démarrage sert de référence « droit ». Si l'écran tourne dans le mauvais sens, mets `IMU_DIR` à `-1` dans `main.cpp`.
+- **Toujours droit** : avec une **Unit IMU M5Stack branchée sur le Port A**, l'interface pivote pour rester horizontale. Le M5Dial n'a pas d'IMU intégrée. Fixe l'unité à plat au dos du boîtier. L'orientation au démarrage sert de référence « droit ». Si l'écran tourne dans le mauvais sens : Réglages › Sens IMU › inversé.
 
 ## Écran de démarrage
 
@@ -115,4 +123,6 @@ pio run -t upload
 - L'ESP32-S3 n'a pas de Bluetooth Classic : A2DP/AVRCP sont impossibles, d'où AMS (BLE).
 - AMS ne transmet pas la pochette d'album : affichage titre + artiste à la place.
 - Android et Windows n'exposent pas les infos du morceau en BLE : il faudrait une app compagnon.
-- `ENC_STEPS_PER_DETENT` (main.cpp) = impulsions par cran de molette (2 sur ce M5Dial) ; à ajuster si un cran ne donne pas un pas.
+- Impulsions par cran de molette : 2 sur ce M5Dial ; à ajuster dans Réglages › Molette si un cran ne donne pas un pas.
+- Code : `src/main.cpp` (boucle, gestes, pages), `ble_phone` (AMS + HID), `govee`, `display` (rendu DMA), `imu`,
+  `power`, `settings` (NVS), `pages/` (une page par fichier). Valeurs par défaut des réglages : `src/config.h`.

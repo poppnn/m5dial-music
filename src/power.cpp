@@ -5,14 +5,12 @@
 #include "ble_phone.h"
 #include "config.h"
 #include "display.h"
+#include "settings.h"
 
 bool bootShown = true;
 uint32_t fadeStart = 0;
 static bool fadeTo = true;
-static uint8_t baseBri = 128;
-static float fadeLevel = 1, dimLevel = 1;  // rétroéclairage = baseBri x fondu x atténuation
-
-void backlightInit() { baseBri = M5Dial.Display.getBrightness(); }
+static float fadeLevel = 1, dimLevel = 1;  // rétroéclairage = réglage jour/nuit x fondu x atténuation
 
 // Fondu au noir par le rétroéclairage : l'écran courant s'éteint, bascule, le nouveau s'allume.
 void updateFade(uint32_t now) {
@@ -31,12 +29,13 @@ void updateFade(uint32_t now) {
   fadeLevel = level;
 }
 
-// Atténue l'écran après DIM_AFTER_MS sans geste, le rallume en douceur au premier geste.
+// Atténue l'écran après settings.dimAfterS sans geste (0 = jamais), le rallume en douceur au premier geste.
 bool updateBacklight(uint32_t now, float dt) {
   static uint8_t applied = 0;
-  float target = now - lastInput > DIM_AFTER_MS ? DIM_LEVEL : 1.f;
+  bool idle = settings.dimAfterS && now - lastInput > settings.dimAfterS * 1000UL;
+  float target = idle ? DIM_LEVEL : 1.f;
   dimLevel += (target - dimLevel) * smoothK(dt, DIM_TAU_S);
-  uint8_t bri = baseBri * fadeLevel * dimLevel;
+  uint8_t bri = settingsBacklight() * fadeLevel * dimLevel;
   if (bri != applied) M5Dial.Display.setBrightness(applied = bri);
   return fabsf(target - dimLevel) > 0.01f;
 }
@@ -51,7 +50,7 @@ void shutdown(const char* msg) {
   canvas.setTextColor(TFT_WHITE);
   canvas.drawString(msg, 120, 120);
   frameShift = 0;
-  M5Dial.Display.setBrightness(baseBri);
+  M5Dial.Display.setBrightness(settingsBacklight());
   pushFrame();
   M5Dial.Display.endWrite();  // attend la fin du DMA et libère le bus
   delay(800);

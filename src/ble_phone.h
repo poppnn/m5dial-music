@@ -25,3 +25,6 @@ bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& ela
 void startBle();
 void setupAms();  // à appeler depuis loop() quand needSetup : découverte GATT hors de la tâche BLE
 void sendCmd(uint8_t cmd);
+std::string connectedPeer();               // adresse d'identité du téléphone connecté ("" sinon)
+void forgetBond(const NimBLEAddress& a);   // oublie un appareil (le déconnecte s'il est connecté)
+void forgetAllBonds();

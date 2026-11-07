@@ -3,7 +3,7 @@
 #pragma once
 #include <stdint.h>
 
-enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_SYS, PAGE_COUNT };
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_SYS, PAGE_SET, PAGE_COUNT };
 
 struct PageOps {
   bool (*draw)(float dt);      // true tant qu'une animation propre à la page est en cours

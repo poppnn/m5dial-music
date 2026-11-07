@@ -5,6 +5,7 @@
 #include "ble_phone.h"
 #include <NimBLEHIDDevice.h>
 #include "app.h"
+#include "settings.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -94,6 +95,8 @@ void setupAms() {
   NimBLERemoteService* svc = client ? client->getService(AMS_SVC) : nullptr;
   NimBLERemoteCharacteristic* eu = svc ? svc->getCharacteristic(AMS_EU) : nullptr;
   NimBLERemoteCharacteristic* rc = svc ? svc->getCharacteristic(AMS_RC) : nullptr;
+  // Nom du téléphone (service GAP 0x1800, caractéristique 0x2A00) : NimBLE ne garde que l'adresse des appairés.
+  if (client) bondNameSave(connectedPeer(), client->getValue(NimBLEUUID((uint16_t)0x1800), NimBLEUUID((uint16_t)0x2A00)));
   if (!eu || !rc || !eu->subscribe(true, onEntityUpdate) || !rc->subscribe(true)) {
     linkMode = LINK_HID;  // pas un iPhone (Android/Windows) : touches multimédia HID
     dirty = true;
@@ -123,6 +126,21 @@ void sendCmd(uint8_t cmd) {
     hidInput->setValue(&v, 1);
     hidInput->notify();
   }
+}
+
+std::string connectedPeer() {
+  if (!NimBLEDevice::getServer()->getConnectedCount()) return "";  // Govee = connexion client, non comptée
+  return NimBLEDevice::getServer()->getPeerInfoByHandle(connHandle).getIdAddress().toString();
+}
+
+void forgetBond(const NimBLEAddress& a) {
+  if (connectedPeer() == a.toString()) NimBLEDevice::getServer()->disconnect(connHandle);
+  NimBLEDevice::deleteBond(a);
+}
+
+void forgetAllBonds() {
+  if (linkMode != LINK_NONE) NimBLEDevice::getServer()->disconnect(connHandle);
+  NimBLEDevice::deleteAllBonds();
 }
 
 void startBle() {

@@ -6,3 +6,4 @@ extern float rot;          // rotation affichée (degrés, lissée)
 void imuInit();            // l'orientation au démarrage sert de référence "droit"
 void imuUpdate(float dt);  // à chaque tour de loop()
 bool imuTurning();         // la rotation affichée n'a pas encore rejoint sa cible
+void imuFlipped();         // à appeler après avoir changé settings.imuDir

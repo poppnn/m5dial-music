@@ -6,11 +6,11 @@
 #endif
 
 // Calibration matérielle : impulsions de l'encodeur par cran.
-#define ENC_STEPS_PER_DETENT 2  // mesuré : 2 impulsions par cran sur ce M5Dial (4 donnait 1 pas tous les 2 crans)
+#define ENC_STEPS_PER_DETENT 2  // défaut (Réglages > Molette) : 2 impulsions par cran mesurées sur ce M5Dial
 #define SWIPE_MIN_PX         40
 
-// "Toujours droit" (IMU externe). Calibration : IMU_DIR = -1 si l'écran tourne dans le mauvais sens.
-#define IMU_DIR        1
+// "Toujours droit" (IMU externe).
+#define IMU_DIR        1      // défaut (Réglages > Sens IMU)
 #define IMU_TAU_S      0.40f  // passe-bas de la gravité : les vibrations (> ~1 Hz) sont écrasées
 #define MIN_TILT_G     0.35f  // gravité dans le plan de l'écran trop faible (posé à plat) : angle gelé
 #define ROT_HYST_DEG   8.0f   // hystérésis : on ne suit un nouvel angle qu'au-delà de 8°

@@ -2,12 +2,13 @@
 #include "imu.h"
 #include "anim.h"
 #include "config.h"
+#include "settings.h"
 
 float rot = 0;
 static bool imuOk = false;
 static float gx = 0, gy = 0, refAngle = 0, targetRot = 0;
 
-static float rawAngle() { return IMU_DIR * atan2f(gx, gy) * RAD_TO_DEG; }
+static float rawAngle() { return settings.imuDir * atan2f(gx, gy) * RAD_TO_DEG; }
 
 void imuInit() {
   float az;
@@ -30,6 +31,13 @@ void imuUpdate(float dt) {
     }
   }
   rot = wrap180(rot + wrap180(targetRot - rot) * smoothK(dt, ROT_TAU_S));  // par le chemin le plus court
+}
+
+// Sens inversé dans les réglages : les angles changent de signe, la référence "droit" aussi.
+void imuFlipped() {
+  refAngle = -refAngle;
+  targetRot = -targetRot;
+  rot = -rot;
 }
 
 bool imuTurning() { return fabsf(wrap180(targetRot - rot)) > 0.3f; }
