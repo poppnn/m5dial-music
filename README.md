@@ -55,18 +55,30 @@ Recompile ensuite (`pio run -t upload`).
 
 ## Support volant (impression 3D)
 
-[`hardware/support_volant.stl`](hardware/support_volant.stl) : anneau fin (3 mm, sans paroi) caché derrière le
-M5Dial : découpe Ø 45 recommandée par M5Stack, le corps passe et la collerette Ø 51 repose sur l'anneau, entre la branche du bas et la branche droite d'un volant GT2i Race 350 mm (tulipage 75 mm). Fixation par
-l'arrière dans les deux trous ovales intérieurs : vis M5 × 16 passée de l'avant, rondelle et écrou nylstop dans le lamage.
+[`hardware/support_volant.stl`](hardware/support_volant.stl) : une seule pièce **100 % imprimée** (sans vis ;
+seule la batterie est collée) pour la zone entre la branche du bas et la branche droite d'un volant GT2i Race 350 mm (tulipage 90 mm).
+
+- **Plaque fine et pleine** (6 mm) entre les deux branches : anneau du M5Dial, bras et zone entre eux, d'un seul bloc.
+- **M5Dial** : son corps s'enfonce dans l'anneau (cercle complet Ø 45 / Ø 51, **3,5 mm de haut**), serré par 6
+  nervures d'écrasement ; la collerette repose dessus et le corps ressort dessous, donc **l'USB-C** et le Port A
+  restent libres. Autour, la plaque est abaissée au niveau de l'anneau avec 1 mm de jeu : rien ne frotte.
+- **Batterie LiPo 103450** (50 × 34 × 10 mm) : collée au **dos** de la plaque (adhésif double face), en diagonale,
+  le grand côté parallèle au bord intérieur (côté moyeu) et ce bord aligné dessus, entre les deux bras. Là, elle ne
+  touche ni les branches (qui passent plus en arrière près du moyeu) ni le corps du M5Dial ; elle repose à 99 % sur
+  la plaque.
+- **Fixation** : chaque patte se clipse sur sa branche (on appuie la branche entre les deux parois à crochet, qui
+  s'écartent puis se referment sur sa face avant) ; un téton entre dans le trou de la branche pour qu'elle ne glisse
+  pas.
 
 - Modèle source : script Fusion 360 [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilitaires ›
   Compléments › Scripts › « + » › choisir ce dossier › Exécuter. Les cotes sont des paramètres utilisateur
-  (Modifier › Changer les paramètres) ; elles viennent d'une photo : mesure les valeurs `MESURER` (trous, centre du
-  M5Dial, pente des branches), relance le script, puis exporte le STL.
-- Impression : à plat tel quel (une seule face posée, 29 cm²), **sans supports** ; seuls les plafonds des lamages
-  (Ø 12) se font en pont. PETG ou ASA (le PLA se déforme au soleil), 4 périmètres, 40 % de remplissage.
-- Le M5Dial se colle sur l'anneau avec de l'adhésif double face VHB. Avec l'IMU sur le Port A, l'écran reste droit
-  quand le volant tourne.
+  (Modifier › Changer les paramètres). **Avant d'imprimer, mesure les valeurs `MESURER`** : épaisseur de la branche
+  (`SPOKE_T`, le clip en dépend), Ø des trous des branches (`PEG_D`), Ø du corps du M5Dial (`BODY_D`), position des trous et pente des branches. Relance le script, puis exporte le STL.
+- Impression : à plat telle quelle (une seule face posée, le dos), **sans supports**.
+  PETG ou ASA (le PLA se déforme au soleil et casse au clipsage), 4 périmètres, 30-40 % de remplissage.
+- Teste le clip sur une impression rapide d'abord : trop dur, baisse `CLIP_LIP` ; trop lâche, baisse `SPOKE_T`
+  de 0,2 mm.
+- Avec l'IMU sur le Port A, l'écran reste droit quand le volant tourne.
 - Vérifie que rien ne touche les commodos en tournant le volant de butée à butée avant de rouler.
 
 ## Compiler
