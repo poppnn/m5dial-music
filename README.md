@@ -120,11 +120,11 @@ spoke (battery taped), for the area between the bottom spoke and the right spoke
 (90 mm dish).
 
 - **Thin filled plate** (6 mm) between the two spokes: M5Dial ring, arms and the area between them, in one piece.
-- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim: its body goes into a 3.5 mm ring (Ø 45 /
-  Ø 51) gripped by 6 crush ribs, carried by a tube with **3 windows**; the collar rests on the ring and the body
-  hangs in the tube. The **bottom window** (wheel straight) is open down to the back: turn the M5Dial so its
-  **USB-C** (at the very bottom of the body) faces it and charge it without removing it; the cable hangs down. The
-  battery cable goes through one of the other two.
+- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim, fixed as on a panel: its body goes through a
+  **flat 3.5 mm ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) screws
+  on underneath. Nothing sits within Ø 52.8 below the ring; the ring stands on **3 legs** (in line with the two
+  arms and away from the hub), so fingers reach the clamp and **USB-C** (on the back of the M5Dial) and the
+  battery cable stay free.
 - **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
   two arms, centred about 52 mm right and 42 mm below the hub centre, long side tilted about 30° (86 % of it
   rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
@@ -143,7 +143,8 @@ spoke (battery taped), for the area between the bottom spoke and the right spoke
   Spoke widths, thickness and hole size are measured; hole positions, slope and taper come from the photos
   (±2 mm / ±2°). Check the M5Dial body Ø (`BODY_D`) before printing. Run the script again, then export
   the STL.
-- Printing: flat as is (one face on the bed, the back), **no supports** (the window tops are ~17 mm bridges).
+- Printing: flat as is (one face on the bed, the back), **supports from the build plate under the raised ring**
+  only (nothing else overhangs).
   PETG or ASA (PLA warps in the sun), 4 perimeters, 30-40 % infill.
 - With the IMU on Port A, the screen stays level when the wheel turns.
 - Check that nothing touches the stalks when turning the wheel lock to lock before driving.

@@ -9,10 +9,11 @@ Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau),
 - Plaque fine et pleine entre les deux branches (anneau, bras et zone entre eux). La LiPo 103450 se colle au dos,
   centrée vers (52, -42), grand côté incliné de ~30° (86 % d'appui) ; en vraie diagonale (~48°), centrée vers
   (42, -53) (80 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
-- Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : son corps s'enfonce dans un anneau de 3,5 mm
-  serré par 6 nervures d'écrasement, porté par 3 pieds (tube ajouré) ; la collerette repose dessus et le corps
-  pend dans le tube. La fenêtre du bas est ouverte jusqu'au dos : on tourne le M5Dial pour que sa prise USB-C
-  (tout en bas du corps) soit en face, et on le recharge sans le démonter. Le câble de batterie passe par une autre.
+- Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : il se fixe comme sur un panneau, dans un
+  anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8, 12,6 de haut). Sous
+  l'anneau, rien dans le rayon du collier ; l'anneau est porté par 3 pieds (dans l'axe des bras et à l'opposé du
+  moyeu) : les grandes ouvertures laissent passer les doigts pour visser le collier, l'USB-C (au dos) et les câbles.
+  À l'impression, des supports sont nécessaires sous l'anneau.
 - Chaque patte se pose sur sa branche entre 2 parois de guidage (inclinées comme les bords, la branche s'élargit
   vers le moyeu), sans crochet ni téton : la pièce se pose d'un seul geste sur les deux branches. Une vis M5 passe
   par le grand trou (Ø 16, rondelle large Ø 20+ côté conducteur) et la patte ; l'écrou se loge dans une empreinte
@@ -67,13 +68,16 @@ PARAMS = [
     ("CRUSH", 0.5, "mm", "Serrage (sur le Ø) des nervures sur le corps du M5Dial"),
     ("RING_T", 3.5, "mm", "Hauteur de l'anneau (le corps du M5Dial et son USB-C ressortent dessous)"),
     ("DIAL_RISE", 30.0, "mm", "Rehausse du M5Dial au-dessus de la plaque (0 = anneau posé sur la plaque)"),
-    ("WIN_ANG", 40.0, "deg", "Largeur angulaire des 3 fenêtres du tube (USB-C, câble)"),
+    ("CLAMP_D", 49.8, "mm", "Ø extérieur du collier de serrage du M5Dial (STL Dial_v1.1 : 49,8, 12,6 de haut)"),
+    ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
+    ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
+    ("LEG_ANG", 40.0, "deg", "Largeur angulaire des 3 pieds (le reste est ouvert : doigts, USB-C, câbles)"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
             "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement batterie
-            "PEG_D", "CLIP_LIP", "CLIP_LIP_T"]  # anciens téton et crochets (pièce impossible à poser sur 2 branches)
+            "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton et crochets (pièce impossible à poser sur 2 branches)
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
 JOIN = adsk.fusion.FeatureOperations.JoinFeatureOperation
@@ -229,8 +233,11 @@ def build(comp, P):
     z_b = min(P[k + "_DZ"] - P["PAD_L"] / 2 * math.sin(math.radians(P[k + "_TILT"])) for k in ("R", "B")) - P["PAD_MIN"]
     slab = P["ARM_T"]
     z_ring = z_b + P["DIAL_RISE"]  # bas de l'anneau qui tient le M5Dial
+    raised = P["DIAL_RISE"] > slab + 3
+    r_clr = P["CLAMP_D"] / 2 + P["CLAMP_GAP"]  # vide sous l'anneau rehaussé : le collier s'y visse
+    r_base = r_clr + P["TUBE_WALL"] if raised else r_out
 
-    cup = b.solid(b.circles([(cx, cy)], r_out), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
+    cup = b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
     cup.name = NAME
     # Zone entre les bras remplie (triangle M5Dial / trou droit / trou bas), rognée plus loin le long des branches
     b.combine(cup, b.solid(b.poly([(cx, cy), (P["R_X"], P["R_Y"]), (P["B_X"], P["B_Y"])]), z_b, slab), JOIN)
@@ -259,6 +266,8 @@ def build(comp, P):
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
     b.extrude(b.circles([(cx, cy)], r_in), z_b - 1, 200, CUT, [cup])
+    if raised:  # sous l'anneau plat de RING_T : rien dans le rayon du collier
+        b.extrude(b.circles([(cx, cy)], r_clr), z_b - 1, P["DIAL_RISE"] + 1, CUT, [cup])
     # Anneau de RING_T seulement : le corps du M5Dial (et son USB-C) ressort dessous. Sans rehausse, la plaque autour
     # est abaissée au même niveau, 1 mm plus large que la collerette pour qu'elle ne frotte pas.
     if P["DIAL_RISE"] + P["RING_T"] < slab:
@@ -285,17 +294,21 @@ def build(comp, P):
 
     b.fillet([e for e in {e.tempId: e for f in tops for e in f.edges}.values() if not ring_edge(e)], P["FILLET_TOP"], False)
 
-    # 3 fenêtres dans le tube, sous l'anneau. Celle du bas (volant droit) est ouverte jusqu'au dos : la prise USB-C,
-    # tout en bas du corps du M5Dial, s'y branche quelle que soit la longueur du corps et le câble pend vers le bas.
-    # Les deux autres (câble de batterie) s'arrêtent sur la plaque pour ne pas affaiblir les bras.
-    if P["DIAL_RISE"] > slab + 3:
-        w, rw = P["WIN_ANG"] / 2, r_out + 3
-        for i in range(3):
-            a = -90 + 120 * i
-            pts = [(cx, cy)] + [(cx + rw * math.cos(math.radians(a + d)), cy + rw * math.sin(math.radians(a + d)))
-                                for d in (-w, 0, w)]
-            z0 = z_b - 1 if i == 0 else z_b + slab
-            b.extrude(b.poly(pts), z0, z_ring - z0, CUT, [cup])
+    # Tube ouvert entre la plaque et l'anneau : il ne reste que 3 pieds, dans l'axe des deux bras et à l'opposé du
+    # moyeu. Les grandes ouvertures laissent passer les doigts pour visser le collier, la prise USB-C (au dos du
+    # M5Dial) et le câble de batterie.
+    if raised:
+        legs = sorted(math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) % 360 for k in ("R", "B"))
+        legs = sorted(legs + [math.degrees(math.atan2(cy, cx)) % 360])
+        rw = r_base + 3
+        for a1, a2 in zip(legs, legs[1:] + [legs[0] + 360]):
+            span = a2 - a1 - P["LEG_ANG"]
+            if span < 10:
+                continue
+            n = int(span // 10) + 1
+            pts = [(cx, cy)] + [(cx + rw * math.cos(math.radians(a1 + P["LEG_ANG"] / 2 + span * j / n)),
+                                 cy + rw * math.sin(math.radians(a1 + P["LEG_ANG"] / 2 + span * j / n))) for j in range(n + 1)]
+            b.extrude(b.poly(pts), z_b + slab, z_ring - z_b - slab, CUT, [cup])
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
     tip, root = P["BODY_D"] / 2 - P["CRUSH"] / 2, r_in + 0.6
