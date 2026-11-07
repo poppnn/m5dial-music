@@ -21,9 +21,10 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install platformio esptool==4.8.1
-      - name: Version 1.<nombre de commits>.0 (manifeste du flasheur + firmware)
+      - name: Version (manifeste du flasheur + firmware) = dernier tag v* (+ commits depuis), sinon 1.<nombre de commits>.0
         run: |
-          V="1.$(git rev-list --count HEAD).0"
+          V=$(git describe --tags --match 'v*' 2>/dev/null | sed 's/^v//')
+          [ -n "$V" ] || V="1.$(git rev-list --count HEAD).0"
           echo "VERSION=$V" >> "$GITHUB_ENV"
           sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$V\"/" docs/manifest.json
           grep -q "\"version\": \"$V\"" docs/manifest.json

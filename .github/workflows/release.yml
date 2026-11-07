@@ -1,0 +1,53 @@
+name: Release
+# Tag v* (ex. v1.2.0) -> compile, puis publie une Release GitHub avec les binaires et le changelog.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # historique et tags complets : changelog depuis le tag précédent
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install platformio esptool==4.8.1
+      - name: Version = tag sans le "v"
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+      - run: pio run
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
+      - name: Binaires (firmware seul + image complète pour 0x0)
+        run: |
+          B=.pio/build/m5dial
+          mkdir dist
+          cp $B/firmware.bin "dist/m5dial-music-$GITHUB_REF_NAME-firmware.bin"
+          esptool.py --chip esp32s3 merge_bin -o "dist/m5dial-music-$GITHUB_REF_NAME-full-0x0.bin" \
+            --flash_mode keep --flash_size 8MB \
+            0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
+            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+            0x10000 $B/firmware.bin
+      - name: Changelog (commits depuis le tag précédent)
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          {
+            echo "## Changements${PREV:+ depuis $PREV}"
+            echo
+            git log --no-merges --pretty='- %s' ${PREV:+$PREV..}"$GITHUB_REF_NAME"
+            echo
+            echo "## Installation"
+            echo
+            echo "- Le plus simple : https://poppnn.github.io/m5dial-music/ (Chrome ou Edge, M5Dial en USB-C)."
+            echo "- \`*-full-0x0.bin\` : image complète, à flasher à l'adresse 0x0 (esptool, flasheur web Espressif)."
+            echo "- \`*-firmware.bin\` : application seule, à 0x10000 (mise à jour d'un M5Dial déjà installé)."
+          } > CHANGELOG.md
+          cat CHANGELOG.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: M5Dial Music ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: dist/*.bin

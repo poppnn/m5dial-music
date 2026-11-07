@@ -16,6 +16,19 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
 - Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire
 
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
+Ou télécharger les binaires d'une version dans [Releases](https://github.com/poppnn/m5dial-music/releases).
+
+## Photos
+
+<!-- Dépose les photos dans docs/img/ avec ces noms, puis retire les commentaires autour des lignes. -->
+<!-- ![M5Dial monté sur le volant](docs/img/volant.jpg) -->
+<!-- ![Page Musique (iPhone)](docs/img/page-musique.jpg) -->
+<!-- ![Page LED Govee](docs/img/page-led.jpg) -->
+<!-- ![Page Chrono](docs/img/page-chrono.jpg) -->
+<!-- ![Page Système](docs/img/page-systeme.jpg) -->
+<!-- ![Support imprimé, dos avec la batterie](docs/img/support-dos.jpg) -->
+*Photos à venir : `docs/img/volant.jpg`, `page-musique.jpg`, `page-led.jpg`, `page-chrono.jpg`, `page-systeme.jpg`,
+`support-dos.jpg`.*
 
 ## LED Govee H7090
 
@@ -40,7 +53,8 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 
 ## Écran de démarrage
 
-Tant qu'aucun appareil n'est connecté, le M5Dial affiche le logo Nissan (blanc sur noir), un arc qui tourne et « Connexion Bluetooth... ».
+Tant qu'aucun appareil n'est connecté, le M5Dial affiche un logo (par défaut une double croche dessinée par le
+firmware), un arc qui tourne et « Connexion Bluetooth... ».
 Les commandes sont bloquées, sauf l'appui long pour éteindre. À la connexion, un fondu mène à l'interface.
 
 Pour mettre ton logo (PNG ou BMP, idéalement sur fond transparent ou noir) :
@@ -51,7 +65,12 @@ python tools/png2logo.py mon_logo.png
 ```
 
 Le script réduit l'image à 150 × 130 max, la convertit en RGB565 et écrit `src/logo.h` (stocké en flash, pas en RAM).
-Recompile ensuite (`pio run -t upload`).
+Recompile ensuite (`pio run -t upload`). Pour revenir au logo neutre : `git checkout src/logo.h`.
+
+Exemple, logo de ta marque de voiture (ici Nissan) : les logos de marque sont déposés, donc non fournis dans ce
+repo. Télécharge le logo (par ex. `Nissan_2020_logo.svg` sur Wikimedia Commons), exporte-le en PNG **blanc sur fond
+transparent** (Inkscape ou un convertisseur SVG → PNG, ~600 px de large), puis
+`python tools/png2logo.py nissan_blanc.png`. Garde ce `logo.h` pour toi (ne le publie pas).
 
 ## Support volant (impression 3D)
 
@@ -86,6 +105,10 @@ seule la batterie est collée) pour la zone entre la branche du bas et la branch
 ```bash
 pio run -t upload
 ```
+
+## Licence
+
+[MIT](LICENSE).
 
 ## Notes
 
