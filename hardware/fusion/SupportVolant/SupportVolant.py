@@ -1,13 +1,13 @@
 """Fusion 360 : support M5Dial pour volant GT2i Race 350 mm (tulipage 90 mm).
-Source de hardware/support_volant.stl. Fixé par une vis M5 + écrou + rondelle large par branche ; batterie collée.
+Source de hardware/support_volant.stl. Fixé par une vis M5 + écrou + rondelle large par branche.
 
 Lancer : Utilitaires > Compléments > Scripts > "+" > dossier SupportVolant > Exécuter.
 Au premier lancement, les cotes sont créées en paramètres utilisateur (Modifier > Changer les paramètres).
 Pour appliquer de nouvelles cotes : modifie-les là, puis relance le script (il remplace le groupe de timeline).
 
 Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), supports seulement sous l'anneau rehaussé :
-- Plaque fine entre les deux branches, ouverte sous le M5Dial (le collier se met par-dessous), prolongée côté
-  jante par un plateau où se colle la LiPo 103450 : centrée vers (91, -86), grand côté à ~46° (tangent au tube).
+- Plaque fine d'un seul contour convexe entre les deux pattes et le tube, ouverte sous le M5Dial (le collier se met
+  par-dessous). Elle affleure le bout bas des coins (PAD_MIN = ARM_T), coupés à la verticale côté moyeu.
 - Le M5Dial (rapproché du moyeu, à 3-4 mm des pattes) est rehaussé de DIAL_RISE et se fixe comme sur un panneau :
   anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8 x 12,6). Sous l'anneau,
   rien dans le rayon du collier. Il est porté par un tube plein percé de 2 fenêtres en arche entre 3 piliers de 60°
@@ -54,29 +54,26 @@ PARAMS = [
     ("NUT_AF", 8.4, "mm", "Empreinte d'écrou M5 : sur plats (écrou 8 + jeu)"),
     ("NUT_FLOOR", 3.0, "mm", "Plastique entre la branche et l'écrou"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
-    ("PAD_MIN", 3.0, "mm", "Patte : épaisseur mini (bout bas du coin)"),
+    ("PAD_MIN", 6.0, "mm", "Patte : épaisseur mini (bout bas du coin) = ARM_T : la plaque affleure le coin, sans marche"),
     ("CLIP_WALL", 2.2, "mm", "Parois de guidage : épaisseur"),
     ("CLIP_GAP", 0.3, "mm", "Parois de guidage : jeu avec le bord de la branche"),
-    ("ARM_W", 18.0, "mm", "Bras : largeur côté patte"),
-    ("ARM_ROOT_W", 30.0, "mm", "Bras : largeur côté anneau (effilé)"),
     ("ARM_T", 6.0, "mm", "Hauteur du dessus de la plaque au-dessus du bas des pattes (assise du M5Dial)"),
     ("FILLET_V", 4.0, "mm", "Congé des arêtes verticales (contour)"),
     ("FILLET_TOP", 1.5, "mm", "Congé des arêtes du dessus des bras"),
     ("BODY_D", 45.0, "mm", "MESURER : Ø du corps du M5Dial derrière la collerette (découpe recommandée Ø45)"),
     ("CRUSH", 0.5, "mm", "Serrage (sur le Ø) des nervures sur le corps du M5Dial"),
     ("RING_T", 3.5, "mm", "Hauteur de l'anneau (le corps du M5Dial et son USB-C ressortent dessous)"),
-    ("DIAL_RISE", 30.0, "mm", "Rehausse du M5Dial au-dessus de la plaque (0 = anneau posé sur la plaque)"),
+    ("DIAL_RISE", 33.0, "mm", "Rehausse du M5Dial au-dessus de la plaque (0 = anneau posé sur la plaque)"),
     ("CLAMP_D", 49.8, "mm", "Ø extérieur du collier de serrage du M5Dial (STL Dial_v1.1 : 49,8, 12,6 de haut)"),
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
     ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
     ("LEG_ANG", 60.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : fenêtres en arche)"),
-    ("BAT_L", 50.0, "mm", "LiPo 103450 : longueur (plateau de batterie au dos, côté jante)"),
-    ("BAT_W", 34.0, "mm", "LiPo 103450 : largeur"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
-            "CASE_WALL", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement batterie
+            "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement / plateau batterie
+            "ARM_W", "ARM_ROOT_W",  # anciens bras (remplacés par une plaque d'un seul contour)
             "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton, crochets, fenêtres
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
@@ -185,6 +182,8 @@ class Builder:
         """Congé constant ; si Fusion refuse ce rayon, essaie plus petit. Renvoie le rayon appliqué (0 = aucun)."""
         if not edges:
             return 0
+        body = edges[0].body
+        vol = body.physicalProperties.volume
         for rr in (r, r * 0.6, r * 0.35):
             coll = adsk.core.ObjectCollection.create()
             for e in edges:
@@ -196,7 +195,11 @@ class Builder:
                     inp.edgeSetInputs.addConstantRadiusEdgeSet(coll, rad, chain)
                 else:
                     inp.addConstantRadiusEdgeSet(coll, rad, chain)
-                self.f.filletFeatures.add(inp)
+                feat = self.f.filletFeatures.add(inp)
+                # Fusion peut "réussir" un congé qui vide le corps : on l'annule et on essaie plus petit
+                if feat.bodies.count and feat.bodies.item(0).physicalProperties.volume < 0.9 * vol:
+                    feat.deleteMe()
+                    continue
                 return rr
             except RuntimeError:
                 pass
@@ -215,6 +218,24 @@ def pad_w(P, k):
     """Largeur de la patte : branche + jeu et parois des deux côtés + évasement sur toute la longueur."""
     return (P[k + "_SPOKE_W"] + 2 * (P["CLIP_GAP"] + P["CLIP_WALL"])
             + P["PAD_L"] * math.tan(math.radians(P[k + "_TAPER"])) + 1)
+
+
+def hull(pts):
+    """Enveloppe convexe (chaîne monotone), sens trigonométrique."""
+    pts = sorted(set((round(x, 4), round(y, 4)) for x, y in pts))
+
+    def half(seq):
+        out = []
+        for p in seq:
+            while len(out) >= 2 and ((out[-1][0] - out[-2][0]) * (p[1] - out[-2][1])
+                                     - (out[-1][1] - out[-2][1]) * (p[0] - out[-2][0])) <= 0:
+                out.pop()
+            out.append(p)
+        return out[:-1]
+    return half(pts) + half(pts[::-1])
+
+
+assert hull([(0, 0), (2, 0), (1, 1), (2, 2), (0, 2)]) == [(0, 0), (2, 0), (2, 2), (0, 2)]
 
 
 def steep(e):
@@ -241,16 +262,22 @@ def build(comp, P):
 
     cup = b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
     cup.name = NAME
-    # Zone entre les bras remplie (triangle M5Dial / trou droit / trou bas), rognée plus loin le long des branches
-    b.combine(cup, b.solid(b.poly([(cx, cy), (P["R_X"], P["R_Y"]), (P["B_X"], P["B_Y"])]), z_b, slab), JOIN)
+    # Plaque d'un seul contour convexe : base du tube + côté intérieur des deux pattes (pas de bras ni de recoins)
+    rp = r_base - 1  # un peu dans le tube : le contour ne frôle pas le cylindre (échec "osculating curves")
+    pts = [(cx + rp * math.cos(math.radians(a)), cy + rp * math.sin(math.radians(a))) for a in range(0, 360, 2)]
+    for k in ("R", "B"):
+        x, y, rad, til = P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"]
+        u = (math.cos(math.radians(rad)), math.sin(math.radians(rad)))
+        n = (-u[1], u[0])
+        sd = 1 if n[0] * (cx - x) + n[1] * (cy - y) > 0 else -1  # côté du M5Dial
+        # Bout côté moyeu : juste hors de la bande dégagée au-dessus de la branche (pad_w + 4), sinon la plaque y est
+        # rognée en rainures ; bout côté jante : sous la patte, pour que plaque et patte ne fassent qu'un.
+        hl = P["PAD_L"] / 2 * math.cos(math.radians(til))
+        for su, hw in ((-1, pad_w(P, k) / 2 + 2.5), (1, pad_w(P, k) / 2 - P["FILLET_V"])):
+            pts.append((x + su * hl * u[0] + sd * hw * n[0], y + su * hl * u[1] + sd * hw * n[1]))
+    b.combine(cup, b.solid(b.poly(hull(pts)), z_b, slab), JOIN)
 
     a_out = math.degrees(math.atan2(cy, cx))  # direction opposée au moyeu
-    if raised:
-        # Plateau de batterie au dos, côté jante, juste après le trou du collier (grand côté tangent au tube)
-        d = r_clr + P["BAT_W"] / 2 + 2
-        b.combine(cup, b.solid(b.rect(cx + d * math.cos(math.radians(a_out)), cy + d * math.sin(math.radians(a_out)),
-                                      P["BAT_W"] + 4, P["BAT_L"] + 4, a_out), z_b, slab), JOIN)
-
     for k in ("R", "B"):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
 
@@ -259,16 +286,12 @@ def build(comp, P):
             b.tilt(body, x, y, rad, til, dz)
             return body
 
-        # Bras posé sur le plateau, de l'anneau jusqu'au trou, puis coin : dessus = face arrière de la branche
-        ang = math.degrees(math.atan2(y - cy, x - cx))
-        u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
-        n, hw, hw0 = (-u[1], u[0]), P["ARM_W"] / 2, P["ARM_ROOT_W"] / 2
-        root = (cx + u[0] * (r_out - 6), cy + u[1] * (r_out - 6))
-        arm = b.solid(b.poly([(root[0] + n[0] * hw0, root[1] + n[1] * hw0), (x + n[0] * hw, y + n[1] * hw),
-                              (x - n[0] * hw, y - n[1] * hw), (root[0] - n[0] * hw0, root[1] - n[1] * hw0)]),
-                      z_b, slab)
-        b.combine(cup, arm, JOIN)
-        b.combine(cup, tilted(b.rect(x, y, P["PAD_L"], pad_w(P, k), rad), -40, 40), JOIN)  # rogné au plateau plus bas
+        # Coin sous la branche : dessus = face arrière de la branche
+        # Coin allongé côté moyeu puis recoupé à la verticale : bout net, sans face penchée en contre-dépouille
+        ux, uy = math.cos(math.radians(rad)), math.sin(math.radians(rad))
+        b.combine(cup, tilted(b.rect(x - 10 * ux, y - 10 * uy, P["PAD_L"] + 20, pad_w(P, k), rad), -40, 40), JOIN)
+        hl = P["PAD_L"] / 2 * math.cos(math.radians(til)) + 15
+        b.combine(cup, b.solid(b.rect(x - hl * ux, y - hl * uy, 30, pad_w(P, k) + 4, rad), z_b - 1, 100), CUT)
         # Rien au-dessus de la face arrière de la branche, ni contre les parois des clips (2 mm de jeu)
         b.combine(cup, tilted(b.rect(x, y, 70, pad_w(P, k) + 4, rad), 0, 40), CUT)
 

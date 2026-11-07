@@ -116,19 +116,17 @@ that `logo.h` to yourself (do not publish it).
 ## Steering wheel mount (3D printed)
 
 [`hardware/support_volant.stl`](hardware/support_volant.stl): a single printed part, held by one M5 screw per
-spoke (battery taped), for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
+spoke, for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
 (90 mm dish).
 
-- **Thin plate** (6 mm) between the two spokes, open under the M5Dial, extended towards the rim by a battery tray.
-- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58 mm right,
+- **Thin plate** (6 mm), one smooth outline between the two pads and the tube, open under the M5Dial.
+- **M5Dial**, raised 33 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58 mm right,
   55 mm below the hub centre, 3-4 mm from the pads), fixed as on a panel: its body goes through a **flat 3.5 mm
   ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on from
   underneath** through the Ø 52.8 opening and screwed up. The ring sits on a solid tube with **2 arched windows**
   between 3 wide pillars (in line with the two arms and towards the rim): fingers reach the clamp, and **USB-C**
   (on the back of the M5Dial) and the battery cable go through them.
-- **LiPo 103450 battery** (50 × 34 × 10 mm): taped (double-sided) to the back of the **battery tray**, beyond the
-  M5Dial towards the rim: centred about 91 mm right and 86 mm below the hub centre, long side at ~46° (along the
-  tube). It rests fully on the tray and leaves the nut pockets and the clamp opening free.
+- **Battery**: no holder on the mount; tape the LiPo where it suits you.
 - **Attachment**: each pad sits on the back of its spoke between two guide walls (angled like the spoke edges,
   no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 16 screw** (longer sticks out at the back) through the spoke
   hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
