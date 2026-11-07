@@ -1,5 +1,5 @@
 """Fusion 360 : support M5Dial pour volant GT2i Race 350 mm (tulipage 90 mm).
-Source de hardware/support_volant.stl. Tout est imprimé, sans vis ; seule la batterie est collée (double face).
+Source de hardware/support_volant.stl. Fixé par une vis M5 + écrou + rondelle large par branche ; batterie collée.
 
 Lancer : Utilitaires > Compléments > Scripts > "+" > dossier SupportVolant > Exécuter.
 Au premier lancement, les cotes sont créées en paramètres utilisateur (Modifier > Changer les paramètres).
@@ -9,10 +9,13 @@ Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau),
 - Plaque fine et pleine entre les deux branches (anneau, bras et zone entre eux). La LiPo 103450 se colle au dos,
   centrée vers (52, -42), grand côté incliné de ~30° (86 % d'appui) ; en vraie diagonale (~48°), centrée vers
   (42, -53) (80 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
-- Le corps du M5Dial s'enfonce dans l'anneau (cercle complet, 3,5 mm de haut), serré par 6 nervures
-  d'écrasement ; la collerette repose dessus et le corps ressort dessous : l'USB-C reste libre.
-- Chaque patte se clipse sur sa branche : 2 parois à crochet qui passent par-dessus les bords, inclinées comme
-  eux (la branche s'élargit vers le moyeu), et un téton Ø 15,4 dans le grand trou (Ø 16) : rien ne glisse.
+- Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : son corps s'enfonce dans un anneau de 3,5 mm
+  serré par 6 nervures d'écrasement, porté par 3 pieds (tube ajouré) ; la collerette repose dessus et le corps
+  pend dans le tube : l'USB-C et le câble de batterie passent par une des 3 fenêtres.
+- Chaque patte se pose sur sa branche entre 2 parois de guidage (inclinées comme les bords, la branche s'élargit
+  vers le moyeu), sans crochet ni téton : la pièce se pose d'un seul geste sur les deux branches. Une vis M5 passe
+  par le grand trou (Ø 16, rondelle large Ø 20+ côté conducteur) et la patte ; l'écrou se loge dans une empreinte
+  hexagonale au dos.
 
 Repère : X droite, Y haut (vue de face), Z vers le conducteur, origine = centre du moyeu,
 Z = 0 = face arrière des branches au niveau des trous.
@@ -47,13 +50,13 @@ PARAMS = [
     ("B_SPOKE_W", 40.0, "mm", "Largeur de la branche du bas au trou (mesurée)"),
     ("B_TAPER", 4.0, "deg", "Évasement de la branche du bas, par côté (plus large vers le moyeu)"),
     ("SPOKE_T", 5.0, "mm", "Épaisseur de la branche (mesurée : 5 mm)"),
-    ("PEG_D", 15.4, "mm", "Ø du téton dans le trou de la branche (trous Ø 16 mesurés)"),
+    ("SCREW_D", 5.5, "mm", "Passage de la vis M5 dans la patte"),
+    ("NUT_AF", 8.4, "mm", "Empreinte d'écrou M5 : sur plats (écrou 8 + jeu)"),
+    ("NUT_FLOOR", 3.0, "mm", "Plastique entre la branche et l'écrou"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
     ("PAD_MIN", 3.0, "mm", "Patte : épaisseur mini (bout bas du coin)"),
-    ("CLIP_WALL", 2.2, "mm", "Clip : épaisseur des parois (elles fléchissent pour clipser)"),
-    ("CLIP_GAP", 0.3, "mm", "Clip : jeu entre paroi et bord de branche"),
-    ("CLIP_LIP", 1.2, "mm", "Clip : débord du crochet sur la face avant de la branche"),
-    ("CLIP_LIP_T", 2.0, "mm", "Clip : épaisseur du crochet"),
+    ("CLIP_WALL", 2.2, "mm", "Parois de guidage : épaisseur"),
+    ("CLIP_GAP", 0.3, "mm", "Parois de guidage : jeu avec le bord de la branche"),
     ("ARM_W", 18.0, "mm", "Bras : largeur côté patte"),
     ("ARM_ROOT_W", 30.0, "mm", "Bras : largeur côté anneau (effilé)"),
     ("ARM_T", 6.0, "mm", "Hauteur du dessus de la plaque au-dessus du bas des pattes (assise du M5Dial)"),
@@ -62,11 +65,14 @@ PARAMS = [
     ("BODY_D", 45.0, "mm", "MESURER : Ø du corps du M5Dial derrière la collerette (découpe recommandée Ø45)"),
     ("CRUSH", 0.5, "mm", "Serrage (sur le Ø) des nervures sur le corps du M5Dial"),
     ("RING_T", 3.5, "mm", "Hauteur de l'anneau (le corps du M5Dial et son USB-C ressortent dessous)"),
+    ("DIAL_RISE", 30.0, "mm", "Rehausse du M5Dial au-dessus de la plaque (0 = anneau posé sur la plaque)"),
+    ("WIN_ANG", 40.0, "deg", "Largeur angulaire des 3 fenêtres du tube (USB-C, câble)"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
-            "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y"]  # ancien logement batterie
+            "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement batterie
+            "PEG_D", "CLIP_LIP", "CLIP_LIP_T"]  # anciens téton et crochets (pièce impossible à poser sur 2 branches)
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
 JOIN = adsk.fusion.FeatureOperations.JoinFeatureOperation
@@ -221,8 +227,9 @@ def build(comp, P):
     # Plan du plateau (= dos de la plaque, où se colle la batterie) : sous le bout le plus bas des coins
     z_b = min(P[k + "_DZ"] - P["PAD_L"] / 2 * math.sin(math.radians(P[k + "_TILT"])) for k in ("R", "B")) - P["PAD_MIN"]
     slab = P["ARM_T"]
+    z_ring = z_b + P["DIAL_RISE"]  # bas de l'anneau qui tient le M5Dial
 
-    cup = b.solid(b.circles([(cx, cy)], r_out), z_b, slab)
+    cup = b.solid(b.circles([(cx, cy)], r_out), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
     cup.name = NAME
     # Zone entre les bras remplie (triangle M5Dial / trou droit / trou bas), rognée plus loin le long des branches
     b.combine(cup, b.solid(b.poly([(cx, cy), (P["R_X"], P["R_Y"]), (P["B_X"], P["B_Y"])]), z_b, slab), JOIN)
@@ -250,10 +257,10 @@ def build(comp, P):
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
-    b.extrude(b.circles([(cx, cy)], r_in), z_b - 1, 60, CUT, [cup])
-    # Anneau de RING_T seulement : le corps du M5Dial (et son USB-C) ressort dessous. La plaque autour est abaissée
-    # au même niveau, 1 mm plus large que la collerette pour qu'elle ne frotte pas.
-    if P["RING_T"] < slab:
+    b.extrude(b.circles([(cx, cy)], r_in), z_b - 1, 200, CUT, [cup])
+    # Anneau de RING_T seulement : le corps du M5Dial (et son USB-C) ressort dessous. Sans rehausse, la plaque autour
+    # est abaissée au même niveau, 1 mm plus large que la collerette pour qu'elle ne frotte pas.
+    if P["DIAL_RISE"] + P["RING_T"] < slab:
         b.extrude(b.circles([(cx, cy)], r_out + 1), z_b + P["RING_T"], 60, CUT, [cup])
     # Face plateau : tout ce qui est sous z_b disparaît -> une seule face plane, pas de support
     b.extrude(b.rect(cx, cy, 500, 500, 0), z_b - 80, 80, CUT, [cup])
@@ -277,15 +284,25 @@ def build(comp, P):
 
     b.fillet([e for e in {e.tempId: e for f in tops for e in f.edges}.values() if not ring_edge(e)], P["FILLET_TOP"], False)
 
+    # 3 fenêtres dans le tube, entre la plaque et l'anneau : USB-C et câble de batterie. Une face au plus loin du moyeu.
+    if P["DIAL_RISE"] > slab + 3:
+        a0, w, rw = math.degrees(math.atan2(cy, cx)), P["WIN_ANG"] / 2, r_out + 3
+        for i in range(3):
+            a = a0 + 120 * i
+            pts = [(cx, cy)] + [(cx + rw * math.cos(math.radians(a + d)), cy + rw * math.sin(math.radians(a + d)))
+                                for d in (-w, 0, w)]
+            b.extrude(b.poly(pts), z_b + slab, P["DIAL_RISE"] - slab, CUT, [cup])
+
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
     tip, root = P["BODY_D"] / 2 - P["CRUSH"] / 2, r_in + 0.6
     for i in range(6):
         a = math.radians(30 + 60 * i)
         rc = (tip + root) / 2
-        rib = b.solid(b.rect(cx + rc * math.cos(a), cy + rc * math.sin(a), root - tip, 1.2, math.degrees(a)), z_b, P["RING_T"])
+        rib = b.solid(b.rect(cx + rc * math.cos(a), cy + rc * math.sin(a), root - tip, 1.2, math.degrees(a)), z_ring, P["RING_T"])
         b.combine(cup, rib, JOIN)
 
-    # Clips, construits dans le repère de la branche puis inclinés : z = 0 face arrière, z = SPOKE_T face avant
+    # Parois de guidage et vis, construites dans le repère de la branche puis inclinées : z = 0 face arrière,
+    # z = SPOKE_T face avant. Pas de crochet : la pièce se pose sur les deux branches d'un même geste (selon Z).
     clip_l = P["PAD_L"] - 2 * P["FILLET_V"]
     for k in ("R", "B"):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
@@ -293,27 +310,22 @@ def build(comp, P):
         nr = (-ur[1], ur[0])
         e = P[k + "_SPOKE_W"] / 2 + P["CLIP_GAP"]  # face intérieure des parois, au centre de la patte
         tp = P[k + "_TAPER"]  # parois inclinées comme les bords de la branche (plus large vers le moyeu)
-        z_lip = P["SPOKE_T"]                   # dessous du crochet = face avant de la branche
-        z_cl = z_lip + P["CLIP_LIP_T"]
         for sd in (1, -1):
             def o(dist):
                 return x + nr[0] * sd * dist, y + nr[1] * sd * dist
 
             wa = rad - sd * tp  # direction de la paroi : suit le bord de la branche
-            wall = b.solid(b.rect(*o(e + P["CLIP_WALL"] / 2), clip_l, P["CLIP_WALL"], wa), -1, z_cl + 1)
-            lip = b.solid(b.rect(*o(e - P["CLIP_LIP"] / 2 + 0.5), clip_l, P["CLIP_LIP"] + 1, wa), z_lip, P["CLIP_LIP_T"])
-            b.combine(wall, lip, JOIN)
-            # Rampe à 45° sur le crochet : la branche écarte les parois en entrant, puis elles se referment
-            ramp = b.solid(b.rect(*o(e - 25), 40, 50, wa), z_cl, 30)
-            px, py = o(e)
-            b.rotate(ramp, (math.cos(math.radians(wa)), math.sin(math.radians(wa)), 0), (px, py, z_cl), sd * 45)
-            b.combine(wall, ramp, CUT)
+            wall = b.solid(b.rect(*o(e + P["CLIP_WALL"] / 2), clip_l, P["CLIP_WALL"], wa), -1, P["SPOKE_T"] + 1)
             b.tilt(wall, x, y, rad, til, dz)
             b.combine(cup, wall, JOIN)
-        # Téton dans le trou de la branche : empêche la patte de glisser le long de la branche
-        peg = b.solid(b.circles([(x, y)], P["PEG_D"] / 2), -1, P["SPOKE_T"] - 0.3 + 1)
-        b.tilt(peg, x, y, rad, til, dz)
-        b.combine(cup, peg, JOIN)
+        # Vis M5 par le trou de la branche (rondelle large côté conducteur), écrou dans une empreinte au dos
+        hole = b.solid(b.circles([(x, y)], P["SCREW_D"] / 2), -40, 41)
+        rh = P["NUT_AF"] / math.sqrt(3)
+        nut = b.solid(b.poly([(x + rh * math.cos(math.radians(rad + 60 * j)), y + rh * math.sin(math.radians(rad + 60 * j)))
+                              for j in range(6)]), -40, 40 - P["NUT_FLOOR"])
+        for t in (hole, nut):
+            b.tilt(t, x, y, rad, til, dz)
+            b.combine(cup, t, CUT)
     return cup
 
 

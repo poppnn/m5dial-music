@@ -115,21 +115,23 @@ that `logo.h` to yourself (do not publish it).
 
 ## Steering wheel mount (3D printed)
 
-[`hardware/support_volant.stl`](hardware/support_volant.stl): a single **fully printed** part (no screws; only the
-battery is taped) for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
+[`hardware/support_volant.stl`](hardware/support_volant.stl): a single printed part, held by one M5 screw per
+spoke (battery taped), for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
 (90 mm dish).
 
 - **Thin filled plate** (6 mm) between the two spokes: M5Dial ring, arms and the area between them, in one piece.
-- **M5Dial**: its body goes into the ring (full circle Ø 45 / Ø 51, **3.5 mm high**), gripped by 6 crush ribs;
-  the collar rests on it and the body sticks out behind, so **USB-C** and Port A stay free. Around it, the plate
-  is lowered to the ring level with 1 mm clearance: nothing rubs.
+- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim: its body goes into a 3.5 mm ring (Ø 45 /
+  Ø 51) gripped by 6 crush ribs, carried by a tube with **3 windows**; the collar rests on the ring and the body
+  hangs in the tube. Turn the M5Dial so **USB-C** faces a window (one faces away from the hub); the battery cable
+  goes through another.
 - **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
   two arms, centred about 52 mm right and 42 mm below the hub centre, long side tilted about 30° (86 % of it
   rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
   There it touches neither the spokes (which sit further back near the hub) nor the M5Dial body.
-- **Attachment**: each pad clips onto its spoke (push the spoke between the two hooked walls, which spread then
-  close over its front face). The walls are angled like the spoke edges (the spokes widen towards the hub) and a
-  Ø 15.4 peg goes into the spoke hole nearest the hub (Ø 16) so it cannot slide.
+- **Attachment**: each pad sits on the back of its spoke between two guide walls (angled like the spoke edges,
+  no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 20 screw** through the spoke
+  hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
+  5 × 20 or 5 × 25; a plain M5 washer would drop into the hole), and an **M5 nut** in the hex pocket at the back of the pad.
 - Geometry measured from photos of the wheel (OMP-type, 350 mm, 90 mm dish; ruler and the 6 × 70 mm hub bolt
   circle as scale, perspective corrected): spokes slope ~43°, side spokes raised ~18° above horizontal, bottom
   spoke 40 mm wide at the hole (tapering ~4° per side), right spoke 38 mm (~1° per side); widths, 5 mm
@@ -140,9 +142,8 @@ battery is taped) for the area between the bottom spoke and the right spoke of a
   Spoke widths, thickness and hole size are measured; hole positions, slope and taper come from the photos
   (±2 mm / ±2°). Check the M5Dial body Ø (`BODY_D`) before printing. Run the script again, then export
   the STL.
-- Printing: flat as is (one face on the bed, the back), **no supports**. PETG or ASA (PLA warps in the sun and
-  breaks when clipping), 4 perimeters, 30-40 % infill.
-- Test the clip on a quick print first: too stiff, lower `CLIP_LIP`; too loose, lower `SPOKE_T` by 0.2 mm.
+- Printing: flat as is (one face on the bed, the back), **no supports** (the window tops are ~17 mm bridges).
+  PETG or ASA (PLA warps in the sun), 4 perimeters, 30-40 % infill.
 - With the IMU on Port A, the screen stays level when the wheel turns.
 - Check that nothing touches the stalks when turning the wheel lock to lock before driving.
 
