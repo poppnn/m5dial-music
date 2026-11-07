@@ -9,7 +9,8 @@
 
 #define TOAST_MS      4000  // app + compteur
 #define TOAST_TEXT_MS 8000  // avec titre et texte (option des Réglages)
-#define TOAST_IN_MS   250
+#define TOAST_IN_MS   320
+#define TOAST_OUT_MS  220
 
 // Appel : nom de l'appelant en très gros, anneau vert qui pulse.
 bool drawCall(uint32_t now, const std::string& caller) {
@@ -57,40 +58,51 @@ static int wrap(const std::string& s, int maxW, std::string* lines, int maxLines
 
 static bool withText(const NotifToast& t) { return settings.notifText && (!t.title.empty() || !t.message.empty()); }
 
+static uint32_t life(const NotifToast& t) { return withText(t) ? TOAST_TEXT_MS : TOAST_MS; }
+
+// Ouverte (reçoit les gestes) : affichée et pas déjà en train de se fermer.
 bool toastShown(uint32_t now) {
   const NotifToast& t = ancsToast();
-  return t.since && now - t.since <= (withText(t) ? TOAST_TEXT_MS : TOAST_MS);
+  return t.since && !t.closing && now - t.since <= life(t);
 }
 
-// Notification : panneau au centre, entre par le haut. true tant qu'il est visible.
+// Notification : panneau au centre. Entre par le haut avec un léger rebond, ressort vers le haut à la fermeture
+// (geste) ou à la fin de sa durée. true pendant ces animations (sinon 4 images/s suffisent).
 bool drawToast(uint32_t now) {
-  if (!toastShown(now)) return false;
   const NotifToast& t = ancsToast();
-  bool text = withText(t);
+  if (!t.since) return false;
   uint32_t age = now - t.since;
+  int32_t outAge = (int32_t)(now - (t.closing ? t.closing : t.since + life(t)));  // < 0 : sortie pas commencée
+  if (outAge >= TOAST_OUT_MS) return false;
+  float in = age < TOAST_IN_MS ? easeOutBack(age / (float)TOAST_IN_MS) : 1.f;
+  float out = outAge > 0 ? easeInCubic(outAge / (float)TOAST_OUT_MS) : 0.f;
+  int dy = (int)(-170 * (1.f - in) - 170 * out);
+  bool text = withText(t);
   const int c = 120;
-  int dy = age < TOAST_IN_MS ? (int)(-140 * (1.f - easeOutCubic(age / (float)TOAST_IN_MS))) : 0;
-  int top = (text ? 48 : 70) + dy, h = text ? 144 : 100, x0 = text ? 24 : 18;
+  // Tailles choisies pour que les coins arrondis restent dans l'écran rond
+  int x0 = text ? 28 : 18, top = (text ? 40 : 64) + dy, h = text ? 164 : 112, room = 240 - 2 * x0 - 16;
   canvas.fillRoundRect(x0, top, 240 - 2 * x0, h, 14, 0x18E3);
   canvas.drawRoundRect(x0, top, 240 - 2 * x0, h, 14, 0xFA20);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(fit(t.app.empty() ? "Notification" : t.app, 172).c_str(), c, top + 28);
+  canvas.drawString(fit(t.app.empty() ? "Notification" : t.app, room).c_str(), c, top + 28);
   canvas.setFont(&fonts::efontJA_16);
   if (!text) {
     char b[32];
     int n = ancsCount();
     snprintf(b, sizeof(b), "%d notification%s", n, n > 1 ? "s" : "");
     canvas.setTextColor(0xAD55);
-    canvas.drawString(b, c, top + 66);
-    return true;
+    canvas.drawString(b, c, top + 60);
+  } else {
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString(fit(t.title, room).c_str(), c, top + 54);
+    std::string lines[3];
+    int n = wrap(t.message, room, lines, 3);
+    canvas.setTextColor(0xAD55);
+    for (int i = 0; i < n; i++) canvas.drawString(lines[i].c_str(), c, top + 78 + i * 20);
   }
-  canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(fit(t.title, 172).c_str(), c, top + 56);
-  std::string lines[3];
-  int n = wrap(t.message, 172, lines, 3);
-  canvas.setTextColor(0xAD55);
-  for (int i = 0; i < n; i++) canvas.drawString(lines[i].c_str(), c, top + 80 + i * 20);
-  return true;
+  canvas.setTextColor(0x5AEB);
+  canvas.drawString("Press to close", c, top + h - 22);
+  return age < TOAST_IN_MS || outAge > -300;
 }

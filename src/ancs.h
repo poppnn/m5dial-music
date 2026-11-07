@@ -12,7 +12,8 @@ bool ancsCall(std::string& caller);    // appel entrant en cours
 void ancsAnswer(bool accept);          // décrocher / refuser
 int ancsCount();                       // notifications présentes sur l'iPhone
 
-struct NotifToast { std::string app, title, message; uint32_t since = 0; };  // since = 0 : rien à afficher
+// since = 0 : rien à afficher ; closing = instant où la fermeture a commencé (0 = ouverte)
+struct NotifToast { std::string app, title, message; uint32_t since = 0, closing = 0; };
 const NotifToast& ancsToast();
-void ancsToastDismiss();
+void ancsToastDismiss();  // lance l'animation de fermeture
 void ancsSelfTest();

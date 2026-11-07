@@ -8,6 +8,7 @@
 #include "app.h"
 #include "clock.h"
 #include "settings.h"
+#include "text.h"
 
 // ---------- AMS (spec Apple "Apple Media Service") ----------
 static const char* AMS_SVC = "89D3502B-0F36-433A-8EF4-C502AD55F8DC";
@@ -48,7 +49,7 @@ bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& ela
 // shortcut: valeurs tronquées à MTU-6 octets (flag 1), lire Entity Attribute si titres très longs.
 static void onEntityUpdate(NimBLERemoteCharacteristic*, uint8_t* d, size_t len, bool) {
   if (len < 3) return;
-  std::string v((const char*)d + 3, len - 3);
+  std::string v = cleanText(std::string((const char*)d + 3, len - 3));  // emojis : carrés avec la police de l'écran
   std::lock_guard<std::mutex> lock(mtx);
   if (d[0] == ENT_TRACK) {
     if (d[1] == TRACK_TITLE) {

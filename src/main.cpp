@@ -7,7 +7,7 @@
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
  * iPhone : un appel entrant prend tout l'écran (appui = décrocher, appui long = refuser) ; une notification
- * s'affiche par-dessus la page (nom de l'app + compteur ; texte en option), appui = la fermer.
+ * s'affiche par-dessus la page (nom de l'app + compteur ; texte en option), appui, tap ou glissement = la fermer.
  *
  * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
@@ -29,6 +29,7 @@
 #include "power.h"
 #include "clock.h"
 #include "settings.h"
+#include "text.h"
 #include "pages/pages.h"
 
 volatile bool dirty = true;
@@ -100,6 +101,7 @@ void setup() {
   settingsLoad();
   settingsSelfTest();
   ancsSelfTest();
+  cleanTextSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
   assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 
@@ -191,7 +193,8 @@ void loop() {
     float r = rot * DEG_TO_RAD;
     float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
     float dy = -sinf(r) * t.distanceX() + cosf(r) * t.distanceY();
-    if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) startPageSlide(dy < 0 ? -1 : +1);  // vertical : page
+    if (toastShown(now)) ancsToastDismiss();  // notification affichée : n'importe quel glissement la ferme
+    else if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) startPageSlide(dy < 0 ? -1 : +1);  // vertical : page
     else if (fabsf(dx) > SWIPE_MIN_PX) PAGES[page]->swipeX(dx > 0 ? +1 : -1);
     dirty = true;
   }

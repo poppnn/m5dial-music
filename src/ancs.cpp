@@ -7,6 +7,7 @@
 #include <vector>
 #include "ancs.h"
 #include "settings.h"
+#include "text.h"
 
 static const char* ANCS_SVC = "7905F431-B5CE-4E99-A40F-4B1E122D00D0";
 static const char* ANCS_NS  = "9FBF120D-6301-42D9-8C58-25E699A21DBD";  // Notification Source
@@ -24,6 +25,7 @@ struct Event { uint8_t id, flags, cat; uint32_t uid; };
 
 static NimBLERemoteCharacteristic* cp = nullptr;
 static QueueHandle_t events = nullptr;
+static QueueHandle_t writes = nullptr;  // écritures du Control Point, faites par writerTask
 static std::mutex rxMtx;
 static std::vector<uint8_t> rx;  // Data Source accumulé jusqu'à une réponse complète
 
@@ -70,15 +72,38 @@ void ancsReset() {
   cp = nullptr;
   if (events) xQueueReset(events);
   { std::lock_guard<std::mutex> lock(rxMtx); rx.clear(); }
+  if (writes) xQueueReset(writes);
   count = 0;
   callActive = false;
   pending = PEND_NONE;
   toast.since = 0;
 }
 
+// Le Control Point exige une écriture avec réponse, qui bloque le temps d'un aller-retour radio : faite par une
+// petite tâche dédiée, pour que loop() (animations, molette) ne s'arrête jamais.
+// shortcut: si une écriture est en vol pile pendant une reconnexion, elle vise l'ancienne caractéristique ; rare
+// (il faut déconnexion + reconnexion pendant ~50 ms), à protéger par un compteur de connexion si ça arrive.
+struct WriteReq { uint8_t len; uint8_t d[96]; };
+
+static void writerTask(void*) {
+  WriteReq w;
+  for (;;) {
+    if (!xQueueReceive(writes, &w, portMAX_DELAY)) continue;
+    NimBLERemoteCharacteristic* c = cp;
+    if (c) c->writeValue(w.d, w.len, true);
+  }
+}
+
 static bool write(const std::vector<uint8_t>& v) {
-  NimBLERemoteCharacteristic* c = cp;
-  return c && c->writeValue(v.data(), v.size(), true);  // le Control Point exige une écriture avec réponse
+  if (!cp || v.size() > sizeof(WriteReq::d)) return false;
+  if (!writes) {
+    writes = xQueueCreate(6, sizeof(WriteReq));
+    xTaskCreate(writerTask, "ancs_wr", 4096, nullptr, 1, nullptr);
+  }
+  WriteReq w;
+  w.len = v.size();
+  memcpy(w.d, v.data(), v.size());
+  return xQueueSend(writes, &w, 0) == pdTRUE;
 }
 
 // GetNotificationAttributes : identifiant d'app, titre (64 o max), et message (120 o) si le texte est affiché.
@@ -114,10 +139,11 @@ static bool parseAttrs(const uint8_t* p, size_t n, int want, std::map<uint8_t, s
 
 static void showToast() {
   auto it = appNames.find(pendingApp);
-  toast.app = it != appNames.end() ? it->second : pendingApp.substr(pendingApp.rfind('.') + 1);
-  toast.title = pendingTitle;
-  toast.message = pendingMsg;
+  toast.app = cleanText(it != appNames.end() ? it->second : pendingApp.substr(pendingApp.rfind('.') + 1));
+  toast.title = cleanText(pendingTitle);
+  toast.message = cleanText(pendingMsg);
   toast.since = millis() | 1;
+  toast.closing = 0;
 }
 
 // Traite la réponse en attente si elle est complète. true = quelque chose à montrer.
@@ -130,7 +156,7 @@ static bool handleResponse() {
     if (!parseAttrs(&buf[5], buf.size() - 5, settings.notifText ? 3 : 2, a)) return false;
     pending = PEND_NONE;
     if (callActive && pendingUid == callUid) {  // appel : le titre est le nom (ou le numéro) de l'appelant
-      if (!a[ATTR_TITLE].empty()) callName = a[ATTR_TITLE];
+      if (!cleanText(a[ATTR_TITLE]).empty()) callName = cleanText(a[ATTR_TITLE]);
       return true;
     }
     pendingApp = a[ATTR_APP_ID];
@@ -197,7 +223,7 @@ void ancsAnswer(bool accept) {
 
 int ancsCount() { return count; }
 const NotifToast& ancsToast() { return toast; }
-void ancsToastDismiss() { toast.since = 0; }
+void ancsToastDismiss() { if (toast.since && !toast.closing) toast.closing = millis() | 1; }
 
 void ancsSelfTest() {
   const uint8_t r[] = {ATTR_APP_ID, 3, 0, 'a', 'b', 'c', ATTR_TITLE, 2, 0, 'h', 'i'};
