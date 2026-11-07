@@ -11,6 +11,7 @@ struct Settings {
   uint8_t briDay, briNight;  // luminosité de l'écran (%)
   uint8_t briMode;         // 0 jour, 1 nuit, 2 auto (nuit entre nightFrom et nightTo, heure de l'iPhone)
   uint8_t nightFrom, nightTo;  // heures
+  bool notifText;          // notifications iPhone : afficher titre et texte (sinon app + compteur seulement)
 };
 extern Settings settings;
 

@@ -6,6 +6,9 @@
  * power (rétroéclairage, extinction), anim (easing, glissements), pages/ (une page par fichier).
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
+ * iPhone : un appel entrant prend tout l'écran (appui = décrocher, appui long = refuser) ; une notification
+ * s'affiche par-dessus la page (nom de l'app + compteur ; texte en option), appui = la fermer.
+ *
  * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
  *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
@@ -14,6 +17,7 @@
  */
 #include <M5Dial.h>
 #include <algorithm>
+#include "ancs.h"
 #include "anim.h"
 #include "app.h"
 #include "ble_phone.h"
@@ -72,7 +76,15 @@ static bool draw(float dt) {
     pushFrame();
     return true;  // spinner animé en continu
   }
+  std::string caller;
+  if (ancsCall(caller)) {  // appel entrant : prioritaire sur toutes les pages
+    frameShift = 0;
+    drawCall(now, caller);
+    pushFrame();
+    return true;
+  }
   bool anim = PAGES[page]->draw(dt);
+  anim |= drawToast(now);
   pushFrame();
   return anim || dimming || fadeStart || slideDir || pageDir || imuTurning();
 }
@@ -86,6 +98,7 @@ void setup() {
   Serial.begin(115200);
   settingsLoad();
   settingsSelfTest();
+  ancsSelfTest();
 
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
@@ -107,6 +120,10 @@ void loop() {
 
   M5Dial.update();
   if (needSetup) setupAms();
+  static Link prevLink = LINK_NONE;
+  if (linkMode == LINK_NONE && prevLink != LINK_NONE) ancsReset();
+  prevLink = linkMode;
+  if (ancsService()) { lastInput = millis(); dirty = true; }  // appel ou notification : écran rallumé
   clockService();  // heure reçue de l'iPhone : appliquée ici (I2C du RTC hors de la tâche BLE)
   imuUpdate(dt);
   goveeService(page == PAGE_LED);
@@ -118,7 +135,9 @@ void loop() {
   const long steps = settings.encSteps;
   while (enc - encLast >= steps) { detents++; encLast += steps; }
   while (encLast - enc >= steps) { detents--; encLast -= steps; }
-  if (!bootShown && detents) PAGES[page]->wheel(detents);  // écran de démarrage : commandes ignorées
+  std::string caller;
+  bool call = !bootShown && ancsCall(caller);
+  if (!bootShown && !call && detents) PAGES[page]->wheel(detents);  // démarrage, appel : molette ignorée
   if (detents) dirty = true;  // image tout de suite : sinon jusqu'à 250 ms d'attente au repos
   if (volPing) { volPing = false; musicVolumePing(); dirty = true; }
 
@@ -131,11 +150,23 @@ void loop() {
   if (linkMode != LINK_NONE || lastInput == now) lastActive = now;
   if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Veille...");
 
-  if (!bootShown && M5Dial.BtnA.wasClicked()) {  // au relâcher, pour distinguer l'appui long
+  // Bouton déjà utilisé (refus d'appel) : ignoré jusqu'à ce qu'il soit relâché, sinon le relâcher ferait un clic.
+  static bool swallowBtn = false;
+  bool btnClick = M5Dial.BtnA.wasClicked() && !swallowBtn, btnHold = M5Dial.BtnA.wasHold() && !swallowBtn;
+  if (swallowBtn && M5Dial.BtnA.isReleased()) swallowBtn = false;
+
+  if (call) {  // appel entrant : seulement le bouton (gestes simples en conduisant)
+    if (!swallowBtn && M5Dial.BtnA.pressedFor(CALL_REJECT_MS)) { ancsAnswer(false); swallowBtn = true; dirty = true; }
+    else if (btnClick) { ancsAnswer(true); dirty = true; }
+    btnClick = btnHold = false;
+  } else if (toastShown(now) && (btnClick || t.wasClicked())) {  // notification affichée : appui = la fermer
+    ancsToastDismiss();
+    btnClick = false;
+    dirty = true;
+  } else if (!bootShown && btnClick) {  // au relâcher, pour distinguer l'appui long
     PAGES[page]->click();
     dirty = true;
-  }
-  if (!bootShown && t.wasClicked()) {
+  } else if (!bootShown && t.wasClicked()) {
     if (PAGES[page]->tap) {  // position ramenée dans le repère de l'interface, tournée de rot degrés
       float r = rot * DEG_TO_RAD, x = t.x - 120, y = t.y - 120;
       PAGES[page]->tap(120 + cosf(r) * x + sinf(r) * y, 120 - sinf(r) * x + cosf(r) * y, t.getClickCount());
@@ -145,8 +176,8 @@ void loop() {
     dirty = true;
   }
 
-  if (M5Dial.BtnA.wasHold()) shutdown("Arrêt...");  // appui long 2 s
-  if (!bootShown && (t.wasFlicked() || t.wasDragged())) {
+  if (btnHold) shutdown("Arrêt...");  // appui long 2 s
+  if (!bootShown && !call && (t.wasFlicked() || t.wasDragged())) {
     // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
     float r = rot * DEG_TO_RAD;
     float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();

@@ -18,6 +18,18 @@ Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour *
   dessus les change. **Double tap** ailleurs = « J'aime » (un cœur s'affiche). Le tap simple (lecture / pause)
   part après 0,3 s, le temps de voir si un second tap arrive ; l'appui sur la molette reste immédiat.
 
+## Appels et notifications (iPhone)
+
+Via le service Apple ANCS (aucune app à installer, l'appairage suffit) :
+
+- **Appel entrant** : tout l'écran, quelle que soit la page, avec le nom de l'appelant en très gros.
+  **Appui** sur la molette = décrocher, **appui long** (0,8 s) = refuser. L'écran revient ensuite à la page d'avant.
+- **Notification** : par sécurité au volant, seul le **nom de l'app** et le **nombre de notifications** s'affichent
+  (4 s). Réglages › Texte notifs › affiché : titre et texte en gros (8 s). Appui = fermer.
+- Gestes simples uniquement (molette, appui) : pas de glissement à viser sur ces écrans.
+- Si l'iPhone ne propose pas les notifications pour « M5Dial Music » : Réglages iOS › Bluetooth › (i) ›
+  « Partager les notifications système ».
+
 **Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
 Ou télécharger les binaires d'une version dans [Releases](https://github.com/poppnn/m5dial-music/releases).
 
@@ -52,7 +64,8 @@ L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 - **Réglages** (enregistrés dans la mémoire du M5Dial, gardés à l'extinction et aux mises à jour) : molette =
   choisir une ligne, appui = modifier (molette = valeur, appliquée tout de suite), appui = terminer.
   - Sens IMU (normal / inversé), impulsions par cran de molette (1 à 4), délai d'atténuation (jamais à 120 s),
-    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit.
+    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit, texte des notifications
+    (masqué par défaut).
   - Luminosité : jour, nuit ou **auto** (nuit entre « Nuit dès » et « Nuit jusqu'à », 21 h -> 7 h par défaut,
     selon l'heure de l'iPhone ; heure inconnue = jour).
   - Appareils appairés (nom lu à la connexion) : « Oublier » un appareil, ou « Tout effacer ». Premier appui =

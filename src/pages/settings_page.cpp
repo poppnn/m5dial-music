@@ -6,7 +6,7 @@
 #include "../imu.h"
 #include "../settings.h"
 
-enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_VALUES };  // puis les appareils
+enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF_TEXT, IT_VALUES };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
 static const uint16_t SLEEP_OPTS[] = {0, 5, 10, 20, 30, 60};   // min
@@ -26,7 +26,7 @@ static int nearest(const T* opts, int n, int v) {  // index de l'option la plus 
 
 static int optCount(int it) {
   switch (it) {
-    case IT_IMU: return 2;
+    case IT_IMU: case IT_NOTIF_TEXT: return 2;
     case IT_MODE: return 3;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: return 24;
     case IT_ENC: return 4;
@@ -40,6 +40,7 @@ static int optCount(int it) {
 static int optIndex(int it) {
   switch (it) {
     case IT_IMU: return settings.imuDir < 0;
+    case IT_NOTIF_TEXT: return settings.notifText;
     case IT_MODE: return settings.briMode;
     case IT_NIGHT_FROM: return settings.nightFrom;
     case IT_NIGHT_TO: return settings.nightTo;
@@ -59,6 +60,7 @@ static void setOpt(int it, int i) {
       break;
     }
     case IT_MODE: settings.briMode = i; break;
+    case IT_NOTIF_TEXT: settings.notifText = i; break;
     case IT_NIGHT_FROM: settings.nightFrom = i; break;
     case IT_NIGHT_TO: settings.nightTo = i; break;
     case IT_ENC: settings.encSteps = i + 1; break;
@@ -74,6 +76,7 @@ static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
     case IT_IMU: snprintf(b, n, "%s", i ? "inversé" : "normal"); break;
+    case IT_NOTIF_TEXT: snprintf(b, n, "%s", i ? "affiché" : "masqué"); break;
     case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (nuit)" : "auto (jour)") : i ? "nuit" : "jour"); break;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d h", i); break;
     case IT_ENC: snprintf(b, n, "%d impulsion%s", i + 1, i ? "s" : ""); break;
@@ -85,7 +88,7 @@ static void valueText(int it, char* b, size_t n) {
 }
 
 static const char* LABELS[IT_VALUES] = {"Sens IMU", "Molette", "Atténuation", "Extinction", "Lum. jour",
-                                        "Lum. nuit", "Luminosité", "Nuit dès", "Nuit jusqu'à"};
+                                        "Lum. nuit", "Luminosité", "Nuit dès", "Nuit jusqu'à", "Texte notifs"};
 
 // Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {

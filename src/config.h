@@ -8,6 +8,7 @@
 // Calibration matérielle : impulsions de l'encodeur par cran.
 #define ENC_STEPS_PER_DETENT 2  // défaut (Réglages > Molette) : 2 impulsions par cran mesurées sur ce M5Dial
 #define SWIPE_MIN_PX         40
+#define CALL_REJECT_MS       800  // appel entrant : appui long sur la molette = refuser
 
 // "Toujours droit" (IMU externe).
 #define IMU_DIR        1      // défaut (Réglages > Sens IMU)

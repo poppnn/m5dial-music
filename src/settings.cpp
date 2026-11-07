@@ -3,7 +3,7 @@
 #include "config.h"
 #include "clock.h"
 
-Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7};
+Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7, false};
 static Preferences prefs;
 
 void settingsLoad() {
@@ -17,6 +17,7 @@ void settingsLoad() {
   settings.briMode = min<uint8_t>(prefs.getUChar("briMode", settings.briMode), 2);
   settings.nightFrom = prefs.getUChar("nightFrom", settings.nightFrom) % 24;
   settings.nightTo = prefs.getUChar("nightTo", settings.nightTo) % 24;
+  settings.notifText = prefs.getBool("notifTxt", settings.notifText);
 }
 
 void settingsSave() {
@@ -29,6 +30,7 @@ void settingsSave() {
   prefs.putUChar("briMode", settings.briMode);
   prefs.putUChar("nightFrom", settings.nightFrom);
   prefs.putUChar("nightTo", settings.nightTo);
+  prefs.putBool("notifTxt", settings.notifText);
 }
 
 // Plage de nuit qui peut passer minuit (21 h -> 7 h) ou non (1 h -> 5 h).

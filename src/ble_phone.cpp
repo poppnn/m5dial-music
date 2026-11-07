@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "ble_phone.h"
 #include <NimBLEHIDDevice.h>
+#include "ancs.h"
 #include "app.h"
 #include "clock.h"
 #include "settings.h"
@@ -121,6 +122,7 @@ void setupAms() {
     clockFromCts(v.data(), v.size());
     ct->subscribe(true, [](NimBLERemoteCharacteristic*, uint8_t* d, size_t len, bool) { clockFromCts(d, len); });
   }
+  ancsSetup(client);  // appels et notifications
   rcChar = rc;
   linkMode = LINK_AMS;
   dirty = true;
