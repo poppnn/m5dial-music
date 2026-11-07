@@ -6,14 +6,12 @@ Au premier lancement, les cotes sont créées en paramètres utilisateur (Modifi
 Pour appliquer de nouvelles cotes : modifie-les là, puis relance le script (il remplace le groupe de timeline).
 
 Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), supports seulement sous l'anneau rehaussé :
-- Plaque fine et pleine entre les deux branches, pleine aussi sous le M5Dial (rapproché du moyeu, à 3-4 mm des
-  pattes). La LiPo 103450 se colle au dos, sous le M5Dial : centrée vers (60, -50), grand côté presque vertical
-  (~108°, perpendiculaire à la branche droite), 100 % d'appui, sans couvrir les écrous.
-- Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : il se fixe comme sur un panneau, dans un
-  anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8, 12,6 de haut). Sous
-  l'anneau, rien dans le rayon du collier ; l'anneau est porté par 3 pieds (dans l'axe des bras et à l'opposé du
-  moyeu) : les grandes ouvertures laissent passer les doigts pour visser le collier, l'USB-C (au dos) et les câbles.
-  À l'impression, des supports sont nécessaires sous l'anneau.
+- Plaque fine entre les deux branches, ouverte sous le M5Dial (le collier se met par-dessous), prolongée côté
+  jante par un plateau où se colle la LiPo 103450 : centrée vers (91, -86), grand côté à ~46° (tangent au tube).
+- Le M5Dial (rapproché du moyeu, à 3-4 mm des pattes) est rehaussé de DIAL_RISE et se fixe comme sur un panneau :
+  anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8 x 12,6). Sous l'anneau,
+  rien dans le rayon du collier. Il est porté par un tube plein percé de 2 fenêtres en arche entre 3 piliers de 60°
+  (dans l'axe des bras et côté jante) : doigts pour tenir le collier, USB-C (au dos du M5Dial), câble de batterie.
 - Chaque patte se pose sur sa branche entre 2 parois de guidage (inclinées comme les bords, la branche s'élargit
   vers le moyeu), sans crochet ni téton : la pièce se pose d'un seul geste sur les deux branches. Une vis M5 passe
   par le grand trou (Ø 16, rondelle large Ø 20+ côté conducteur) et la patte ; l'écrou se loge dans une empreinte
@@ -71,13 +69,15 @@ PARAMS = [
     ("CLAMP_D", 49.8, "mm", "Ø extérieur du collier de serrage du M5Dial (STL Dial_v1.1 : 49,8, 12,6 de haut)"),
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
     ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
-    ("LEG_ANG", 40.0, "deg", "Largeur angulaire des 3 pieds (le reste est ouvert : doigts, USB-C, câbles)"),
+    ("LEG_ANG", 60.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : fenêtres en arche)"),
+    ("BAT_L", 50.0, "mm", "LiPo 103450 : longueur (plateau de batterie au dos, côté jante)"),
+    ("BAT_W", 34.0, "mm", "LiPo 103450 : largeur"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
-            "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement batterie
-            "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton et crochets (pièce impossible à poser sur 2 branches)
+            "CASE_WALL", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement batterie
+            "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton, crochets, fenêtres
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
 JOIN = adsk.fusion.FeatureOperations.JoinFeatureOperation
@@ -161,12 +161,14 @@ class Builder:
         r = math.radians(radial)
         self.rotate(body, (-math.sin(r), math.cos(r), 0), (x, y, 0), -tilt, dz)
 
-    def rotate(self, body, axis, pt, ang, dz=0):
-        """Rotation de `ang` degrés autour de l'axe (direction axis, passant par pt en mm), puis décalage en Z."""
+    def rotate(self, body, axis, pt, ang, dz=0, dx=0, dy=0):
+        """Rotation de `ang` degrés autour de l'axe (direction axis, passant par pt en mm), puis décalage (mm)."""
         m = adsk.core.Matrix3D.create()
         m.setToRotation(math.radians(ang), adsk.core.Vector3D.create(*axis),
                         adsk.core.Point3D.create(pt[0] / 10, pt[1] / 10, pt[2] / 10))
         tr = m.translation
+        tr.x += dx / 10
+        tr.y += dy / 10
         tr.z += dz / 10
         m.translation = tr
         coll = adsk.core.ObjectCollection.create()
@@ -242,6 +244,13 @@ def build(comp, P):
     # Zone entre les bras remplie (triangle M5Dial / trou droit / trou bas), rognée plus loin le long des branches
     b.combine(cup, b.solid(b.poly([(cx, cy), (P["R_X"], P["R_Y"]), (P["B_X"], P["B_Y"])]), z_b, slab), JOIN)
 
+    a_out = math.degrees(math.atan2(cy, cx))  # direction opposée au moyeu
+    if raised:
+        # Plateau de batterie au dos, côté jante, juste après le trou du collier (grand côté tangent au tube)
+        d = r_clr + P["BAT_W"] / 2 + 2
+        b.combine(cup, b.solid(b.rect(cx + d * math.cos(math.radians(a_out)), cy + d * math.sin(math.radians(a_out)),
+                                      P["BAT_W"] + 4, P["BAT_L"] + 4, a_out), z_b, slab), JOIN)
+
     for k in ("R", "B"):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
 
@@ -265,8 +274,7 @@ def build(comp, P):
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
-    # Rehaussé, le M5Dial et son collier restent au-dessus de la plaque : elle reste pleine dessous (place pour la batterie)
-    z_floor = z_b + slab if raised else z_b - 1
+    z_floor = z_b - 1  # ouvert dessous : le collier se met par-dessous
     b.extrude(b.circles([(cx, cy)], r_in), z_floor, 200, CUT, [cup])
     if raised:  # sous l'anneau plat de RING_T : rien dans le rayon du collier
         b.extrude(b.circles([(cx, cy)], r_clr), z_floor, z_ring - z_floor, CUT, [cup])
@@ -296,21 +304,25 @@ def build(comp, P):
 
     b.fillet([e for e in {e.tempId: e for f in tops for e in f.edges}.values() if not ring_edge(e)], P["FILLET_TOP"], False)
 
-    # Tube ouvert entre la plaque et l'anneau : il ne reste que 3 pieds, dans l'axe des deux bras et à l'opposé du
-    # moyeu. Les grandes ouvertures laissent passer les doigts pour visser le collier, la prise USB-C (au dos du
-    # M5Dial) et le câble de batterie.
+    # Tube plein, percé de fenêtres en arche entre 3 piliers (dans l'axe des deux bras et à l'opposé du moyeu) :
+    # les doigts y passent pour tenir le collier, ainsi que la prise USB-C (au dos du M5Dial) et le câble de batterie.
+    # Le haut en arche s'imprime sans support et garde le tube rigide.
     if raised:
         legs = sorted(math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) % 360 for k in ("R", "B"))
-        legs = sorted(legs + [math.degrees(math.atan2(cy, cx)) % 360])
-        rw = r_base + 3
+        legs = sorted(legs + [a_out % 360])
+        h = z_ring - 1 - (z_b + slab)  # hauteur de fenêtre, 1 mm sous l'anneau
         for a1, a2 in zip(legs, legs[1:] + [legs[0] + 360]):
             span = a2 - a1 - P["LEG_ANG"]
-            if span < 10:
+            ww = min(2 * r_clr * math.sin(math.radians(span / 2)), 2 * (h - 3))  # largeur à l'intérieur du tube
+            if ww < 12:
                 continue
-            n = int(span // 10) + 1
-            pts = [(cx, cy)] + [(cx + rw * math.cos(math.radians(a1 + P["LEG_ANG"] / 2 + span * j / n)),
-                                 cy + rw * math.sin(math.radians(a1 + P["LEG_ANG"] / 2 + span * j / n))) for j in range(n + 1)]
-            b.extrude(b.poly(pts), z_b + slab, z_ring - z_b - slab, CUT, [cup])
+            ra = ww / 2
+            pts = ([(ra, 0), (ra, h - ra)] + [(ra * math.cos(math.radians(t)), h - ra + ra * math.sin(math.radians(t)))
+                                               for t in range(15, 180, 15)] + [(-ra, h - ra), (-ra, 0)])
+            win = b.solid(b.poly(pts), 0, r_base + 5)  # arche dressée dans le plan XZ, poussée selon -Y
+            b.rotate(win, (1, 0, 0), (0, 0, 0), 90)
+            b.rotate(win, (0, 0, 1), (0, 0, 0), (a1 + a2) / 2 + 90, z_b + slab, cx, cy)
+            b.combine(cup, win, CUT)
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
     tip, root = P["BODY_D"] / 2 - P["CRUSH"] / 2, r_in + 0.6
