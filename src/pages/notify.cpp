@@ -19,7 +19,7 @@ bool drawCall(uint32_t now, const std::string& caller) {
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
-  canvas.drawString("Appel entrant", c, 58);
+  canvas.drawString("Incoming call", c, 58);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
   canvas.setTextSize(1.6f);
@@ -28,9 +28,9 @@ bool drawCall(uint32_t now, const std::string& caller) {
   canvas.setTextSize(1);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0x07E8);
-  canvas.drawString("Appui : décrocher", c, 166);
+  canvas.drawString("Press: answer", c, 166);
   canvas.setTextColor(0xF8A2);
-  canvas.drawString("Appui long : refuser", c, 190);
+  canvas.drawString("Hold: decline", c, 190);
   return true;  // anneau animé
 }
 
@@ -70,13 +70,13 @@ bool drawToast(uint32_t now) {
   uint32_t age = now - t.since;
   const int c = 120;
   int dy = age < TOAST_IN_MS ? (int)(-140 * (1.f - easeOutCubic(age / (float)TOAST_IN_MS))) : 0;
-  int top = (text ? 44 : 70) + dy, h = text ? 152 : 100;
-  canvas.fillRoundRect(18, top, 204, h, 14, 0x18E3);
-  canvas.drawRoundRect(18, top, 204, h, 14, 0xFA20);
+  int top = (text ? 48 : 70) + dy, h = text ? 144 : 100, x0 = text ? 24 : 18;
+  canvas.fillRoundRect(x0, top, 240 - 2 * x0, h, 14, 0x18E3);
+  canvas.drawRoundRect(x0, top, 240 - 2 * x0, h, 14, 0xFA20);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(fit(t.app.empty() ? "Notification" : t.app, 180).c_str(), c, top + 28);
+  canvas.drawString(fit(t.app.empty() ? "Notification" : t.app, 172).c_str(), c, top + 28);
   canvas.setFont(&fonts::efontJA_16);
   if (!text) {
     char b[32];
@@ -87,10 +87,10 @@ bool drawToast(uint32_t now) {
     return true;
   }
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(fit(t.title, 180).c_str(), c, top + 58);
+  canvas.drawString(fit(t.title, 172).c_str(), c, top + 56);
   std::string lines[3];
-  int n = wrap(t.message, 184, lines, 3);
+  int n = wrap(t.message, 172, lines, 3);
   canvas.setTextColor(0xAD55);
-  for (int i = 0; i < n; i++) canvas.drawString(lines[i].c_str(), c, top + 84 + i * 20);
+  for (int i = 0; i < n; i++) canvas.drawString(lines[i].c_str(), c, top + 80 + i * 20);
   return true;
 }

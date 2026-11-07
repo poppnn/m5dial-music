@@ -75,20 +75,20 @@ static void setOpt(int it, int i) {
 static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
-    case IT_IMU: snprintf(b, n, "%s", i ? "inversé" : "normal"); break;
-    case IT_NOTIF_TEXT: snprintf(b, n, "%s", i ? "affiché" : "masqué"); break;
-    case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (nuit)" : "auto (jour)") : i ? "nuit" : "jour"); break;
-    case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d h", i); break;
-    case IT_ENC: snprintf(b, n, "%d impulsion%s", i + 1, i ? "s" : ""); break;
-    case IT_DIM: if (DIM_OPTS[i]) snprintf(b, n, "%u s", DIM_OPTS[i]); else snprintf(b, n, "jamais"); break;
-    case IT_SLEEP: if (SLEEP_OPTS[i]) snprintf(b, n, "%u min", SLEEP_OPTS[i]); else snprintf(b, n, "jamais"); break;
+    case IT_IMU: snprintf(b, n, "%s", i ? "reversed" : "normal"); break;
+    case IT_NOTIF_TEXT: snprintf(b, n, "%s", i ? "shown" : "hidden"); break;
+    case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (night)" : "auto (day)") : i ? "night" : "day"); break;
+    case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d:00", i); break;
+    case IT_ENC: snprintf(b, n, "%d pulse%s", i + 1, i ? "s" : ""); break;
+    case IT_DIM: if (DIM_OPTS[i]) snprintf(b, n, "%u s", DIM_OPTS[i]); else snprintf(b, n, "never"); break;
+    case IT_SLEEP: if (SLEEP_OPTS[i]) snprintf(b, n, "%u min", SLEEP_OPTS[i]); else snprintf(b, n, "never"); break;
     case IT_BRI_DAY: snprintf(b, n, "%u %%", BRI_DAY_OPTS[i]); break;
     default: snprintf(b, n, "%u %%", BRI_NIGHT_OPTS[i]); break;
   }
 }
 
-static const char* LABELS[IT_VALUES] = {"Sens IMU", "Molette", "Atténuation", "Extinction", "Lum. jour",
-                                        "Lum. nuit", "Luminosité", "Nuit dès", "Nuit jusqu'à", "Texte notifs"};
+static const char* LABELS[IT_VALUES] = {"IMU dir", "Wheel", "Dim after", "Power off", "Day level",
+                                        "Night level", "Brightness", "Night from", "Night until", "Notif text"};
 
 // Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {
@@ -104,35 +104,38 @@ static bool draw(float) {
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextDatum(middle_center);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString("Réglages", c, 26);
-  for (int i = sel - 3; i <= sel + 3; i++) {
+  canvas.drawString("Settings", c, 26);
+  for (int i = sel - 2; i <= sel + 2; i++) {  // 5 lignes : au-delà, l'écran rond est trop étroit
     if (i < 0 || i >= n) continue;
     int y = 118 + (i - sel) * 28;
+    int room = textSpace(y, 16, 114) - 6;  // largeur de chaque colonne à cette hauteur
     bool cur = i == sel;
     char val[40];
     std::string label;
+    bool live = false;
     if (i < IT_VALUES) {
       label = LABELS[i];
       valueText(i, val, sizeof(val));
     } else if (!bonds) {
-      label = "Appareils";
-      snprintf(val, sizeof(val), "aucun");
+      label = "Devices";
+      snprintf(val, sizeof(val), "none");
     } else if (i - IT_VALUES < bonds) {  // un appareil appairé
       std::string a = NimBLEDevice::getBondedAddress(i - IT_VALUES).toString(), name = bondName(a);
-      label = a == peer ? "Oublier (connecté)" : "Oublier";
-      snprintf(val, sizeof(val), "%s", fit(name.empty() ? a.substr(9) : name, 100).c_str());
+      label = "Forget";
+      live = a == peer;  // appareil connecté : nom en vert
+      snprintf(val, sizeof(val), "%s", (name.empty() ? a.substr(9) : name).c_str());
     } else {
-      label = "Tout effacer";
-      snprintf(val, sizeof(val), "%d appareil%s", bonds, bonds > 1 ? "s" : "");
+      label = "Erase all";
+      snprintf(val, sizeof(val), "%d device%s", bonds, bonds > 1 ? "s" : "");
     }
-    if (cur && confirming) snprintf(val, sizeof(val), "confirmer ?");
+    if (cur && confirming) snprintf(val, sizeof(val), "confirm?");
     if (cur) canvas.fillRoundRect(16, y - 13, 208, 26, 8, 0x2104);
     canvas.setTextDatum(middle_right);
     canvas.setTextColor(cur ? TFT_WHITE : 0x8410);
-    canvas.drawString(label.c_str(), c - 4, y);
+    canvas.drawString(fit(label, room).c_str(), c - 4, y);
     canvas.setTextDatum(middle_left);
-    canvas.setTextColor(cur && (editing || confirming) ? 0xFA20 : cur ? TFT_WHITE : 0x8410);
-    canvas.drawString(val, c + 4, y);
+    canvas.setTextColor(cur && (editing || confirming) ? 0xFA20 : live ? 0x07E8 : cur ? TFT_WHITE : 0x8410);
+    canvas.drawString(fit(val, room).c_str(), c + 4, y);
   }
   return false;
 }

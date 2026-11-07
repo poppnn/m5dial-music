@@ -151,7 +151,7 @@ void loop() {
   // Aucun appareil connecté (ni geste) pendant settings.sleepAfterMin : extinction (0 = jamais)
   static uint32_t lastActive = 0;
   if (linkMode != LINK_NONE || lastInput == now) lastActive = now;
-  if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Veille...");
+  if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Sleeping...");
 
   // Bouton déjà utilisé (refus d'appel) : ignoré jusqu'à ce qu'il soit relâché, sinon le relâcher ferait un clic.
   static bool swallowBtn = false, longDone = false;  // longDone : appui long court déjà traité, pas de clic au relâcher
@@ -185,7 +185,7 @@ void loop() {
     dirty = true;
   }
 
-  if (btnHold) shutdown("Arrêt...");  // appui long 2 s
+  if (btnHold) shutdown("Power off...");  // appui long 2 s
   if (!bootShown && !call && (t.wasFlicked() || t.wasDragged())) {
     // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
     float r = rot * DEG_TO_RAD;

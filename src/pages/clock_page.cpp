@@ -5,9 +5,9 @@
 #include "../display.h"
 #include "../settings.h"
 
-static const char* DAYS[7] = {"dimanche", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"};
-static const char* MONTHS[12] = {"janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août",
-                                 "septembre", "octobre", "novembre", "décembre"};
+static const char* DAYS[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+static const char* MONTHS[12] = {"January", "February", "March", "April", "May", "June", "July", "August",
+                                 "September", "October", "November", "December"};
 
 static bool draw(float) {
   const int c = 120;
@@ -18,10 +18,10 @@ static bool draw(float) {
   if (!known) {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Heure inconnue", c, 108);
+    canvas.drawString("Time unknown", c, 108);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
-    canvas.drawString("Connecte l'iPhone", c, 140);
+    canvas.drawString("Connect your iPhone", c, 140);
     return false;
   }
   if (t.tm_sec) canvas.fillArc(c, c, 119, 111, -90, -90 + 6.f * t.tm_sec, settingsNight() ? 0x8410 : 0xFA20);
@@ -30,7 +30,7 @@ static bool draw(float) {
   canvas.setFont(&fonts::Font7);
   canvas.setTextColor(TFT_WHITE);
   canvas.drawString(b, c, 108);
-  snprintf(b, sizeof(b), "%s %d %s", DAYS[t.tm_wday], t.tm_mday, MONTHS[t.tm_mon]);
+  snprintf(b, sizeof(b), "%s %d %s", DAYS[t.tm_wday], t.tm_mday, MONTHS[t.tm_mon]);  // "Wednesday 24 September" : 176 px
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
   canvas.drawString(b, c, 160);

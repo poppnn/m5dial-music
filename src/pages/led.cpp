@@ -57,15 +57,15 @@ static bool draw(float dt) {
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
   char name[16];
-  if (shownKey < 0) snprintf(name, sizeof(name), "Teinte %d°", ledHue);
+  if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
   else snprintf(name, sizeof(name), "%s", lc.name);
   canvas.drawString(name, c + off, 150);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
-  const char* status = !goveeConnected() ? "Recherche H7090..." : ledOn ? "LED allumées" : "LED éteintes";
-  canvas.drawString(status, c, 180);
+  const char* status = !goveeConnected() ? "Searching H7090..." : ledOn ? "LEDs on" : "LEDs off";
+  canvas.drawString(status, c, 176);
   canvas.setTextColor(0x5AEB);
-  canvas.drawString(ledHueMode ? "Molette : teinte" : "Molette : luminosité", c, 202);
+  canvas.drawString(ledHueMode ? "Turn: hue" : "Turn: brightness", c, 196);  // 128 px : tient à cette hauteur
   return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS;
 }
 

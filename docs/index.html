@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -32,55 +32,55 @@
 <main>
   <div class="dial" aria-hidden="true">♪</div>
   <h1>M5Dial Music</h1>
-  <p class="lead">Télécommande multimédia Bluetooth pour iPhone, Android et Windows. Sur iPhone, elle affiche aussi le titre, l'artiste et un arc de progression.</p>
+  <p class="lead">Bluetooth media remote for iPhone, Android and Windows. On iPhone it also shows the title, artist, progress, calls and notifications.</p>
 
   <section>
-    <h2>1. Installer le firmware</h2>
-    <p>Branche le M5Dial en USB-C, puis clique sur le bouton et choisis son port série.</p>
+    <h2>1. Install the firmware</h2>
+    <p>Plug the M5Dial in over USB-C, click the button and pick its serial port.</p>
     <esp-web-install-button manifest="manifest.json">
-      <button slot="activate">Installer sur le M5Dial</button>
-      <span slot="unsupported">Ton navigateur ne gère pas Web Serial : utilise Chrome ou Edge sur ordinateur.</span>
-      <span slot="not-allowed">La page doit être ouverte en HTTPS.</span>
+      <button slot="activate">Install on the M5Dial</button>
+      <span slot="unsupported">Your browser does not support Web Serial: use Chrome or Edge on a computer.</span>
+      <span slot="not-allowed">This page must be opened over HTTPS.</span>
     </esp-web-install-button>
-    <p class="muted">Port absent ? Débranche le M5Dial, maintiens le bouton BOOT (G0) de la StampS3, puis rebranche-le.</p>
+    <p class="muted">No port? Unplug the M5Dial, hold the StampS3 BOOT (G0) button, then plug it back in.</p>
   </section>
 
   <section>
-    <h2>2. Appairer ton appareil</h2>
+    <h2>2. Pair your device</h2>
     <ul>
-      <li><strong>iPhone</strong> : Réglages → Bluetooth → <strong>M5Dial Music</strong>, puis accepte l'appairage. Commandes + titre, artiste et progression.</li>
-      <li><strong>Android</strong> : Paramètres → Appareils connectés → Associer un appareil → <strong>M5Dial Music</strong>. Commandes seules.</li>
-      <li><strong>Windows</strong> : Paramètres → Bluetooth et appareils → Ajouter un appareil → Bluetooth → <strong>M5Dial Music</strong>. Commandes seules.</li>
+      <li><strong>iPhone</strong>: Settings → Bluetooth → <strong>M5Dial Music</strong>, then accept pairing and "Share System Notifications". Controls, track info, time, calls and notifications.</li>
+      <li><strong>Android</strong>: Settings → Connected devices → Pair new device → <strong>M5Dial Music</strong>. Controls only.</li>
+      <li><strong>Windows</strong>: Settings → Bluetooth &amp; devices → Add device → Bluetooth → <strong>M5Dial Music</strong>. Controls only.</li>
     </ul>
-    <p class="muted">Android et Windows ne transmettent pas les infos du morceau en Bluetooth : l'écran affiche alors « Connecté ».</p>
+    <p class="muted">Android and Windows do not share track info over Bluetooth: the screen then shows "Connected".</p>
   </section>
 
   <section>
-    <h2>3. Commandes</h2>
+    <h2>3. Controls</h2>
     <ul>
-      <li>Tourner la molette : volume − / +</li>
-      <li>Appuyer sur la molette ou taper sur l'écran : lecture / pause</li>
-      <li>Maintenir la molette appuyée 2 s : éteindre (sur batterie)</li>
-      <li>Sans geste pendant 20 s, l'écran s'atténue ; sans appareil connecté pendant 10 min, le M5Dial s'éteint (bouton WAKE pour le rallumer)</li>
-      <li>Glisser vers la gauche / la droite : piste suivante / précédente</li>
-      <li>iPhone : tap sur les icônes en bas = aléatoire / répétition, double tap = « J'aime »</li>
-      <li>Appel entrant (iPhone) : appui = décrocher, appui long = refuser · notification : nom de l'app et compteur, appui = fermer</li>
-      <li>Glisser vers le haut ou le bas : pages Musique, LED, Chrono, Horloge, Système et Réglages</li>
-      <li>Chrono : appui = départ / pause, glisser à gauche ou à droite = remise à zéro</li>
-      <li>Réglages : molette = choisir, appui = modifier puis terminer (sens IMU, molette, délais, luminosité jour / nuit / auto selon l'heure de l'iPhone, appareils appairés)</li>
+      <li>Turn the wheel: volume − / +</li>
+      <li>Press the wheel or tap the screen: play / pause</li>
+      <li>Hold the wheel 2 s: power off (on battery)</li>
+      <li>No input for 20 s dims the screen; no device for 10 min powers off (WAKE button to turn back on). Both delays are adjustable.</li>
+      <li>Swipe left / right: next / previous track</li>
+      <li>iPhone: tap the icons at the bottom = shuffle / repeat, double tap = "Like"</li>
+      <li>Incoming call (iPhone): press = answer, hold = decline · notification: app name and count, press = close</li>
+      <li>Swipe up or down: Music, LED, Stopwatch, Clock, System and Settings pages</li>
+      <li>Stopwatch: press = start / pause, swipe left or right = reset</li>
+      <li>Settings: turn = choose, press = edit then done (IMU direction, wheel, delays, day / night / auto brightness from the iPhone time, paired devices)</li>
     </ul>
   </section>
 
   <section>
-    <h2>4. LED Govee H7090</h2>
+    <h2>4. Govee H7090 LEDs</h2>
     <ul>
-      <li>Sur la page LED, le M5Dial trouve et connecte seul la barre H7090.</li>
-      <li>Molette : luminosité · Appui : allumer / éteindre · Glisser à gauche / à droite : couleur · Appui long court (0,6 s) : la molette passe en mode teinte (roue des couleurs)</li>
+      <li>On the LED page, the M5Dial finds and connects to the H7090 bar by itself.</li>
+      <li>Wheel: brightness · Press: on / off · Swipe left / right: colour · Short hold (0.6 s): the wheel switches to hue mode (colour wheel)</li>
     </ul>
-    <p class="muted">Ferme l'app Govee Home sur ton téléphone : la barre n'accepte qu'une seule connexion à la fois.</p>
+    <p class="muted">Close the Govee Home app on your phone: the bar only accepts one connection at a time.</p>
   </section>
 
-  <p class="muted">Code source : <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
+  <p class="muted">Source code: <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
 </main>
 </body>
 </html>

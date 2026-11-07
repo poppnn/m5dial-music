@@ -10,9 +10,9 @@ static const char* GOVEE_SVC = "00010203-0405-0607-0809-0a0b0c0d1910";
 static const char* GOVEE_WR  = "00010203-0405-0607-0809-0a0b0c0d2b11";
 
 const LedColor LED_COLORS[] = {
-  {"Blanc", 255, 255, 255}, {"Rouge", 255, 0, 0},   {"Orange", 255, 90, 0},
-  {"Jaune", 255, 200, 0},   {"Vert", 0, 255, 40},   {"Cyan", 0, 220, 255},
-  {"Bleu", 0, 60, 255},     {"Violet", 150, 0, 255}, {"Rose", 255, 0, 140}};
+  {"White", 255, 255, 255}, {"Red", 255, 0, 0},     {"Orange", 255, 90, 0},
+  {"Yellow", 255, 200, 0},  {"Green", 0, 255, 40},  {"Cyan", 0, 220, 255},
+  {"Blue", 0, 60, 255},     {"Purple", 150, 0, 255}, {"Pink", 255, 0, 140}};
 const int LED_COLOR_COUNT = sizeof(LED_COLORS) / sizeof(LED_COLORS[0]);
 
 static NimBLEClient* goveeClient = nullptr;
@@ -63,7 +63,7 @@ LedColor hueColor(int hue) {
     case 4: r = x; b = 1; break;
     default: r = 1; b = x; break;
   }
-  return {"Teinte", (uint8_t)(r * 255), (uint8_t)(g * 255), (uint8_t)(b * 255)};
+  return {"Hue", (uint8_t)(r * 255), (uint8_t)(g * 255), (uint8_t)(b * 255)};
 }
 
 LedColor ledCurrent() { return ledCustom ? hueColor(ledHue) : LED_COLORS[ledColor]; }

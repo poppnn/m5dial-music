@@ -1,151 +1,159 @@
 # M5Dial Music
 
-Télécommande multimédia Bluetooth (BLE) sur M5Stack M5Dial (ESP32-S3), pour **iPhone, Android et Windows**.
+Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, Android and Windows**.
 
-- **iPhone** : service natif **Apple Media Service (AMS)** → commandes + titre, artiste, progression.
-- **Android / Windows** : télécommande **BLE HID** (touches multimédia standard) → commandes seules.
+- **iPhone**: native **Apple Media Service (AMS)** → controls + title, artist, progress, shuffle / repeat / like,
+  plus time (CTS), calls and notifications (ANCS).
+- **Android / Windows**: **BLE HID** remote (standard media keys) → controls only.
 
-6 pages, swipe vertical (haut = suivante) : **Musique**, **LED**, **Chrono**, **Horloge**, **Système**, **Réglages**.
+6 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **System**, **Settings**.
 
-- Molette : volume − / + (LED : luminosité)
-- Appui molette ou tap écran : lecture / pause (LED : on/off, Chrono : départ/pause)
-- Appui long (2 s) sur la molette : extinction sur batterie (sur USB : veille, débrancher/rebrancher pour relancer)
-- Économie de batterie : écran atténué après 20 s sans geste (le moindre geste le rallume), extinction automatique
-  après 10 min sans appareil Bluetooth connecté ; le bouton WAKE le rallume. Les deux délais se règlent.
-- Swipe gauche / droite : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
-- Écran (iPhone) : titre, artiste, temps écoulé / durée, arc de progression circulaire, heure
-- iPhone : icônes **aléatoire** et **répétition** en bas (orange = actif, « 1 » = répéter le morceau) : un tap
-  dessus les change. **Double tap** ailleurs = « J'aime » (un cœur s'affiche). Le tap simple (lecture / pause)
-  part après 0,3 s, le temps de voir si un second tap arrive ; l'appui sur la molette reste immédiat.
+- Wheel: volume − / + (LED: brightness or hue)
+- Wheel press or screen tap: play / pause (LED: on / off, Stopwatch: start / pause)
+- Short hold (0.6 s) on the wheel: LED page, switch the wheel between brightness and hue
+- Hold (2 s) on the wheel: power off on battery (on USB: deep sleep, unplug / replug to restart)
+- Battery saving: screen dims after 20 s without input (any input wakes it), automatic power off after 10 min
+  without a connected Bluetooth device; the WAKE button turns it back on. Both delays are adjustable.
+- Swipe left / right: next / previous track (LED: colour, Stopwatch: reset)
+- Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day
+- iPhone: **shuffle** and **repeat** icons at the bottom (orange = on, "1" = repeat one): tap them to change.
+  **Double tap** elsewhere = "Like" (a heart pops up). A single tap (play / pause) is sent after 0.3 s, to leave
+  room for a double tap; the wheel press stays instant.
 
-## Appels et notifications (iPhone)
+## Calls and notifications (iPhone)
 
-Via le service Apple ANCS (aucune app à installer, l'appairage suffit) :
+Through Apple's ANCS service (no app to install, pairing is enough):
 
-- **Appel entrant** : tout l'écran, quelle que soit la page, avec le nom de l'appelant en très gros.
-  **Appui** sur la molette = décrocher, **appui long** (0,8 s) = refuser. L'écran revient ensuite à la page d'avant.
-- **Notification** : par sécurité au volant, seul le **nom de l'app** et le **nombre de notifications** s'affichent
-  (4 s). Réglages › Texte notifs › affiché : titre et texte en gros (8 s). Appui = fermer.
-- Gestes simples uniquement (molette, appui) : pas de glissement à viser sur ces écrans.
-- Si l'iPhone ne propose pas les notifications pour « M5Dial Music » : Réglages iOS › Bluetooth › (i) ›
-  « Partager les notifications système ».
+- **Incoming call**: full screen on any page, caller name in large type. **Press** the wheel = answer,
+  **hold** (0.8 s) = decline. The screen then goes back to the previous page.
+- **Notification**: for safety while driving, only the **app name** and the **notification count** are shown (4 s).
+  Settings › Notif text › shown: title and text in large type (8 s). Press = close.
+- Simple gestures only (wheel, press): no precise swipes on these screens.
+- If the iPhone does not offer notifications for "M5Dial Music": iOS Settings › Bluetooth › (i) ›
+  "Share System Notifications".
 
-**Installer depuis le navigateur (Chrome/Edge) :** https://poppnn.github.io/m5dial-music/
-Ou télécharger les binaires d'une version dans [Releases](https://github.com/poppnn/m5dial-music/releases).
+**Install from the browser (Chrome / Edge):** https://poppnn.github.io/m5dial-music/
+Or download a version's binaries from [Releases](https://github.com/poppnn/m5dial-music/releases).
 
 ## Photos
 
-<!-- Dépose les photos dans docs/img/ avec ces noms, puis retire les commentaires autour des lignes. -->
-<!-- ![M5Dial monté sur le volant](docs/img/volant.jpg) -->
-<!-- ![Page Musique (iPhone)](docs/img/page-musique.jpg) -->
-<!-- ![Page LED Govee](docs/img/page-led.jpg) -->
-<!-- ![Page Chrono](docs/img/page-chrono.jpg) -->
-<!-- ![Page Système](docs/img/page-systeme.jpg) -->
-<!-- ![Support imprimé, dos avec la batterie](docs/img/support-dos.jpg) -->
-*Photos à venir : `docs/img/volant.jpg`, `page-musique.jpg`, `page-led.jpg`, `page-chrono.jpg`, `page-systeme.jpg`,
+<!-- Drop the photos into docs/img/ with these names, then remove the comment markers around the lines. -->
+<!-- ![M5Dial mounted on the steering wheel](docs/img/volant.jpg) -->
+<!-- ![Music page (iPhone)](docs/img/page-musique.jpg) -->
+<!-- ![Govee LED page](docs/img/page-led.jpg) -->
+<!-- ![Stopwatch page](docs/img/page-chrono.jpg) -->
+<!-- ![System page](docs/img/page-systeme.jpg) -->
+<!-- ![Printed mount, back with the battery](docs/img/support-dos.jpg) -->
+*Photos coming: `docs/img/volant.jpg`, `page-musique.jpg`, `page-led.jpg`, `page-chrono.jpg`, `page-systeme.jpg`,
 `support-dos.jpg`.*
 
-## LED Govee H7090
+## Govee H7090 LEDs
 
-Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protocole Govee non officiel) :
-molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 préréglages).
-**Appui long court** (0,6 s) sur la molette = mode **teinte** : l'anneau devient une roue des couleurs et la
-molette fait défiler la teinte (10° par cran) ; un autre appui long court revient à la luminosité. La dernière
-couleur (préréglage ou teinte) et la luminosité sont mémorisées, et renvoyées à la barre à chaque connexion.
-L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
+Swipe vertically to the LED page. The M5Dial connects to the bar over BLE (unofficial Govee protocol):
+wheel = brightness, press = on / off, swipe left / right = colour (9 presets).
+**Short hold** (0.6 s) on the wheel = **hue** mode: the ring becomes a colour wheel and the wheel scrolls the hue
+(10° per detent); another short hold goes back to brightness. The last colour (preset or hue) and brightness are
+remembered and sent to the bar on every connection.
+Close the Govee Home app: the bar only accepts one connection.
 
-## Chrono, Horloge, Système et Réglages
+## Stopwatch, Clock, System and Settings
 
-- **Chrono** : afficheur 7 segments, centièmes, anneau trotteuse (1 tour par minute). Appui = départ / pause,
-  swipe gauche ou droite = remise à zéro. Il continue de tourner quand on change de page.
-- **Horloge** : heure et date de l'iPhone (Current Time Service), anneau des secondes. Le RTC du M5Dial garde
-  l'heure déconnecté et éteint ; elle est remise à l'heure à chaque connexion (et au passage à l'heure d'été).
-- **Système** : cause du dernier démarrage (normal, plantage, blocage, tension basse), appareil Bluetooth
-  connecté et son signal, LED Govee, fréquence et température du processeur, images/s et temps de rendu,
-  RAM libre, durée depuis l'allumage. Le niveau de batterie n'est pas mesurable : le M5Dial n'a aucune mesure de
-  tension ni signal de charge câblé vers l'ESP32 (il faudrait souder un pont diviseur sur un GPIO ADC).
-- **Réglages** (enregistrés dans la mémoire du M5Dial, gardés à l'extinction et aux mises à jour) : molette =
-  choisir une ligne, appui = modifier (molette = valeur, appliquée tout de suite), appui = terminer.
-  - Sens IMU (normal / inversé), impulsions par cran de molette (1 à 4), délai d'atténuation (jamais à 120 s),
-    délai d'extinction sans appareil (jamais à 60 min), luminosité de jour et de nuit, texte des notifications
-    (masqué par défaut).
-  - Luminosité : jour, nuit ou **auto** (nuit entre « Nuit dès » et « Nuit jusqu'à », 21 h -> 7 h par défaut,
-    selon l'heure de l'iPhone ; heure inconnue = jour).
-  - Appareils appairés (nom lu à la connexion) : « Oublier » un appareil, ou « Tout effacer ». Premier appui =
-    « confirmer ? », second appui = action ; tourner la molette annule. L'appareil oublié doit aussi oublier
-    « M5Dial Music » dans ses réglages Bluetooth avant de se réappairer.
+- **Stopwatch**: 7-segment display, hundredths, second-hand ring (one turn per minute). Press = start / pause,
+  swipe left or right = reset. It keeps running when you change page.
+- **Clock**: iPhone time and date (Current Time Service), seconds ring. The M5Dial RTC keeps the time while
+  disconnected and off; it is set again on every connection (and when daylight saving time changes).
+- **System**: last boot reason (normal, crash, watchdog, brownout), connected phone and its signal, Govee LEDs,
+  CPU frequency and temperature, frames per second and render time, free RAM, uptime. Battery level cannot be
+  measured: the M5Dial has no battery voltage or charge signal wired to the ESP32 (it would need a voltage divider
+  soldered to an ADC GPIO).
+- **Settings** (stored in the M5Dial memory, kept across power off and updates): turn = choose a row,
+  press = edit (turn = value, applied immediately), press = done.
+  - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
+    power-off delay without a device (never to 60 min), day and night brightness, notification text
+    (hidden by default).
+  - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
+    from the iPhone time; unknown time = day).
+  - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".
+    First press = "confirm?", second press = do it; turning the wheel cancels. The forgotten device must also
+    forget "M5Dial Music" in its Bluetooth settings before pairing again.
 
 ## Interface
 
-- Animations avec easing : l'arc de progression et l'anneau de volume se remplissent en douceur, et le titre glisse lors d'un swipe ou d'un changement de piste.
-- Jusqu'à ~60 images/s pendant une animation, 4/s au repos pour économiser la batterie.
-- Envoi à l'écran en DMA par bandes ping-pong (2 × 19 Ko), en SRAM interne : l'encodeur et le BLE restent réactifs pendant le transfert.
-- **Toujours droit** : avec une **Unit IMU M5Stack branchée sur le Port A**, l'interface pivote pour rester horizontale. Le M5Dial n'a pas d'IMU intégrée. Fixe l'unité à plat au dos du boîtier. L'orientation au démarrage sert de référence « droit ». Si l'écran tourne dans le mauvais sens : Réglages › Sens IMU › inversé.
+- Eased animations: the progress arc and volume ring fill smoothly, and the title slides on a swipe or a track
+  change.
+- Up to ~60 fps while animating, 4 fps at rest to save battery.
+- DMA output to the screen in ping-pong bands (2 × 19 KB) in internal SRAM: the encoder and BLE stay responsive
+  during the transfer.
+- Every text is fitted to the round screen: long titles, names and settings rows are truncated with "..." to the
+  width available at their height.
+- **Always upright**: with an **M5Stack IMU Unit on Port A**, the UI rotates to stay level. The M5Dial has no
+  built-in IMU. Mount the unit flat on the back of the case. The orientation at power on is the "upright"
+  reference. If the screen turns the wrong way: Settings › IMU dir › reversed.
 
-## Écran de démarrage
+## Boot screen
 
-Tant qu'aucun appareil n'est connecté, le M5Dial affiche un logo (par défaut une double croche dessinée par le
-firmware), un arc qui tourne et « Connexion Bluetooth... ».
-Les commandes sont bloquées, sauf l'appui long pour éteindre. À la connexion, un fondu mène à l'interface.
+While no device is connected, the M5Dial shows a logo (by default a music note drawn by the firmware), a spinning
+arc and "Waiting for phone". Controls are locked, except the hold to power off. On connection, a fade leads to the
+UI.
 
-Pour mettre ton logo (PNG ou BMP, idéalement sur fond transparent ou noir) :
+To use your own logo (PNG or BMP, ideally on a transparent or black background):
 
 ```bash
 pip install pillow
-python tools/png2logo.py mon_logo.png
+python tools/png2logo.py my_logo.png
 ```
 
-Le script réduit l'image à 150 × 130 max, la convertit en RGB565 et écrit `src/logo.h` (stocké en flash, pas en RAM).
-Recompile ensuite (`pio run -t upload`). Pour revenir au logo neutre : `git checkout src/logo.h`.
+The script scales the image to 150 × 130 max, converts it to RGB565 and writes `src/logo.h` (stored in flash, not
+RAM). Then rebuild (`pio run -t upload`). To go back to the neutral logo: `git checkout src/logo.h`.
 
-Exemple, logo de ta marque de voiture (ici Nissan) : les logos de marque sont déposés, donc non fournis dans ce
-repo. Télécharge le logo (par ex. `Nissan_2020_logo.svg` sur Wikimedia Commons), exporte-le en PNG **blanc sur fond
-transparent** (Inkscape ou un convertisseur SVG → PNG, ~600 px de large), puis
-`python tools/png2logo.py nissan_blanc.png`. Garde ce `logo.h` pour toi (ne le publie pas).
+Example, your car brand logo (here Nissan): brand logos are trademarks, so they are not included in this repo.
+Download the logo (e.g. `Nissan_2020_logo.svg` on Wikimedia Commons), export it as a **white on transparent**
+PNG (Inkscape or any SVG → PNG converter, ~600 px wide), then `python tools/png2logo.py nissan_white.png`. Keep
+that `logo.h` to yourself (do not publish it).
 
-## Support volant (impression 3D)
+## Steering wheel mount (3D printed)
 
-[`hardware/support_volant.stl`](hardware/support_volant.stl) : une seule pièce **100 % imprimée** (sans vis ;
-seule la batterie est collée) pour la zone entre la branche du bas et la branche droite d'un volant GT2i Race 350 mm (tulipage 90 mm).
+[`hardware/support_volant.stl`](hardware/support_volant.stl): a single **fully printed** part (no screws; only the
+battery is taped) for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
+(90 mm dish).
 
-- **Plaque fine et pleine** (6 mm) entre les deux branches : anneau du M5Dial, bras et zone entre eux, d'un seul bloc.
-- **M5Dial** : son corps s'enfonce dans l'anneau (cercle complet Ø 45 / Ø 51, **3,5 mm de haut**), serré par 6
-  nervures d'écrasement ; la collerette repose dessus et le corps ressort dessous, donc **l'USB-C** et le Port A
-  restent libres. Autour, la plaque est abaissée au niveau de l'anneau avec 1 mm de jeu : rien ne frotte.
-- **Batterie LiPo 103450** (50 × 34 × 10 mm) : collée au **dos** de la plaque (adhésif double face), en diagonale,
-  le grand côté parallèle au bord intérieur (côté moyeu) et ce bord aligné dessus, entre les deux bras. Là, elle ne
-  touche ni les branches (qui passent plus en arrière près du moyeu) ni le corps du M5Dial ; elle repose à 99 % sur
-  la plaque.
-- **Fixation** : chaque patte se clipse sur sa branche (on appuie la branche entre les deux parois à crochet, qui
-  s'écartent puis se referment sur sa face avant) ; un téton entre dans le trou de la branche pour qu'elle ne glisse
-  pas.
+- **Thin filled plate** (6 mm) between the two spokes: M5Dial ring, arms and the area between them, in one piece.
+- **M5Dial**: its body goes into the ring (full circle Ø 45 / Ø 51, **3.5 mm high**), gripped by 6 crush ribs;
+  the collar rests on it and the body sticks out behind, so **USB-C** and Port A stay free. Around it, the plate
+  is lowered to the ring level with 1 mm clearance: nothing rubs.
+- **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), diagonally,
+  long side parallel to the inner edge (hub side) and aligned on it, between the two arms. There it touches
+  neither the spokes (which sit further back near the hub) nor the M5Dial body; 99 % of it rests on the plate.
+- **Attachment**: each pad clips onto its spoke (push the spoke between the two hooked walls, which spread then
+  close over its front face); a peg goes into the spoke hole so it cannot slide.
 
-- Modèle source : script Fusion 360 [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilitaires ›
-  Compléments › Scripts › « + » › choisir ce dossier › Exécuter. Les cotes sont des paramètres utilisateur
-  (Modifier › Changer les paramètres). **Avant d'imprimer, mesure les valeurs `MESURER`** : épaisseur de la branche
-  (`SPOKE_T`, le clip en dépend), Ø des trous des branches (`PEG_D`), Ø du corps du M5Dial (`BODY_D`), position des trous et pente des branches. Relance le script, puis exporte le STL.
-- Impression : à plat telle quelle (une seule face posée, le dos), **sans supports**.
-  PETG ou ASA (le PLA se déforme au soleil et casse au clipsage), 4 périmètres, 30-40 % de remplissage.
-- Teste le clip sur une impression rapide d'abord : trop dur, baisse `CLIP_LIP` ; trop lâche, baisse `SPOKE_T`
-  de 0,2 mm.
-- Avec l'IMU sur le Port A, l'écran reste droit quand le volant tourne.
-- Vérifie que rien ne touche les commodos en tournant le volant de butée à butée avant de rouler.
+- Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
+  Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
+  **Before printing, measure the `MESURER` values**: spoke thickness (`SPOKE_T`, the clip depends on it), spoke
+  hole Ø (`PEG_D`), M5Dial body Ø (`BODY_D`), hole positions and spoke slope. Run the script again, then export
+  the STL.
+- Printing: flat as is (one face on the bed, the back), **no supports**. PETG or ASA (PLA warps in the sun and
+  breaks when clipping), 4 perimeters, 30-40 % infill.
+- Test the clip on a quick print first: too stiff, lower `CLIP_LIP`; too loose, lower `SPOKE_T` by 0.2 mm.
+- With the IMU on Port A, the screen stays level when the wheel turns.
+- Check that nothing touches the stalks when turning the wheel lock to lock before driving.
 
-## Compiler
+## Build
 
 ```bash
 pio run -t upload
 ```
 
-## Licence
+## License
 
 [MIT](LICENSE).
 
 ## Notes
 
-- L'ESP32-S3 n'a pas de Bluetooth Classic : A2DP/AVRCP sont impossibles, d'où AMS (BLE).
-- AMS ne transmet pas la pochette d'album : affichage titre + artiste à la place.
-- Android et Windows n'exposent pas les infos du morceau en BLE : il faudrait une app compagnon.
-- Impulsions par cran de molette : 2 sur ce M5Dial ; à ajuster dans Réglages › Molette si un cran ne donne pas un pas.
-- Code : `src/main.cpp` (boucle, gestes, pages), `ble_phone` (AMS + HID), `govee`, `display` (rendu DMA), `imu`,
-  `power`, `settings` (NVS), `pages/` (une page par fichier). Valeurs par défaut des réglages : `src/config.h`.
+- The ESP32-S3 has no Bluetooth Classic: A2DP / AVRCP are impossible, hence AMS (BLE).
+- AMS does not send album art: title + artist are shown instead.
+- Android and Windows do not expose track info over BLE: that would need a companion app.
+- Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
+- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications),
+  `govee`, `display` (DMA rendering), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
+  Settings defaults: `src/config.h`. Code comments are in French.

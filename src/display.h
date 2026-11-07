@@ -11,3 +11,6 @@ void displayInit();  // à appeler AVANT le BLE (blocs contigus en SRAM DMA)
 void pushFrame();
 std::string fit(std::string s, int maxW);  // tronque proprement en UTF-8 + "..."
 String mmss(float sec);
+// Demi-largeur disponible (px) pour une ligne de texte de hauteur h centrée en y, à l'intérieur d'un cercle de
+// rayon r centré sur l'écran (le bord le plus serré de la ligne compte).
+int textSpace(int y, int h, int r);

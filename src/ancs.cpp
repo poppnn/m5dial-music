@@ -172,7 +172,7 @@ bool ancsService() {
       if (e.cat == CAT_INCOMING_CALL) {
         callActive = true;
         callUid = e.uid;
-        callName = "Appel entrant";
+        callName = "Incoming call";
         fresh = true;
         requestNotif(e.uid, false);
       } else if (!(e.flags & FLAG_SILENT)) {

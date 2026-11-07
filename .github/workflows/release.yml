@@ -35,15 +35,15 @@ jobs:
         run: |
           PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
           {
-            echo "## Changements${PREV:+ depuis $PREV}"
+            echo "## Changes${PREV:+ since $PREV}"
             echo
             git log --no-merges --pretty='- %s' ${PREV:+$PREV..}"$GITHUB_REF_NAME"
             echo
-            echo "## Installation"
+            echo "## Install"
             echo
-            echo "- Le plus simple : https://poppnn.github.io/m5dial-music/ (Chrome ou Edge, M5Dial en USB-C)."
-            echo "- \`*-full-0x0.bin\` : image complète, à flasher à l'adresse 0x0 (esptool, flasheur web Espressif)."
-            echo "- \`*-firmware.bin\` : application seule, à 0x10000 (mise à jour d'un M5Dial déjà installé)."
+            echo "- Easiest: https://poppnn.github.io/m5dial-music/ (Chrome or Edge, M5Dial over USB-C)."
+            echo "- \`*-full-0x0.bin\`: full image, flash at address 0x0 (esptool, Espressif web flasher)."
+            echo "- \`*-firmware.bin\`: app only, at 0x10000 (update of an already installed M5Dial)."
           } > CHANGELOG.md
           cat CHANGELOG.md
       - uses: softprops/action-gh-release@v2

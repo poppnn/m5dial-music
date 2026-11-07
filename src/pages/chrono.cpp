@@ -28,7 +28,7 @@ static bool draw(float) {
   canvas.drawString(b, c, 152);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
-  canvas.drawString(chronoRun ? "Appui : pause" : ms ? "Glisser : remise à zéro" : "Appui : départ", c, 186);
+  canvas.drawString(chronoRun ? "Press: pause" : ms ? "Swipe: reset" : "Press: start", c, 186);
   return chronoRun;
 }
 

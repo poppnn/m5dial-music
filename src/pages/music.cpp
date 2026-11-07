@@ -87,10 +87,10 @@ static bool draw(float) {
   if (linkMode == LINK_HID) {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Connecté", c, 108);
+    canvas.drawString("Connected", c, 108);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
-    canvas.drawString("Télécommande", c, 140);
+    canvas.drawString("Remote control", c, 140);
   } else if (linkMode == LINK_AMS) {  // LINK_NONE : rien, l'interface est en train de disparaître
     if (m.playing) {  // icône lecture / pause
       canvas.fillRect(c - 9, 52, 6, 18, TFT_WHITE);

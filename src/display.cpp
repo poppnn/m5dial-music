@@ -1,5 +1,6 @@
 #include "display.h"
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
+#include <algorithm>
 #include "imu.h"
 
 M5Canvas canvas(&M5Dial.Display);  // UI dans le repère "droit"
@@ -59,6 +60,11 @@ std::string fit(std::string s, int maxW) {
     if (!s.empty() && (uint8_t)s.back() >= 0xC0) s.pop_back();
   }
   return s + "...";
+}
+
+int textSpace(int y, int h, int r) {
+  int dy = std::max(abs(y - h / 2 - 120), abs(y + h / 2 - 120));
+  return dy >= r ? 0 : (int)sqrtf((float)(r * r - dy * dy));
 }
 
 String mmss(float sec) {

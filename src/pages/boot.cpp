@@ -25,7 +25,7 @@ void drawBoot(uint32_t now) {
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
-  canvas.drawString("Connexion Bluetooth...", c, 186);
+  canvas.drawString("Waiting for phone", c, 186);
   canvas.setTextColor(0x5AEB);
   canvas.drawString("M5Dial Music", c, 206);  // nom à choisir dans les réglages Bluetooth
 }
