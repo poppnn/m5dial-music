@@ -7,8 +7,8 @@ Pour appliquer de nouvelles cotes : modifie-les là, puis relance le script (il 
 
 Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), sans support :
 - Plaque fine et pleine entre les deux branches (anneau, bras et zone entre eux). La LiPo 103450 se colle au dos,
-  centrée vers (51, -41), grand côté incliné de ~25° (91 % d'appui) ; en vraie diagonale (~49°), centrée vers
-  (43, -52) (85 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
+  centrée vers (52, -42), grand côté incliné de ~30° (86 % d'appui) ; en vraie diagonale (~48°), centrée vers
+  (42, -53) (80 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
 - Le corps du M5Dial s'enfonce dans l'anneau (cercle complet, 3,5 mm de haut), serré par 6 nervures
   d'écrasement ; la collerette repose dessus et le corps ressort dessous : l'USB-C reste libre.
 - Chaque patte se clipse sur sa branche : 2 parois à crochet qui passent par-dessus les bords, inclinées comme
@@ -37,14 +37,14 @@ PARAMS = [
     ("R_RADIAL", 18.0, "deg", "MESURER : direction de la branche droite (relevée de ~18° sur l'OMP)"),
     ("R_TILT", 43.0, "deg", "MESURER : pente de la branche droite (photo de profil : ~43°)"),
     ("R_DZ", 2.8, "mm", "Profondeur du trou droit par rapport au trou bas (il est plus loin du moyeu)"),
-    ("R_SPOKE_W", 32.0, "mm", "MESURER : largeur de la branche droite au grand trou"),
+    ("R_SPOKE_W", 38.0, "mm", "Largeur de la branche droite au trou (mesurée)"),
     ("R_TAPER", 1.0, "deg", "Évasement de la branche droite, par côté (plus large vers le moyeu)"),
     ("B_X", 0.0, "mm", "MESURER : grand trou de la branche du bas, X"),
     ("B_Y", -64.0, "mm", "MESURER : grand trou de la branche du bas, Y"),
     ("B_RADIAL", -90.0, "deg", "Direction de la branche du bas"),
     ("B_TILT", 43.0, "deg", "MESURER : pente de la branche du bas (photo de profil : ~43°)"),
     ("B_DZ", 0.0, "mm", "Profondeur du trou bas (référence)"),
-    ("B_SPOKE_W", 36.0, "mm", "MESURER : largeur de la branche du bas au grand trou"),
+    ("B_SPOKE_W", 40.0, "mm", "Largeur de la branche du bas au trou (mesurée)"),
     ("B_TAPER", 4.0, "deg", "Évasement de la branche du bas, par côté (plus large vers le moyeu)"),
     ("SPOKE_T", 5.0, "mm", "Épaisseur de la branche (mesurée : 5 mm)"),
     ("PEG_D", 15.4, "mm", "Ø du téton dans le trou de la branche (trous Ø 16 mesurés)"),

@@ -124,20 +124,21 @@ battery is taped) for the area between the bottom spoke and the right spoke of a
   the collar rests on it and the body sticks out behind, so **USB-C** and Port A stay free. Around it, the plate
   is lowered to the ring level with 1 mm clearance: nothing rubs.
 - **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
-  two arms, long side tilted about 25° (91 % of it rests on the plate); a true diagonal (~49°) also fits (85 %).
+  two arms, centred about 52 mm right and 42 mm below the hub centre, long side tilted about 30° (86 % of it
+  rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
   There it touches neither the spokes (which sit further back near the hub) nor the M5Dial body.
 - **Attachment**: each pad clips onto its spoke (push the spoke between the two hooked walls, which spread then
   close over its front face). The walls are angled like the spoke edges (the spokes widen towards the hub) and a
   Ø 15.4 peg goes into the spoke hole nearest the hub (Ø 16) so it cannot slide.
 - Geometry measured from photos of the wheel (OMP-type, 350 mm, 90 mm dish; ruler and the 6 × 70 mm hub bolt
   circle as scale, perspective corrected): spokes slope ~43°, side spokes raised ~18° above horizontal, bottom
-  spoke ~36 mm wide at the large hole (tapering ~4° per side), right spoke ~32 mm (~1° per side).
+  spoke 40 mm wide at the hole (tapering ~4° per side), right spoke 38 mm (~1° per side); widths, 5 mm
+  thickness and Ø 16 holes measured with a caliper.
 
 - Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
-  Measured on the wheel: spokes 5 mm thick, holes Ø 16. **Before printing, check with a caliper** the spoke widths
-  at the large holes (`R_SPOKE_W`, `B_SPOKE_W`) and the M5Dial body Ø (`BODY_D`). Hole positions, slope and taper
-  come from the photos (±2 mm / ±2°). Run the script again, then export
+  Spoke widths, thickness and hole size are measured; hole positions, slope and taper come from the photos
+  (±2 mm / ±2°). Check the M5Dial body Ø (`BODY_D`) before printing. Run the script again, then export
   the STL.
 - Printing: flat as is (one face on the bed, the back), **no supports**. PETG or ASA (PLA warps in the sun and
   breaks when clipping), 4 perimeters, 30-40 % infill.
