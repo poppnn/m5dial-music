@@ -5,10 +5,10 @@ Lancer : Utilitaires > Compléments > Scripts > "+" > dossier SupportVolant > Ex
 Au premier lancement, les cotes sont créées en paramètres utilisateur (Modifier > Changer les paramètres).
 Pour appliquer de nouvelles cotes : modifie-les là, puis relance le script (il remplace le groupe de timeline).
 
-Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), sans support :
-- Plaque fine et pleine entre les deux branches (anneau, bras et zone entre eux). La LiPo 103450 se colle au dos,
-  centrée vers (52, -42), grand côté incliné de ~30° (86 % d'appui) ; en vraie diagonale (~48°), centrée vers
-  (42, -53) (80 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
+Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), supports seulement sous l'anneau rehaussé :
+- Plaque fine et pleine entre les deux branches, pleine aussi sous le M5Dial (rapproché du moyeu, à 3-4 mm des
+  pattes). La LiPo 103450 se colle au dos, sous le M5Dial : centrée vers (60, -50), grand côté presque vertical
+  (~108°, perpendiculaire à la branche droite), 100 % d'appui, sans couvrir les écrous.
 - Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : il se fixe comme sur un panneau, dans un
   anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8, 12,6 de haut). Sous
   l'anneau, rien dans le rayon du collier ; l'anneau est porté par 3 pieds (dans l'axe des bras et à l'opposé du
@@ -33,8 +33,8 @@ NAME = "Support M5Dial"
 # (nom, valeur par défaut, unité, commentaire). Les cotes MESURER viennent d'une photo ou d'une estimation.
 PARAMS = [
     ("DIAL_D", 51.0, "mm", "Ø extérieur de l'anneau = Ø du M5Dial"),
-    ("DEV_X", 78.6, "mm", "MESURER : centre M5Dial, X"),
-    ("DEV_Y", -73.8, "mm", "MESURER : centre M5Dial, Y"),
+    ("DEV_X", 58.0, "mm", "Centre M5Dial, X (au plus près du moyeu : 3-4 mm des pattes)"),
+    ("DEV_Y", -55.0, "mm", "Centre M5Dial, Y"),
     # Mesures sur photos (règle + entraxe 6 x 70 du moyeu, perspective corrigée) d'un OMP 350 tulipage 90 :
     # branches latérales relevées de ~18°, pente des branches ~43°, épaisseur 5, trous Ø 16 (mesurés).
     ("R_X", 66.7, "mm", "MESURER : grand trou de la branche droite, X (centre du moyeu = 0)"),
@@ -265,9 +265,11 @@ def build(comp, P):
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
-    b.extrude(b.circles([(cx, cy)], r_in), z_b - 1, 200, CUT, [cup])
+    # Rehaussé, le M5Dial et son collier restent au-dessus de la plaque : elle reste pleine dessous (place pour la batterie)
+    z_floor = z_b + slab if raised else z_b - 1
+    b.extrude(b.circles([(cx, cy)], r_in), z_floor, 200, CUT, [cup])
     if raised:  # sous l'anneau plat de RING_T : rien dans le rayon du collier
-        b.extrude(b.circles([(cx, cy)], r_clr), z_b - 1, P["DIAL_RISE"] + 1, CUT, [cup])
+        b.extrude(b.circles([(cx, cy)], r_clr), z_floor, z_ring - z_floor, CUT, [cup])
     # Anneau de RING_T seulement : le corps du M5Dial (et son USB-C) ressort dessous. Sans rehausse, la plaque autour
     # est abaissée au même niveau, 1 mm plus large que la collerette pour qu'elle ne frotte pas.
     if P["DIAL_RISE"] + P["RING_T"] < slab:

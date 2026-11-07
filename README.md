@@ -119,16 +119,16 @@ that `logo.h` to yourself (do not publish it).
 spoke (battery taped), for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
 (90 mm dish).
 
-- **Thin filled plate** (6 mm) between the two spokes: M5Dial ring, arms and the area between them, in one piece.
-- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim, fixed as on a panel: its body goes through a
-  **flat 3.5 mm ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) screws
-  on underneath. Nothing sits within Ø 52.8 below the ring; the ring stands on **3 legs** (in line with the two
-  arms and away from the hub), so fingers reach the clamp and **USB-C** (on the back of the M5Dial) and the
-  battery cable stay free.
-- **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
-  two arms, centred about 52 mm right and 42 mm below the hub centre, long side tilted about 30° (86 % of it
-  rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
-  There it touches neither the spokes (which sit further back near the hub) nor the M5Dial body.
+- **Thin filled plate** (6 mm) between the two spokes, solid under the M5Dial too, in one piece.
+- **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58 mm right,
+  55 mm below the hub centre, 3-4 mm from the pads), fixed as on a panel: its body goes through a **flat 3.5 mm
+  ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) screws on
+  underneath. Nothing sits within Ø 52.8 below the ring; the ring stands on **3 legs** (in line with the two arms
+  and away from the hub), so fingers reach the clamp and **USB-C** (on the back of the M5Dial) and the battery
+  cable stay free.
+- **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), right
+  under the M5Dial: centred about 60 mm right and 50 mm below the hub centre, long side almost vertical
+  (perpendicular to the right spoke). It rests fully on the plate and leaves the nut pockets free.
 - **Attachment**: each pad sits on the back of its spoke between two guide walls (angled like the spoke edges,
   no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 16 screw** (longer sticks out at the back) through the spoke
   hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
