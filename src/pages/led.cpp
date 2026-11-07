@@ -12,15 +12,56 @@
 
 #define HUE_STEP   5      // degrés par cran
 #define HUE_TAU_S  0.07f  // le repère rejoint la teinte choisie en douceur
-#define RING_SEG   2      // segments de 2° : dégradé continu (36 segments de 10° faisaient des marches)
+#define RING_IN    111    // anneau de la roue : mêmes rayons que les autres anneaux
+#define RING_OUT   120
 
 static float ledBriShown = 1, hueShown = 0;
 
+// Appelle f(x, y) pour chaque pixel de l'anneau, ligne par ligne (toujours dans le même ordre).
+template <typename F>
+static void forRing(F f) {
+  for (int y = 0; y < 240; y++) {
+    float dy = y + 0.5f - 120;
+    if (fabsf(dy) >= RING_OUT) continue;
+    int xo = (int)sqrtf(RING_OUT * RING_OUT - dy * dy);
+    int xi = fabsf(dy) < RING_IN ? (int)sqrtf(RING_IN * RING_IN - dy * dy) : -1;
+    for (int x = 120 - xo; x < 120 + xo; x++) {
+      if (xi > 0 && x == 120 - xi) { x = 120 + xi - 1; continue; }  // saute l'intérieur de l'anneau
+      f(x, y);
+    }
+  }
+}
+
+// Roue des couleurs : la teinte de chaque pixel (pas de 2°, 0° en haut, sens horaire) est calculée une seule
+// fois (~6,5 Ko) ; ensuite chaque image n'est qu'une recopie de couleurs dans le tampon. 180 fillArc par image
+// prenaient trop de temps : la boucle ralentissait et le tactile ne voyait plus les glissements.
+static uint8_t* ringIdx = nullptr;
+
 static void drawHueRing(int c, float hue, bool on) {
-  for (int h = 0; h < 360; h += RING_SEG) {
-    LedColor k = hueColor(h + RING_SEG / 2);  // couleur du milieu du segment
-    uint16_t col = on ? canvas.color565(k.r, k.g, k.b) : canvas.color565(k.r / 5, k.g / 5, k.b / 5);
-    canvas.fillArc(c, c, 119, 111, -90 + h, -90 + h + RING_SEG + 0.5f, col);  // +0,5° : pas de fente entre segments
+  if (!ringIdx) {
+    size_t n = 0;
+    forRing([&](int, int) { n++; });
+    ringIdx = (uint8_t*)heap_caps_malloc(n, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (ringIdx) {
+      n = 0;
+      forRing([&](int x, int y) {
+        float a = atan2f(y + 0.5f - 120, x + 0.5f - 120) * RAD_TO_DEG + 90;  // 0° en haut
+        ringIdx[n++] = (uint8_t)((int)(a + 360) % 360 / 2);
+      });
+    }
+  }
+  if (ringIdx) {
+    uint16_t pal[180];  // couleurs de la roue, octets inversés comme dans le tampon du canvas (swap565)
+    for (int i = 0; i < 180; i++) {
+      LedColor k = hueColor(i * 2 + 1);
+      uint16_t col = on ? canvas.color565(k.r, k.g, k.b) : canvas.color565(k.r / 5, k.g / 5, k.b / 5);
+      pal[i] = __builtin_bswap16(col);
+    }
+    uint16_t* buf = (uint16_t*)canvas.getBuffer();
+    size_t n = 0;
+    forRing([&](int x, int y) { buf[y * 240 + x] = pal[ringIdx[n++]]; });
+  } else {
+    canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // mémoire insuffisante : anneau neutre, la pastille suffit
   }
   canvas.fillArc(c, c, 119, 106, -90 + hue - 2.5f, -90 + hue + 2.5f, TFT_WHITE);  // repère de la teinte choisie
 }
