@@ -7,12 +7,12 @@ Pour appliquer de nouvelles cotes : modifie-les là, puis relance le script (il 
 
 Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau), sans support :
 - Plaque fine et pleine entre les deux branches (anneau, bras et zone entre eux). La LiPo 103450 se colle au dos,
-  en diagonale, parallèle au bord intérieur (côté moyeu), centrée vers (48, -46) : là, elle ne touche ni les
-  branches (plus en arrière près du moyeu), ni le corps du M5Dial.
+  centrée vers (51, -41), grand côté incliné de ~25° (91 % d'appui) ; en vraie diagonale (~49°), centrée vers
+  (43, -52) (85 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
 - Le corps du M5Dial s'enfonce dans l'anneau (cercle complet, 3,5 mm de haut), serré par 6 nervures
   d'écrasement ; la collerette repose dessus et le corps ressort dessous : l'USB-C reste libre.
-- Chaque patte se clipse sur sa branche (2 parois à crochet qui passent par-dessus les bords) et un téton entre
-  dans le trou de la branche : rien ne glisse.
+- Chaque patte se clipse sur sa branche : 2 parois à crochet qui passent par-dessus les bords, inclinées comme
+  eux (la branche s'élargit vers le moyeu), et un téton Ø 15,4 dans le grand trou (Ø 16) : rien ne glisse.
 
 Repère : X droite, Y haut (vue de face), Z vers le conducteur, origine = centre du moyeu,
 Z = 0 = face arrière des branches au niveau des trous.
@@ -30,21 +30,25 @@ PARAMS = [
     ("DIAL_D", 51.0, "mm", "Ø extérieur de l'anneau = Ø du M5Dial"),
     ("DEV_X", 78.6, "mm", "MESURER : centre M5Dial, X"),
     ("DEV_Y", -73.8, "mm", "MESURER : centre M5Dial, Y"),
-    ("R_X", 71.7, "mm", "MESURER : trou branche droite, X"),
-    ("R_Y", 3.3, "mm", "MESURER : trou branche droite, Y"),
-    ("R_RADIAL", 5.0, "deg", "Direction branche droite"),
-    ("R_TILT", 35.0, "deg", "MESURER : pente branche droite (tulipage 90 : ~35°, 75 : ~30°)"),
-    ("R_DZ", 0.0, "mm", "MESURER : décalage profondeur droite"),
-    ("B_X", 0.0, "mm", "MESURER : trou branche bas, X"),
-    ("B_Y", -70.4, "mm", "MESURER : trou branche bas, Y"),
-    ("B_RADIAL", -90.0, "deg", "Direction branche bas"),
-    ("B_TILT", 35.0, "deg", "MESURER : pente branche bas (tulipage 90 : ~35°, 75 : ~30°)"),
-    ("B_DZ", 0.0, "mm", "MESURER : décalage profondeur bas"),
-    ("SPOKE_W", 32.0, "mm", "Largeur branche (zone où rien ne dépasse au-dessus)"),
+    # Mesures sur photos (règle + entraxe 6 x 70 du moyeu, perspective corrigée) d'un OMP 350 tulipage 90 :
+    # branches latérales relevées de ~18°, pente des branches ~43°, grand trou Ø 16, petit trou Ø 11.
+    ("R_X", 66.7, "mm", "MESURER : grand trou de la branche droite, X (centre du moyeu = 0)"),
+    ("R_Y", 6.0, "mm", "MESURER : grand trou de la branche droite, Y"),
+    ("R_RADIAL", 18.0, "deg", "MESURER : direction de la branche droite (relevée de ~18° sur l'OMP)"),
+    ("R_TILT", 43.0, "deg", "MESURER : pente de la branche droite (photo de profil : ~43°)"),
+    ("R_DZ", 2.8, "mm", "Profondeur du trou droit par rapport au trou bas (il est plus loin du moyeu)"),
+    ("R_SPOKE_W", 32.0, "mm", "MESURER : largeur de la branche droite au grand trou"),
+    ("R_TAPER", 1.0, "deg", "Évasement de la branche droite, par côté (plus large vers le moyeu)"),
+    ("B_X", 0.0, "mm", "MESURER : grand trou de la branche du bas, X"),
+    ("B_Y", -64.0, "mm", "MESURER : grand trou de la branche du bas, Y"),
+    ("B_RADIAL", -90.0, "deg", "Direction de la branche du bas"),
+    ("B_TILT", 43.0, "deg", "MESURER : pente de la branche du bas (photo de profil : ~43°)"),
+    ("B_DZ", 0.0, "mm", "Profondeur du trou bas (référence)"),
+    ("B_SPOKE_W", 36.0, "mm", "MESURER : largeur de la branche du bas au grand trou"),
+    ("B_TAPER", 4.0, "deg", "Évasement de la branche du bas, par côté (plus large vers le moyeu)"),
     ("SPOKE_T", 4.0, "mm", "MESURER : épaisseur de la branche (au pied à coulisse)"),
-    ("PEG_D", 4.8, "mm", "MESURER : Ø du trou de la branche - 0,4 (téton anti-glissement)"),
-    ("PAD_L", 20.0, "mm", "Patte : longueur le long de la branche"),
-    ("PAD_W", 37.0, "mm", "Patte : largeur (= SPOKE_W + 2 x (CLIP_GAP + CLIP_WALL))"),
+    ("PEG_D", 15.4, "mm", "Ø du téton dans le grand trou de la branche (trou Ø 16 mesuré)"),
+    ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
     ("PAD_MIN", 3.0, "mm", "Patte : épaisseur mini (bout bas du coin)"),
     ("CLIP_WALL", 2.2, "mm", "Clip : épaisseur des parois (elles fléchissent pour clipser)"),
     ("CLIP_GAP", 0.3, "mm", "Clip : jeu entre paroi et bord de branche"),
@@ -61,7 +65,7 @@ PARAMS = [
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
-            "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG",  # ancien boîtier arrière, encoche USB-C
+            "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
             "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y"]  # ancien logement batterie
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
@@ -194,6 +198,12 @@ class Builder:
         self.f.combineFeatures.add(inp)
 
 
+def pad_w(P, k):
+    """Largeur de la patte : branche + jeu et parois des deux côtés + évasement sur toute la longueur."""
+    return (P[k + "_SPOKE_W"] + 2 * (P["CLIP_GAP"] + P["CLIP_WALL"])
+            + P["PAD_L"] * math.tan(math.radians(P[k + "_TAPER"])) + 1)
+
+
 def steep(e):
     """Arête droite plutôt verticale (contour vu de dessus)."""
     g = e.geometry
@@ -234,9 +244,9 @@ def build(comp, P):
                               (x - n[0] * hw, y - n[1] * hw), (root[0] - n[0] * hw0, root[1] - n[1] * hw0)]),
                       z_b, slab)
         b.combine(cup, arm, JOIN)
-        b.combine(cup, tilted(b.rect(x, y, P["PAD_L"], P["PAD_W"], rad), -40, 40), JOIN)  # rogné au plateau plus bas
+        b.combine(cup, tilted(b.rect(x, y, P["PAD_L"], pad_w(P, k), rad), -40, 40), JOIN)  # rogné au plateau plus bas
         # Rien au-dessus de la face arrière de la branche, ni contre les parois des clips (2 mm de jeu)
-        b.combine(cup, tilted(b.rect(x, y, 70, P["PAD_W"] + 4, rad), 0, 40), CUT)
+        b.combine(cup, tilted(b.rect(x, y, 70, pad_w(P, k) + 4, rad), 0, 40), CUT)
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
@@ -281,20 +291,22 @@ def build(comp, P):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
         ur = (math.cos(math.radians(rad)), math.sin(math.radians(rad)))
         nr = (-ur[1], ur[0])
-        e = P["SPOKE_W"] / 2 + P["CLIP_GAP"]  # face intérieure des parois
+        e = P[k + "_SPOKE_W"] / 2 + P["CLIP_GAP"]  # face intérieure des parois, au centre de la patte
+        tp = P[k + "_TAPER"]  # parois inclinées comme les bords de la branche (plus large vers le moyeu)
         z_lip = P["SPOKE_T"]                   # dessous du crochet = face avant de la branche
         z_cl = z_lip + P["CLIP_LIP_T"]
         for sd in (1, -1):
             def o(dist):
                 return x + nr[0] * sd * dist, y + nr[1] * sd * dist
 
-            wall = b.solid(b.rect(*o(e + P["CLIP_WALL"] / 2), clip_l, P["CLIP_WALL"], rad), -1, z_cl + 1)
-            lip = b.solid(b.rect(*o(e - P["CLIP_LIP"] / 2 + 0.5), clip_l, P["CLIP_LIP"] + 1, rad), z_lip, P["CLIP_LIP_T"])
+            wa = rad - sd * tp  # direction de la paroi : suit le bord de la branche
+            wall = b.solid(b.rect(*o(e + P["CLIP_WALL"] / 2), clip_l, P["CLIP_WALL"], wa), -1, z_cl + 1)
+            lip = b.solid(b.rect(*o(e - P["CLIP_LIP"] / 2 + 0.5), clip_l, P["CLIP_LIP"] + 1, wa), z_lip, P["CLIP_LIP_T"])
             b.combine(wall, lip, JOIN)
             # Rampe à 45° sur le crochet : la branche écarte les parois en entrant, puis elles se referment
-            ramp = b.solid(b.rect(*o(e - 25), 40, 50, rad), z_cl, 30)
+            ramp = b.solid(b.rect(*o(e - 25), 40, 50, wa), z_cl, 30)
             px, py = o(e)
-            b.rotate(ramp, (ur[0], ur[1], 0), (px, py, z_cl), sd * 45)
+            b.rotate(ramp, (math.cos(math.radians(wa)), math.sin(math.radians(wa)), 0), (px, py, z_cl), sd * 45)
             b.combine(wall, ramp, CUT)
             b.tilt(wall, x, y, rad, til, dz)
             b.combine(cup, wall, JOIN)

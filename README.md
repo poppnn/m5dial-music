@@ -123,16 +123,21 @@ battery is taped) for the area between the bottom spoke and the right spoke of a
 - **M5Dial**: its body goes into the ring (full circle Ø 45 / Ø 51, **3.5 mm high**), gripped by 6 crush ribs;
   the collar rests on it and the body sticks out behind, so **USB-C** and Port A stay free. Around it, the plate
   is lowered to the ring level with 1 mm clearance: nothing rubs.
-- **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), diagonally,
-  long side parallel to the inner edge (hub side) and aligned on it, between the two arms. There it touches
-  neither the spokes (which sit further back near the hub) nor the M5Dial body; 99 % of it rests on the plate.
+- **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
+  two arms, long side tilted about 25° (91 % of it rests on the plate); a true diagonal (~49°) also fits (85 %).
+  There it touches neither the spokes (which sit further back near the hub) nor the M5Dial body.
 - **Attachment**: each pad clips onto its spoke (push the spoke between the two hooked walls, which spread then
-  close over its front face); a peg goes into the spoke hole so it cannot slide.
+  close over its front face). The walls are angled like the spoke edges (the spokes widen towards the hub) and a
+  Ø 15.4 peg goes into the large spoke hole (Ø 16) so it cannot slide.
+- Geometry measured from photos of the wheel (OMP-type, 350 mm, 90 mm dish; ruler and the 6 × 70 mm hub bolt
+  circle as scale, perspective corrected): spokes slope ~43°, side spokes raised ~18° above horizontal, bottom
+  spoke ~36 mm wide at the large hole (tapering ~4° per side), right spoke ~32 mm (~1° per side).
 
 - Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
-  **Before printing, measure the `MESURER` values**: spoke thickness (`SPOKE_T`, the clip depends on it), spoke
-  hole Ø (`PEG_D`), M5Dial body Ø (`BODY_D`), hole positions and spoke slope. Run the script again, then export
+  **Before printing, check the `MESURER` values** with a caliper: spoke thickness (`SPOKE_T`, the clip depends on
+  it), spoke widths at the large holes (`R_SPOKE_W`, `B_SPOKE_W`), M5Dial body Ø (`BODY_D`). Hole positions,
+  slope and taper come from the photos (±2 mm / ±2°). Run the script again, then export
   the STL.
 - Printing: flat as is (one face on the bed, the back), **no supports**. PETG or ASA (PLA warps in the sun and
   breaks when clipping), 4 perimeters, 30-40 % infill.
