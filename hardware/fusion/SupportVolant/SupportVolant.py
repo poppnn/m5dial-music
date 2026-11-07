@@ -11,7 +11,8 @@ Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau),
   (42, -53) (80 % d'appui). Là, elle ne touche ni les branches (plus en arrière près du moyeu) ni le corps du M5Dial.
 - Le M5Dial est rehaussé (DIAL_RISE) pour se rapprocher de la jante : son corps s'enfonce dans un anneau de 3,5 mm
   serré par 6 nervures d'écrasement, porté par 3 pieds (tube ajouré) ; la collerette repose dessus et le corps
-  pend dans le tube : l'USB-C et le câble de batterie passent par une des 3 fenêtres.
+  pend dans le tube. La fenêtre du bas est ouverte jusqu'au dos : on tourne le M5Dial pour que sa prise USB-C
+  (tout en bas du corps) soit en face, et on le recharge sans le démonter. Le câble de batterie passe par une autre.
 - Chaque patte se pose sur sa branche entre 2 parois de guidage (inclinées comme les bords, la branche s'élargit
   vers le moyeu), sans crochet ni téton : la pièce se pose d'un seul geste sur les deux branches. Une vis M5 passe
   par le grand trou (Ø 16, rondelle large Ø 20+ côté conducteur) et la patte ; l'écrou se loge dans une empreinte
@@ -284,14 +285,17 @@ def build(comp, P):
 
     b.fillet([e for e in {e.tempId: e for f in tops for e in f.edges}.values() if not ring_edge(e)], P["FILLET_TOP"], False)
 
-    # 3 fenêtres dans le tube, entre la plaque et l'anneau : USB-C et câble de batterie. Une face au plus loin du moyeu.
+    # 3 fenêtres dans le tube, sous l'anneau. Celle du bas (volant droit) est ouverte jusqu'au dos : la prise USB-C,
+    # tout en bas du corps du M5Dial, s'y branche quelle que soit la longueur du corps et le câble pend vers le bas.
+    # Les deux autres (câble de batterie) s'arrêtent sur la plaque pour ne pas affaiblir les bras.
     if P["DIAL_RISE"] > slab + 3:
-        a0, w, rw = math.degrees(math.atan2(cy, cx)), P["WIN_ANG"] / 2, r_out + 3
+        w, rw = P["WIN_ANG"] / 2, r_out + 3
         for i in range(3):
-            a = a0 + 120 * i
+            a = -90 + 120 * i
             pts = [(cx, cy)] + [(cx + rw * math.cos(math.radians(a + d)), cy + rw * math.sin(math.radians(a + d)))
                                 for d in (-w, 0, w)]
-            b.extrude(b.poly(pts), z_b + slab, P["DIAL_RISE"] - slab, CUT, [cup])
+            z0 = z_b - 1 if i == 0 else z_b + slab
+            b.extrude(b.poly(pts), z0, z_ring - z0, CUT, [cup])
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
     tip, root = P["BODY_D"] / 2 - P["CRUSH"] / 2, r_in + 0.6

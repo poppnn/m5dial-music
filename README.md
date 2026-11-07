@@ -122,8 +122,9 @@ spoke (battery taped), for the area between the bottom spoke and the right spoke
 - **Thin filled plate** (6 mm) between the two spokes: M5Dial ring, arms and the area between them, in one piece.
 - **M5Dial**, raised 30 mm (`DIAL_RISE`) to sit closer to the rim: its body goes into a 3.5 mm ring (Ø 45 /
   Ø 51) gripped by 6 crush ribs, carried by a tube with **3 windows**; the collar rests on the ring and the body
-  hangs in the tube. Turn the M5Dial so **USB-C** faces a window (one faces away from the hub); the battery cable
-  goes through another.
+  hangs in the tube. The **bottom window** (wheel straight) is open down to the back: turn the M5Dial so its
+  **USB-C** (at the very bottom of the body) faces it and charge it without removing it; the cable hangs down. The
+  battery cable goes through one of the other two.
 - **LiPo 103450 battery** (50 × 34 × 10 mm): taped to the **back** of the plate (double-sided tape), between the
   two arms, centred about 52 mm right and 42 mm below the hub centre, long side tilted about 30° (86 % of it
   rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
