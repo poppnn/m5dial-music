@@ -31,7 +31,7 @@ PARAMS = [
     ("DEV_X", 78.6, "mm", "MESURER : centre M5Dial, X"),
     ("DEV_Y", -73.8, "mm", "MESURER : centre M5Dial, Y"),
     # Mesures sur photos (règle + entraxe 6 x 70 du moyeu, perspective corrigée) d'un OMP 350 tulipage 90 :
-    # branches latérales relevées de ~18°, pente des branches ~43°, grand trou Ø 16, petit trou Ø 11.
+    # branches latérales relevées de ~18°, pente des branches ~43°, épaisseur 5, trous Ø 16 (mesurés).
     ("R_X", 66.7, "mm", "MESURER : grand trou de la branche droite, X (centre du moyeu = 0)"),
     ("R_Y", 6.0, "mm", "MESURER : grand trou de la branche droite, Y"),
     ("R_RADIAL", 18.0, "deg", "MESURER : direction de la branche droite (relevée de ~18° sur l'OMP)"),
@@ -46,8 +46,8 @@ PARAMS = [
     ("B_DZ", 0.0, "mm", "Profondeur du trou bas (référence)"),
     ("B_SPOKE_W", 36.0, "mm", "MESURER : largeur de la branche du bas au grand trou"),
     ("B_TAPER", 4.0, "deg", "Évasement de la branche du bas, par côté (plus large vers le moyeu)"),
-    ("SPOKE_T", 4.0, "mm", "MESURER : épaisseur de la branche (au pied à coulisse)"),
-    ("PEG_D", 15.4, "mm", "Ø du téton dans le grand trou de la branche (trou Ø 16 mesuré)"),
+    ("SPOKE_T", 5.0, "mm", "Épaisseur de la branche (mesurée : 5 mm)"),
+    ("PEG_D", 15.4, "mm", "Ø du téton dans le trou de la branche (trous Ø 16 mesurés)"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
     ("PAD_MIN", 3.0, "mm", "Patte : épaisseur mini (bout bas du coin)"),
     ("CLIP_WALL", 2.2, "mm", "Clip : épaisseur des parois (elles fléchissent pour clipser)"),
