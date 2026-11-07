@@ -37,6 +37,7 @@
   <section>
     <h2>1. Install the firmware</h2>
     <p>Plug the M5Dial in over USB-C, click the button and pick its serial port.</p>
+    <p class="muted" id="fw-version">Firmware version: …</p>
     <esp-web-install-button manifest="manifest.json">
       <button slot="activate">Install on the M5Dial</button>
       <span slot="unsupported">Your browser does not support Web Serial: use Chrome or Edge on a computer.</span>
@@ -82,5 +83,12 @@
 
   <p class="muted">Source code: <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
 </main>
+<script>
+  // Version écrite dans manifest.json par le CI (même numéro que la page System du M5Dial)
+  fetch("manifest.json", { cache: "no-store" })
+    .then(r => r.json())
+    .then(m => { document.getElementById("fw-version").textContent = "Firmware version: v" + m.version; })
+    .catch(() => { document.getElementById("fw-version").textContent = ""; });
+</script>
 </body>
 </html>

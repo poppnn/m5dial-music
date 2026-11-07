@@ -65,7 +65,9 @@ static bool draw(float dt) {
   const char* status = !goveeConnected() ? "Searching H7090..." : ledOn ? "LEDs on" : "LEDs off";
   canvas.drawString(status, c, 176);
   canvas.setTextColor(0x5AEB);
-  canvas.drawString(ledHueMode ? "Turn: hue" : "Turn: brightness", c, 196);  // 128 px : tient à cette hauteur
+  // Alterne toutes les 2,5 s : ce que fait la molette, puis comment changer (128 px max : tient à cette hauteur)
+  bool how = now / 2500 % 2;
+  canvas.drawString(ledHueMode ? (how ? "Hold: brightness" : "Turn: hue") : (how ? "Hold: hue mode" : "Turn: brightness"), c, 196);
   return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS;
 }
 

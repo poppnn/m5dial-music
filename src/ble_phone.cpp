@@ -132,6 +132,14 @@ void sendCmd(uint8_t cmd) {
   NimBLERemoteCharacteristic* rc = rcChar;  // copie : la tâche BLE peut le remettre à nullptr entre-temps
   if (linkMode == LINK_AMS && rc) {
     rc->writeValue(&cmd, 1, true);
+    // L'iPhone notifie le nouveau mode avec du retard (ou pas du tout) : l'icône montre tout de suite le mode
+    // suivant prévu (aléatoire : non <-> tout ; répétition : non -> tout -> un -> non), corrigé dès la notification.
+    if (cmd == CMD_SHUFFLE || cmd == CMD_REPEAT) {
+      std::lock_guard<std::mutex> lock(mtx);
+      if (cmd == CMD_SHUFFLE && media.shuffle >= 0) media.shuffle = media.shuffle ? 0 : 2;
+      if (cmd == CMD_REPEAT && media.repeat >= 0) media.repeat = media.repeat == 0 ? 2 : media.repeat == 2 ? 1 : 0;
+      dirty = true;
+    }
   } else if (linkMode == LINK_HID) {
     static const uint8_t bit[] = {0, 0, 0x01, 0x02, 0x04, 0x08, 0x10};  // index = CMD_*
     if (cmd >= sizeof(bit)) return;  // aléatoire, répétition, J'aime : pas d'équivalent HID
