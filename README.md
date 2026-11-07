@@ -129,7 +129,7 @@ spoke (battery taped), for the area between the bottom spoke and the right spoke
   rests on the plate); a true diagonal (~48°), centred at 42 / 53 mm, also fits (80 %).
   There it touches neither the spokes (which sit further back near the hub) nor the M5Dial body.
 - **Attachment**: each pad sits on the back of its spoke between two guide walls (angled like the spoke edges,
-  no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 20 screw** through the spoke
+  no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 16 screw** (longer sticks out at the back) through the spoke
   hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
   5 × 20 or 5 × 25; a plain M5 washer would drop into the hole), and an **M5 nut** in the hex pocket at the back of the pad.
 - Geometry measured from photos of the wheel (OMP-type, 350 mm, 90 mm dish; ruler and the 6 × 70 mm hub bolt
