@@ -1,49 +1,84 @@
-// Page LED : anneau = luminosité, en fondu vers la nouvelle couleur ; la pastille et le nom de l'ancienne
-// couleur sortent en glissant, la nouvelle pastille entre avec un rebond.
+// Page LED. Deux modes de molette, basculés par un appui long court (0,6 s) :
+// - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
+// - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (10° par cran).
+// Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
+// entre avec un rebond. Appui = allumer / éteindre.
 #include "pages.h"
 #include "../anim.h"
 #include "../config.h"
 #include "../display.h"
 #include "../govee.h"
 
+#define HUE_STEP 10  // degrés par cran
+
 static float ledBriShown = 1;
 
+static void drawHueRing(int c, int hue, bool on) {
+  for (int h = 0; h < 360; h += 10) {
+    LedColor k = hueColor(h);
+    uint16_t col = on ? canvas.color565(k.r, k.g, k.b) : canvas.color565(k.r / 5, k.g / 5, k.b / 5);
+    canvas.fillArc(c, c, 119, 111, -90 + h, -90 + h + 10, col);
+  }
+  canvas.fillArc(c, c, 119, 106, -90 + hue - 3, -90 + hue + 3, TFT_WHITE);  // repère de la teinte choisie
+}
+
 static bool draw(float dt) {
-  static int shownColor = 0;
+  static int shownKey = 0;  // préréglage affiché, ou -1 pour la teinte continue
   static float rgb[3] = {255, 255, 255};
   static uint32_t popStart = 0;
   const int c = 120;
   uint32_t now = millis();
-  if (!slideOutPhase && shownColor != ledColor) { shownColor = ledColor; popStart = now; }
-  const LedColor& lc = LED_COLORS[shownColor];
-  const LedColor& tc = LED_COLORS[ledColor];
+  int key = ledCustom ? -1 : ledColor;
+  if (!slideOutPhase && shownKey != key) {
+    if (key >= 0) popStart = now;  // rebond seulement pour un préréglage (la teinte défile en continu)
+    shownKey = key;
+  }
+  LedColor lc = shownKey < 0 ? hueColor(ledHue) : LED_COLORS[shownKey];
+  LedColor tc = ledCurrent();
   const float trgb[3] = {(float)tc.r, (float)tc.g, (float)tc.b};
   float k = smoothK(dt, COLOR_TAU_S), dist = 0;
   for (int i = 0; i < 3; i++) { rgb[i] += (trgb[i] - rgb[i]) * k; dist += fabsf(trgb[i] - rgb[i]); }
 
   float target = ledOn ? ledBri / 100.f : 0;
   ledBriShown += (target - ledBriShown) * smoothK(dt, VOL_TAU_S);
-  uint16_t arcCol = canvas.color565(rgb[0], rgb[1], rgb[2]);
   uint32_t tp = now - popStart;
   float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
   int off = (int)slideOff;
 
-  canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
-  if (ledBriShown > 0.005f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, arcCol);
+  if (ledHueMode) {
+    drawHueRing(c, ledHue, ledOn);
+  } else {
+    canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
+    if (ledBriShown > 0.005f)
+      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
+  }
   canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(lc.name, c + off, 150);
+  char name[16];
+  if (shownKey < 0) snprintf(name, sizeof(name), "Teinte %d°", ledHue);
+  else snprintf(name, sizeof(name), "%s", lc.name);
+  canvas.drawString(name, c + off, 150);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
   const char* status = !goveeConnected() ? "Recherche H7090..." : ledOn ? "LED allumées" : "LED éteintes";
-  canvas.drawString(status, c, 182);
+  canvas.drawString(status, c, 180);
+  canvas.setTextColor(0x5AEB);
+  canvas.drawString(ledHueMode ? "Molette : teinte" : "Molette : luminosité", c, 202);
   return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS;
 }
 
 static void wheel(int detents) {
-  if (detents) ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
+  if (!detents) return;
+  if (ledHueMode) {
+    ledHue = ((ledHue + detents * HUE_STEP) % 360 + 360) % 360;
+    ledCustom = ledOn = true;
+    goveeColorChanged();
+  } else {
+    ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
+    goveeChanged();
+  }
 }
 
 static void click() {
@@ -52,10 +87,13 @@ static void click() {
 }
 
 static void swipeX(int dir) {
-  ledColor = (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
+  ledColor = ledCustom ? (dir > 0 ? 0 : LED_COLOR_COUNT - 1) : (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
+  ledCustom = false;
   ledOn = true;
-  goveeSendColor();
+  goveeColorChanged();
   startSlide(dir, false);
 }
 
-extern const PageOps ledPage = {draw, wheel, click, swipeX};
+static void longPress() { ledHueMode = !ledHueMode; }
+
+extern const PageOps ledPage = {draw, wheel, click, swipeX, nullptr, longPress};

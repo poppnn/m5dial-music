@@ -13,6 +13,8 @@ struct PageOps {
   void (*swipeX)(int dir);     // +1 vers la droite, -1 vers la gauche
   // Tap écran à la position (x, y) de l'interface, n-ième tap rapproché. nullptr : comme click().
   void (*tap)(int x, int y, uint8_t clicks);
+  // Appui long court sur la molette (LONG_PRESS_MS, avant l'extinction à 2 s). nullptr : rien.
+  void (*longPress)();
 };
 extern const PageOps* const PAGES[PAGE_COUNT];
 

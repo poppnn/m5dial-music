@@ -48,7 +48,10 @@ Ou télécharger les binaires d'une version dans [Releases](https://github.com/p
 ## LED Govee H7090
 
 Swipe vertical pour passer à la page LED. Le M5Dial s'y connecte en BLE (protocole Govee non officiel) :
-molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 couleurs).
+molette = luminosité, appui = on/off, swipe gauche/droite = couleur (9 préréglages).
+**Appui long court** (0,6 s) sur la molette = mode **teinte** : l'anneau devient une roue des couleurs et la
+molette fait défiler la teinte (10° par cran) ; un autre appui long court revient à la luminosité. La dernière
+couleur (préréglage ou teinte) et la luminosité sont mémorisées, et renvoyées à la barre à chaque connexion.
 L'app Govee Home doit être fermée : la barre n'accepte qu'une connexion.
 
 ## Chrono, Horloge, Système et Réglages

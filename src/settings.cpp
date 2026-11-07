@@ -49,6 +49,18 @@ void settingsSelfTest() {
   assert(inNight(2, 1, 5) && !inNight(6, 1, 5));
 }
 
+LedState ledStateLoad() {
+  return {prefs.getUChar("ledCol", 0), prefs.getUShort("ledHue", 0), prefs.getBool("ledCus", false),
+          prefs.getUChar("ledBri", 100)};
+}
+
+void ledStateSave(const LedState& s) {
+  prefs.putUChar("ledCol", s.color);
+  prefs.putUShort("ledHue", s.hue);
+  prefs.putBool("ledCus", s.custom);
+  prefs.putUChar("ledBri", s.bri);
+}
+
 // Clé NVS (15 caractères max) : "n" + adresse sans les ":" = 13 caractères.
 static String bondKey(const std::string& addr) {
   String k = "n";

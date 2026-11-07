@@ -21,6 +21,11 @@ void settingsSelfTest();
 bool settingsNight();         // luminosité de nuit en ce moment
 uint8_t settingsBacklight();  // luminosité de base de l'écran, 0..255 (jour ou nuit)
 
+// Dernier état des LED Govee (préréglage, teinte, luminosité).
+struct LedState { uint8_t color; uint16_t hue; bool custom; uint8_t bri; };
+LedState ledStateLoad();
+void ledStateSave(const LedState& s);
+
 // Nom des appareils appairés (NimBLE ne garde que leur adresse) : mémorisé à la connexion.
 void bondNameSave(const std::string& addr, const std::string& name);
 std::string bondName(const std::string& addr);  // "" si inconnu

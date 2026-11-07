@@ -12,6 +12,7 @@
  * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
  *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
+ *   Bouton central 0,6 s    : LED : molette = luminosité <-> teinte
  *   Bouton central 2 s      : extinction (sur batterie)
  *   Swipe gauche / droite   : piste suivante / précédente (LED : couleur, Chrono : remise à zéro)
  */
@@ -99,6 +100,8 @@ void setup() {
   settingsLoad();
   settingsSelfTest();
   ancsSelfTest();
+  LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
+  assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 
   int st; float r, e;  // auto-tests : parseur AMS et repliement d'angle
   assert(parsePlaybackInfo("1,1.0,12.5", st, r, e) && st == 1 && e == 12.5f);
@@ -151,9 +154,15 @@ void loop() {
   if (settings.sleepAfterMin && now - lastActive > settings.sleepAfterMin * 60000UL) shutdown("Veille...");
 
   // Bouton déjà utilisé (refus d'appel) : ignoré jusqu'à ce qu'il soit relâché, sinon le relâcher ferait un clic.
-  static bool swallowBtn = false;
-  bool btnClick = M5Dial.BtnA.wasClicked() && !swallowBtn, btnHold = M5Dial.BtnA.wasHold() && !swallowBtn;
-  if (swallowBtn && M5Dial.BtnA.isReleased()) swallowBtn = false;
+  static bool swallowBtn = false, longDone = false;  // longDone : appui long court déjà traité, pas de clic au relâcher
+  bool btnClick = M5Dial.BtnA.wasClicked() && !swallowBtn && !longDone;
+  bool btnHold = M5Dial.BtnA.wasHold() && !swallowBtn;
+  if (M5Dial.BtnA.isReleased()) swallowBtn = longDone = false;
+  if (!bootShown && !call && !longDone && !swallowBtn && PAGES[page]->longPress && M5Dial.BtnA.pressedFor(LONG_PRESS_MS)) {
+    PAGES[page]->longPress();  // l'extinction reste possible en continuant d'appuyer jusqu'à 2 s
+    longDone = true;
+    dirty = true;
+  }
 
   if (call) {  // appel entrant : seulement le bouton (gestes simples en conduisant)
     if (!swallowBtn && M5Dial.BtnA.pressedFor(CALL_REJECT_MS)) { ancsAnswer(false); swallowBtn = true; dirty = true; }
