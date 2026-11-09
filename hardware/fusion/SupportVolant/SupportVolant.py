@@ -12,8 +12,8 @@ Une seule pièce, imprimée telle quelle (une seule face posée sur le plateau),
   anneau plat de 3,5 mm (6 nervures d'écrasement), serré dessous par son collier (Ø 49,8 x 12,6). Sous l'anneau,
   rien dans le rayon du collier. Il est porté par un tube plein percé de 2 fenêtres en arche entre 3 piliers de 60°
   (dans l'axe des bras et côté jante) : doigts pour tenir le collier, USB-C (au dos du M5Dial), câble de batterie.
-- Chaque patte se pose sur sa branche entre 2 parois de guidage (inclinées comme les bords, la branche s'élargit
-  vers le moyeu), sans crochet ni téton : la pièce se pose d'un seul geste sur les deux branches. Une vis M5 passe
+- Chaque patte se pose sous sa branche, sans paroi, crochet ni téton : la pièce se pose d'un seul geste sur les
+  deux branches. Une vis M5 passe
   par le grand trou (Ø 16, rondelle large Ø 20+ côté conducteur) et la patte ; l'écrou se loge dans une empreinte
   hexagonale au dos.
 
@@ -58,8 +58,8 @@ PARAMS = [
     ("NUT_FLOOR", 3.0, "mm", "Plastique entre la branche et l'écrou"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
     ("PAD_MIN", 6.0, "mm", "Patte : épaisseur mini (bout bas du coin) = ARM_T : la plaque affleure le coin, sans marche"),
-    ("CLIP_WALL", 2.2, "mm", "Parois de guidage : épaisseur"),
-    ("CLIP_GAP", 0.3, "mm", "Parois de guidage : jeu avec le bord de la branche"),
+    ("CLIP_WALL", 2.2, "mm", "Marge de la patte de chaque côté de la branche (anciennes parois de guidage)"),
+    ("CLIP_GAP", 0.3, "mm", "Marge supplémentaire de la patte de chaque côté de la branche"),
     ("ARM_T", 6.0, "mm", "Hauteur du dessus de la plaque au-dessus du bas des pattes (assise du M5Dial)"),
     ("FILLET_V", 4.0, "mm", "Congé des arêtes verticales (contour)"),
     ("FILLET_TOP", 1.5, "mm", "Congé des arêtes du dessus des bras"),
@@ -365,23 +365,10 @@ def build(comp, P):
         rib = b.solid(b.rect(cx + rc * math.cos(a), cy + rc * math.sin(a), root - tip, 1.2, math.degrees(a)), z_ring, P["RING_T"])
         b.combine(cup, rib, JOIN)
 
-    # Parois de guidage et vis, construites dans le repère de la branche puis inclinées : z = 0 face arrière,
-    # z = SPOKE_T face avant. Pas de crochet : la pièce se pose sur les deux branches d'un même geste (selon Z).
-    clip_l = P["PAD_L"] - 2 * P["FILLET_V"]
+    # Vis et écrou, construits dans le repère de la branche puis inclinés : z = 0 face arrière de la branche.
+    # Pas de parois de guidage (retirées après essai) : la vis seule positionne la patte.
     for k in ("R", "B"):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
-        ur = (math.cos(math.radians(rad)), math.sin(math.radians(rad)))
-        nr = (-ur[1], ur[0])
-        e = P[k + "_SPOKE_W"] / 2 + P["CLIP_GAP"]  # face intérieure des parois, au centre de la patte
-        tp = P[k + "_TAPER"]  # parois inclinées comme les bords de la branche (plus large vers le moyeu)
-        for sd in (1, -1):
-            def o(dist):
-                return x + nr[0] * sd * dist, y + nr[1] * sd * dist
-
-            wa = rad - sd * tp  # direction de la paroi : suit le bord de la branche
-            wall = b.solid(b.rect(*o(e + P["CLIP_WALL"] / 2), clip_l, P["CLIP_WALL"], wa), -1, P["SPOKE_T"] + 1)
-            b.tilt(wall, x, y, rad, til, dz)
-            b.combine(cup, wall, JOIN)
         # Vis M5 par le trou de la branche (rondelle large côté conducteur), écrou dans une empreinte au dos
         hole = b.solid(b.circles([(x, y)], P["SCREW_D"] / 2), -40, 41)
         rh = P["NUT_AF"] / math.sqrt(3)
