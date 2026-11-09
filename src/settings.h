@@ -13,12 +13,10 @@ struct Settings {
   uint8_t nightFrom, nightTo;  // heures
   uint8_t notifMode;       // notifications iPhone : 0 aucune, 1 app + expéditeur, 2 app + expéditeur + texte
   uint8_t accent;          // couleur d'accent de l'interface (index de ACCENT_COLORS)
-  uint8_t style;           // STYLE_PLAIN : fond noir ; STYLE_K10 : bandes de la Micra K10 (k10.h)
 };
 extern Settings settings;
 
 enum : uint8_t { NOTIF_OFF, NOTIF_SENDER, NOTIF_FULL };
-enum : uint8_t { STYLE_PLAIN, STYLE_K10, STYLE_COUNT };
 extern const uint16_t ACCENT_COLORS[];  // RGB565
 extern const char* const ACCENT_NAMES[];
 extern const int ACCENT_COUNT;
