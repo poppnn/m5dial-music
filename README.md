@@ -164,15 +164,19 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
   between 3 wide pillars (in line with the two arms and towards the rim): fingers reach the clamp, and **USB-C**
   (on the back of the M5Dial) and the battery cable go through them.
 - **Battery**: no holder on the mount; tape the LiPo where it suits you.
-- **Attachment**: each pad sits on the back of its spoke between two guide walls (angled like the spoke edges,
-  no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 16 screw** (longer sticks out at the back) through the spoke
-  hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
-  5 × 20 or 5 × 25; a plain M5 washer would drop into the hole), and an **M5 nut** in the hex pocket at the back of the pad.
-- Wheel: OMP Corsica (OD0-1954), 350 mm, 95 mm dish. Spoke slope (~43°) from photos of the wheel; widths
-  (bottom 40 mm, right 38 mm at the hole), 5 mm thickness and Ø 16 holes measured with a caliper. Right spoke
-  from OMP's front product photo (6 × 70 mm bolt circle as scale): its holes are as far from the hub as the
-  bottom ones, their axis rises 12.7° and the spoke narrows towards the rim by ~5° per side (edges at ~7.5° and
-  ~17.4°); the bottom spoke tapers ~4° per side.
+- **Attachment**: each pad sits on the back of its spoke (no guide wall, hook or peg: the part goes onto both
+  spokes in one move). Per spoke: **M5 screw** through the spoke hole nearest the hub (Ø 16) and the pad, with a
+  **wide washer Ø 20** (fender washer 5 × 20; a plain M5 washer would drop into the hole) and an **M5 nut**; the
+  hex pocket at the back of the pad holds a nut on that side.
+- **Nut caps** ([`hardware/cache_ecrou.stl`](hardware/cache_ecrou.stl), print 2): round dome Ø 24 × 10 mm that
+  pushes onto the nut on the driver side (tight hex socket, 8.1 mm across flats), flat base on the spoke face, with
+  or without the Ø 20 washer underneath; the screw tip goes into its centre hole. Base on the bed, no supports.
+  Source: [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou) (`NUT_AF` 8.0 if too loose, 8.2 if too tight).
+- Wheel: OMP Corsica (OD0-1954), 350 mm, 95 mm dish. Pads set by fit checks on the wheel: the right pad at 90° to
+  the bottom one, **96 mm between the two hole centres**, both spoke slopes **40°**. Widths (bottom 40 mm, right
+  38 mm at the hole), 5 mm thickness and Ø 16 holes measured with a caliper.
+- Quick fit check: set `TEST_FIT` to 1 and run the script again to get only the two pads joined by a bar
+  (`hardware/support_volant_test.stl`, ~43 cm³, no supports); back to 0 for the full mount.
 
 - Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
