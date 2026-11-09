@@ -26,6 +26,7 @@
 #include "display.h"
 #include "govee.h"
 #include "imu.h"
+#include "k10.h"
 #include "power.h"
 #include "clock.h"
 #include "settings.h"
@@ -85,6 +86,7 @@ static bool draw(float dt) {
     pushFrame();
     return true;
   }
+  if (settings.style == STYLE_K10) drawK10Background();  // bandes de la K10 sous le contenu de la page
   bool anim = PAGES[page]->draw(dt);
   anim |= drawToast(now);
   pushFrame();

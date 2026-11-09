@@ -1,6 +1,7 @@
 // Écran de démarrage (aucun appareil connecté) et table des pages.
 #include "pages.h"
 #include "../display.h"
+#include "../k10.h"
 #include "../settings.h"
 #include "../logo.h"
 
@@ -10,7 +11,11 @@ const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &cl
 // Logo centré + arc qui tourne sur le bord de l'écran + texte discret.
 void drawBoot(uint32_t now) {
   const int c = 120;
-  if (LOGO_W) {
+  bool k10 = settings.style == STYLE_K10;
+  if (k10) {  // carrosserie argent et bandes de la Micra K10, dans leurs vraies couleurs
+    canvas.fillScreen(canvas.color565(232, 232, 225));
+    drawK10(-10, 78, 0.26f, canvas.color565(28, 27, 30), canvas.color565(150, 151, 147));
+  } else if (LOGO_W) {
     canvas.pushImage(c - LOGO_W / 2, 100 - LOGO_H / 2, LOGO_W, LOGO_H, logo_data);
   } else {  // logo neutre par défaut (aucun logo.h personnalisé) : double croche, sans bitmap en flash
     canvas.fillEllipse(97, 128, 13, 10, TFT_WHITE);
@@ -21,12 +26,12 @@ void drawBoot(uint32_t now) {
     canvas.fillTriangle(104, 68, 159, 72, 104, 82, TFT_WHITE);
   }
   float a = (now % 1200) * (360.f / 1200) - 180;  // 1 tour en 1,2 s
-  canvas.fillArc(c, c, 119, 114, 0, 360, 0x2104);
+  canvas.fillArc(c, c, 119, 114, 0, 360, k10 ? 0xC618 : 0x2104);
   canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
-  canvas.setTextColor(0xAD55);
+  canvas.setTextColor(k10 ? 0x39C7 : 0xAD55);
   canvas.drawString("Waiting for phone", c, 186);
-  canvas.setTextColor(0x5AEB);
+  canvas.setTextColor(k10 ? 0x7BCF : 0x5AEB);
   canvas.drawString("M5Dial Music", c, 206);  // nom à choisir dans les réglages Bluetooth
 }

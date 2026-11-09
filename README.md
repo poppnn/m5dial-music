@@ -75,7 +75,10 @@ Close the Govee Home app: the bar only accepts one connection.
   - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
     power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
     full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
-    active icons, notification border).
+    active icons, notification border), and **style**: "Micra K10" (default) draws the side decals of a Nissan
+    Micra K10 (taken from a photo of the car: black line diving into the door stripe, slanted black block, grey
+    band) as a discreet dark background under every page, and in their real colours on a silver disc on the
+    start screen; "plain" keeps a black background.
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".
@@ -168,5 +171,5 @@ pio run -t upload
 - Android and Windows do not expose track info over BLE: that would need a companion app.
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
 - Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications),
-  `govee`, `display` (DMA rendering), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
+  `govee`, `display` (DMA rendering), `k10` (decal style), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.

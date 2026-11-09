@@ -6,7 +6,7 @@
 #include "../imu.h"
 #include "../settings.h"
 
-enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_VALUES };  // puis les appareils
+enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_STYLE, IT_VALUES };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
 static const uint16_t SLEEP_OPTS[] = {0, 5, 10, 20, 30, 60};   // min
@@ -29,6 +29,7 @@ static int optCount(int it) {
     case IT_IMU: return 2;
     case IT_MODE: case IT_NOTIF: return 3;
     case IT_ACCENT: return ACCENT_COUNT;
+    case IT_STYLE: return STYLE_COUNT;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: return 24;
     case IT_ENC: return 4;
     case IT_DIM: return COUNT(DIM_OPTS);
@@ -43,6 +44,7 @@ static int optIndex(int it) {
     case IT_IMU: return settings.imuDir < 0;
     case IT_NOTIF: return settings.notifMode;
     case IT_ACCENT: return settings.accent;
+    case IT_STYLE: return settings.style;
     case IT_MODE: return settings.briMode;
     case IT_NIGHT_FROM: return settings.nightFrom;
     case IT_NIGHT_TO: return settings.nightTo;
@@ -64,6 +66,7 @@ static void setOpt(int it, int i) {
     case IT_MODE: settings.briMode = i; break;
     case IT_NOTIF: settings.notifMode = i; break;
     case IT_ACCENT: settings.accent = i; break;
+    case IT_STYLE: settings.style = i; break;
     case IT_NIGHT_FROM: settings.nightFrom = i; break;
     case IT_NIGHT_TO: settings.nightTo = i; break;
     case IT_ENC: settings.encSteps = i + 1; break;
@@ -81,6 +84,7 @@ static void valueText(int it, char* b, size_t n) {
     case IT_IMU: snprintf(b, n, "%s", i ? "reversed" : "normal"); break;
     case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "full" : i == NOTIF_SENDER ? "sender" : "off"); break;
     case IT_ACCENT: snprintf(b, n, "%s", ACCENT_NAMES[i]); break;
+    case IT_STYLE: snprintf(b, n, "%s", i == STYLE_K10 ? "Micra K10" : "plain"); break;
     case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (night)" : "auto (day)") : i ? "night" : "day"); break;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d:00", i); break;
     case IT_ENC: snprintf(b, n, "%d pulse%s", i + 1, i ? "s" : ""); break;
@@ -92,7 +96,7 @@ static void valueText(int it, char* b, size_t n) {
 }
 
 static const char* LABELS[IT_VALUES] = {"IMU dir", "Wheel", "Dim after", "Power off", "Day level",
-                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent"};
+                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent", "Style"};
 
 // Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {
