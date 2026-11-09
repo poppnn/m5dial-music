@@ -26,7 +26,7 @@ extern volatile uint16_t connHandle;
 Media mediaSnapshot();  // copie sous verrou (écrit par la tâche BLE)
 bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& elapsed);
 void startBle();
-void setupAms();  // à appeler depuis loop() quand needSetup : découverte GATT hors de la tâche BLE
+void startSetup();  // depuis loop() : si needSetup, découverte GATT (AMS, CTS, ANCS) dans une tâche à part
 void sendCmd(uint8_t cmd);
 std::string connectedPeer();               // adresse d'identité du téléphone connecté ("" sinon)
 void forgetBond(const NimBLEAddress& a);   // oublie un appareil (le déconnecte s'il est connecté)

@@ -98,8 +98,10 @@ Close the Govee Home app: the bar only accepts one connection.
 ## Boot screen
 
 While no device is connected, the M5Dial shows a logo (by default a music note drawn by the firmware), a spinning
-arc and "Waiting for phone". Controls are locked, except the hold to power off. On connection, a fade leads to the
-UI.
+arc and "Waiting for phone". Controls are locked, except the hold to power off. On connection, the spinning arc
+closes into a circle while shrinking to the centre, then bursts into a check mark badge with a white wave towards the
+edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) runs in the background meanwhile, so
+the screen never freezes.
 
 To use your own logo (PNG or BMP, ideally on a transparent or black background):
 

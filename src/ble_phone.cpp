@@ -94,7 +94,7 @@ class ServerCB : public NimBLEServerCallbacks {
   }
 };
 
-void setupAms() {
+static void setupAms() {
   needSetup = false;
   // getClient() efface les services GATT déjà découverts : à n'appeler qu'ici, une fois par connexion.
   NimBLEClient* client = NimBLEDevice::getServer()->getClient(connHandle);
@@ -127,6 +127,24 @@ void setupAms() {
   rcChar = rc;
   linkMode = LINK_AMS;
   dirty = true;
+}
+
+// La découverte GATT et les abonnements prennent 1 à 2 s d'allers-retours radio : dans loop(), l'écran gelait à la
+// connexion. Une petite tâche s'en charge ; l'animation de l'écran de démarrage continue pendant ce temps.
+// shortcut: bondNameSave (NVS) est appelé depuis cette tâche ; sans risque tant que loop() n'écrit pas en même temps
+// (seulement en modifiant un réglage, impossible pendant l'écran de démarrage).
+static volatile bool setupRunning = false;
+
+static void setupTask(void*) {
+  setupAms();
+  setupRunning = false;
+  vTaskDelete(nullptr);
+}
+
+void startSetup() {
+  if (!needSetup || setupRunning) return;  // reconnexion pendant une découverte : relancée quand elle a fini
+  setupRunning = true;
+  if (xTaskCreate(setupTask, "ams_setup", 6144, nullptr, 1, nullptr) != pdPASS) setupRunning = false;
 }
 
 void sendCmd(uint8_t cmd) {

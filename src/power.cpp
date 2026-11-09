@@ -9,13 +9,18 @@
 
 bool bootShown = true;
 uint32_t fadeStart = 0;
+uint32_t linkedAt = 0;
 static bool fadeTo = true;
 static float fadeLevel = 1, dimLevel = 1;  // rétroéclairage = réglage jour/nuit x fondu x atténuation
 
 // Fondu au noir par le rétroéclairage : l'écran courant s'éteint, bascule, le nouveau s'allume.
 void updateFade(uint32_t now) {
   bool wantBoot = linkMode == LINK_NONE;
-  if (!fadeStart && wantBoot != bootShown) { fadeStart = now | 1; fadeTo = wantBoot; }
+  if (wantBoot) linkedAt = 0;
+  else if (bootShown && !linkedAt) linkedAt = now | 1;
+  // Connexion : l'animation de validation se joue en entier sur l'écran de démarrage, puis le fondu
+  bool animDone = wantBoot || !bootShown || now - linkedAt >= LINK_ANIM_MS;
+  if (!fadeStart && wantBoot != bootShown && animDone) { fadeStart = now | 1; fadeTo = wantBoot; }
   if (!fadeStart) return;
   uint32_t t = now - fadeStart;
   float level;

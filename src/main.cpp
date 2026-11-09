@@ -124,7 +124,7 @@ void loop() {
   lastUs = nowUs;
 
   M5Dial.update();
-  if (needSetup) setupAms();
+  startSetup();  // téléphone connecté et chiffré : découverte GATT en tâche de fond
   static Link prevLink = LINK_NONE;
   if (linkMode == LINK_NONE && prevLink != LINK_NONE) ancsReset();
   prevLink = linkMode;

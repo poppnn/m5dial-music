@@ -29,6 +29,8 @@
 #define PAGE_OUT_MS    170    // glissement vertical entre pages : sortie puis entrée
 #define PAGE_IN_MS     280
 #define FADE_MS        300    // fondu écran de démarrage <-> interface (sortie puis entrée)
+#define LINK_IN_MS     350    // connexion : l'arc qui tourne se resserre en cercle vers le centre...
+#define LINK_ANIM_MS   800    // ... puis éclate en pastille de validation, avant le fondu vers l'interface
 
 // Batterie
 #define CPU_MHZ        80     // largement assez pour l'UI ; 80 MHz = minimum pour la radio BLE
