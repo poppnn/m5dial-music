@@ -19,6 +19,7 @@
 #include <M5Dial.h>
 #include <algorithm>
 #include "ancs.h"
+#include "gb.h"
 #include "anim.h"
 #include "app.h"
 #include "ble_phone.h"
@@ -105,6 +106,7 @@ void setup() {
   settingsLoad();
   settingsSelfTest();
   ancsSelfTest();
+  gbSelfTest();
   cleanTextSelfTest();
   bootAnimSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
@@ -136,6 +138,7 @@ void loop() {
   static Link prevLink = LINK_NONE;
   if (linkMode == LINK_NONE && prevLink != LINK_NONE) ancsReset();
   prevLink = linkMode;
+  gbService();  // Android / Windows : lignes reçues de Gadgetbridge ou du programme PC
   if (ancsService()) { lastInput = millis(); dirty = true; }  // appel ou notification : écran rallumé
   clockService();  // heure reçue de l'iPhone : appliquée ici (I2C du RTC hors de la tâche BLE)
   imuUpdate(dt);

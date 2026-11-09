@@ -85,14 +85,15 @@ static bool draw(float) {
   }
   canvas.setTextDatum(middle_center);
 
-  if (linkMode == LINK_HID) {
+  bool info = linkMode == LINK_AMS || (linkMode == LINK_HID && !m.title.empty());  // HID + Gadgetbridge / PC : titre
+  if (linkMode == LINK_HID && !info) {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Connected", c, 108);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
     canvas.drawString("Remote control", c, 140);
-  } else if (linkMode == LINK_AMS) {  // LINK_NONE : rien, l'interface est en train de disparaître
+  } else if (info) {  // LINK_NONE : rien, l'interface est en train de disparaître
     if (m.playing) {  // icône lecture / pause
       canvas.fillRect(c - 9, 52, 6, 18, TFT_WHITE);
       canvas.fillRect(c + 3, 52, 6, 18, TFT_WHITE);

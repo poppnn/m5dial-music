@@ -4,7 +4,32 @@ Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, And
 
 - **iPhone**: native **Apple Media Service (AMS)** → controls + title, artist, progress, shuffle / repeat / like,
   plus time (CTS), calls and notifications (ANCS).
-- **Android / Windows**: **BLE HID** remote (standard media keys) → controls only.
+- **Android**: **BLE HID** remote (standard media keys) for the controls; title, artist, progress, time, calls and
+  notifications through [Gadgetbridge](https://gadgetbridge.org/) (free app), which takes the M5Dial for a Bangle.js watch.
+- **Windows**: **BLE HID** remote for the controls; title, artist, progress, time and notifications through a small
+  Python app on the PC ([`tools/windows`](tools/windows/m5dial_pc.py)).
+
+**One firmware per platform**, picked in the [web flasher](https://poppnn.github.io/m5dial-music/) (iPhone by
+default): each one only runs what its platform needs.
+
+| Firmware | Bluetooth name | Track info, notifications | Build |
+|---|---|---|---|
+| iPhone | M5Dial Music | AMS, ANCS, CTS (built into iOS) | `pio run -e m5dial` |
+| Android | Bangle.js M5Dial | Gadgetbridge (Bangle.js protocol over Nordic UART) | `pio run -e android` |
+| Windows | M5Dial Music | `tools/windows/m5dial_pc.py` (same protocol) | `pio run -e windows` |
+
+Android: pair **Bangle.js M5Dial** in the Bluetooth settings (controls), then in Gadgetbridge tap + and add it, and
+allow notification access. The name has to start with "Bangle.js": Gadgetbridge only recognises its watches by name.
+
+Windows: pair **M5Dial Music** in Settings › Bluetooth & devices (controls), then on the PC:
+
+```bash
+pip install -r tools/windows/requirements.txt
+pythonw tools/windows/m5dial_pc.py
+```
+
+It reads what Windows shows in its media panel (Spotify, Apple Music, browser...) and the Windows notifications
+(Settings › Privacy › Notifications must allow access). To start it with Windows: shortcut in `shell:startup`.
 
 6 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **System**, **Settings**.
 
@@ -163,7 +188,7 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
 ## Build
 
 ```bash
-pio run -t upload
+pio run -e m5dial -t upload    # iPhone ; -e android or -e windows for the other platforms
 ```
 
 ## License
@@ -182,8 +207,9 @@ Only the IMU is supported by the firmware today (its chip temperature is shown o
 
 - The ESP32-S3 has no Bluetooth Classic: A2DP / AVRCP are impossible, hence AMS (BLE).
 - AMS does not send album art: title + artist are shown instead.
-- Android and Windows do not expose track info over BLE: that would need a companion app.
+- Android and Windows have no built-in BLE service for track info: Gadgetbridge (Android) and the PC app (Windows)
+  fill that gap with the Bangle.js text protocol (`src/gb.cpp`).
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
-- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications),
+- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications), `gb` (Gadgetbridge / PC app lines),
   `govee`, `display` (DMA rendering), `encoder` (wheel on the PCNT hardware counter), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.

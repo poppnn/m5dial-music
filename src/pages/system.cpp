@@ -14,7 +14,7 @@ static bool draw(float) {
   esp_reset_reason_t rr = esp_reset_reason();  // cause du dernier démarrage : repère les plantages
   snprintf(v[0], 32, "%s", rr == ESP_RST_PANIC ? "crash" : rr == ESP_RST_BROWNOUT ? "brownout"
            : (rr == ESP_RST_INT_WDT || rr == ESP_RST_TASK_WDT || rr == ESP_RST_WDT) ? "watchdog" : "normal");
-  snprintf(v[1], 32, "%s", linkMode == LINK_AMS ? "iPhone" : linkMode == LINK_HID ? "Android/PC" : "none");
+  snprintf(v[1], 32, "%s", linkMode == LINK_AMS ? "iPhone" : linkMode == LINK_HID ? (TARGET_APPLE ? "Android/PC" : FW_VARIANT) : "none");
   // Pas de getServer()->getClient() ici : il efface les services GATT du lien (AMS libéré -> plantage).
   int8_t rssi = 0;
   if (linkMode == LINK_NONE || ble_gap_conn_rssi(connHandle, &rssi) != 0) rssi = 0;
@@ -30,7 +30,7 @@ static bool draw(float) {
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextDatum(middle_center);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(fit("System v" FW_VERSION, 2 * textSpace(28, 16, 118)).c_str(), c, 28);  // version git longue : tronquée
+  canvas.drawString(fit("System v" FW_VERSION " " FW_VARIANT, 2 * textSpace(28, 16, 118)).c_str(), c, 28);  // version git longue : tronquée
   for (int i = 0; i < 8; i++) {
     int y = 52 + i * 20;
     int room = textSpace(y, 16, 118) - 4;  // largeur de chaque colonne à cette hauteur (écran rond)

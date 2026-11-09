@@ -6,6 +6,8 @@
 #include <mutex>
 #include <vector>
 #include "ancs.h"
+#include "config.h"
+#include "gb.h"
 #include "settings.h"
 #include "text.h"
 
@@ -35,6 +37,7 @@ static uint32_t callUid = 0;
 static std::string callName;
 static NotifToast toast;
 static std::map<std::string, std::string> appNames;  // identifiant d'app -> nom affiché (cache)
+static bool pushed = false;  // notification ou appel reçu par gb.cpp (Android / Windows) depuis le dernier ancsService()
 
 // Requête en cours (une seule à la fois) : la réponse arrive sur Data Source.
 enum Pending : uint8_t { PEND_NONE, PEND_NOTIF, PEND_APP };
@@ -182,8 +185,9 @@ static bool handleResponse() {
 }
 
 bool ancsService() {
-  if (!cp) return false;
-  bool fresh = false;
+  bool fresh = pushed;
+  pushed = false;
+  if (!cp) return fresh;
   if (pending != PEND_NONE) {
     fresh = handleResponse();
     if (pending != PEND_NONE && millis() - pendingSince > 3000) pending = PEND_NONE;  // réponse perdue
@@ -216,11 +220,33 @@ bool ancsCall(std::string& caller) {
 }
 
 void ancsAnswer(bool accept) {
+#if !TARGET_APPLE
+  gbAnswer(accept);
+#endif
   uint32_t u = callUid;
   write({CMD_ACTION, (uint8_t)u, (uint8_t)(u >> 8), (uint8_t)(u >> 16), (uint8_t)(u >> 24),
          accept ? ACTION_POSITIVE : ACTION_NEGATIVE});
   callActive = false;  // l'iPhone confirme ensuite en retirant la notification
 }
+
+void notifPush(const std::string& app, const std::string& title, const std::string& msg) {
+  if (settings.notifMode == NOTIF_OFF) return;
+  toast.app = cleanText(app);
+  toast.title = cleanText(title);
+  toast.message = settings.notifMode == NOTIF_FULL ? cleanText(msg) : "";
+  toast.since = millis() | 1;
+  toast.closing = 0;
+  pushed = true;
+}
+
+void callPush(bool incoming, const std::string& name) {
+  if (incoming == callActive) return;
+  callActive = incoming;
+  if (incoming) callName = name.empty() ? "Incoming call" : cleanText(name);
+  pushed = true;
+}
+
+void notifCount(int n) { count = n; }
 
 int ancsCount() { return count; }
 const NotifToast& ancsToast() { return toast; }

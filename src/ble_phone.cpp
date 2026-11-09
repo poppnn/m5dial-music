@@ -7,6 +7,8 @@
 #include "ancs.h"
 #include "app.h"
 #include "clock.h"
+#include "config.h"
+#include "gb.h"
 #include "settings.h"
 #include "text.h"
 
@@ -39,6 +41,12 @@ static const uint8_t hidReportMap[] = {
 Media mediaSnapshot() {
   std::lock_guard<std::mutex> lock(mtx);
   return media;
+}
+
+void mediaEdit(const std::function<void(Media&)>& fn) {
+  std::lock_guard<std::mutex> lock(mtx);
+  fn(media);
+  dirty = true;
 }
 
 // PlaybackInfo AMS = "state,rate,elapsed" (state: 0 pause, 1 lecture, 2/3 avance/recul)
@@ -101,7 +109,7 @@ static void setupAms() {
   uint32_t gen = linkGen;  // téléphone déconnecté pendant la découverte (1-2 s) : on ne passe pas en "connecté"
   // getClient() efface les services GATT déjà découverts : à n'appeler qu'ici, une fois par connexion.
   NimBLEClient* client = NimBLEDevice::getServer()->getClient(connHandle);
-  NimBLERemoteService* svc = client ? client->getService(AMS_SVC) : nullptr;
+  NimBLERemoteService* svc = TARGET_APPLE && client ? client->getService(AMS_SVC) : nullptr;  // Android/Windows : HID direct
   NimBLERemoteCharacteristic* eu = svc ? svc->getCharacteristic(AMS_EU) : nullptr;
   NimBLERemoteCharacteristic* rc = svc ? svc->getCharacteristic(AMS_RC) : nullptr;
   // Nom du téléphone (service GAP 0x1800, caractéristique 0x2A00) : NimBLE ne garde que l'adresse des appairés.
@@ -211,7 +219,7 @@ void forgetAllBonds() {
 }
 
 void startBle() {
-  NimBLEDevice::init("M5Dial Music");
+  NimBLEDevice::init(BLE_NAME);
   NimBLEDevice::setMTU(185);
   NimBLEDevice::setSecurityAuth(true, false, true);  // bonding, sans MITM, Secure Connections
   NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);
@@ -225,6 +233,7 @@ void startBle() {
   hid->setReportMap((uint8_t*)hidReportMap, sizeof(hidReportMap));
   hid->setBatteryLevel(100);
   hidInput = hid->getInputReport(1);
+  if (!TARGET_APPLE) gbInit(server);  // infos de Gadgetbridge / du programme PC
   server->start();
 
   // "Service Solicitation" AMS (AD type 0x15, UUID 128 bits little-endian) : iOS sait qu'on veut AMS.
@@ -232,10 +241,11 @@ void startBle() {
                              0x3A, 0x43, 0x36, 0x0F, 0x2B, 0x50, 0xD3, 0x89};
   NimBLEAdvertisementData adv, scan;
   adv.setFlags(BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
-  adv.addData(solicit, sizeof(solicit));
+  if (TARGET_APPLE) adv.addData(solicit, sizeof(solicit));
   adv.setAppearance(0x0180);                    // télécommande générique
   adv.setCompleteServices16({NimBLEUUID((uint16_t)0x1812)});  // HID : visible sur Android/Windows
-  scan.setName("M5Dial Music");
+  if (!TARGET_APPLE) adv.setCompleteServices(NimBLEUUID("6E400001-B5A3-F393-E0A9-E50E24DCCA9E"));  // UART : Gadgetbridge
+  scan.setName(BLE_NAME);
   NimBLEAdvertising* a = NimBLEDevice::getAdvertising();
   a->setAdvertisementData(adv);
   a->setScanResponseData(scan);

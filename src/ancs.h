@@ -17,3 +17,8 @@ struct NotifToast { std::string app, title, message; uint32_t since = 0, closing
 const NotifToast& ancsToast();
 void ancsToastDismiss();  // lance l'animation de fermeture
 void ancsSelfTest();
+
+// Firmwares Android / Windows (gb.cpp) : mêmes toasts et écran d'appel que l'ANCS, depuis loop().
+void notifPush(const std::string& app, const std::string& title, const std::string& msg);
+void callPush(bool incoming, const std::string& name);
+void notifCount(int n);  // notifications présentes sur le téléphone

@@ -5,6 +5,23 @@
 #define FW_VERSION "dev"  // le CI injecte la version (tag v*, sinon 1.<nombre de commits>.0)
 #endif
 
+// Un firmware par plateforme (choisi dans le flasheur web) : seul ce qui sert est lancé.
+// Apple (défaut) : AMS + ANCS + heure de l'iPhone, HID en secours. Android : HID + Gadgetbridge (gb.cpp).
+// Windows : HID + programme PC (tools/windows), même protocole que Gadgetbridge.
+#if defined(TARGET_ANDROID)
+#define TARGET_APPLE 0
+#define FW_VARIANT "Android"
+#define BLE_NAME   "Bangle.js M5Dial"  // Gadgetbridge ne reconnaît que les noms de montres Bangle.js / Espruino
+#elif defined(TARGET_WINDOWS)
+#define TARGET_APPLE 0
+#define FW_VARIANT "Windows"
+#define BLE_NAME   "M5Dial Music"
+#else
+#define TARGET_APPLE 1
+#define FW_VARIANT "iPhone"
+#define BLE_NAME   "M5Dial Music"
+#endif
+
 // Calibration matérielle : impulsions de l'encodeur par cran.
 #define ENC_STEPS_PER_DETENT 2  // défaut (Réglages > Molette) : 2 impulsions par cran mesurées sur ce M5Dial
 #define SWIPE_MIN_PX         40

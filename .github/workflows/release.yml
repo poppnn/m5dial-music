@@ -23,14 +23,17 @@ jobs:
           PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
       - name: Binaires (firmware seul + image complète pour 0x0)
         run: |
-          B=.pio/build/m5dial
           mkdir dist
-          cp $B/firmware.bin "dist/m5dial-music-$GITHUB_REF_NAME-firmware.bin"
-          esptool.py --chip esp32s3 merge_bin -o "dist/m5dial-music-$GITHUB_REF_NAME-full-0x0.bin" \
-            --flash_mode keep --flash_size 8MB \
-            0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
-            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 $B/firmware.bin
+          for E in m5dial android windows; do
+            B=.pio/build/$E
+            N=m5dial-music-$([ $E = m5dial ] && echo iphone || echo $E)-$GITHUB_REF_NAME
+            cp $B/firmware.bin "dist/$N-firmware.bin"
+            esptool.py --chip esp32s3 merge_bin -o "dist/$N-full-0x0.bin" \
+              --flash_mode keep --flash_size 8MB \
+              0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
+              0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+              0x10000 $B/firmware.bin
+          done
       - name: Changelog (commits depuis le tag précédent)
         run: |
           PREV=$(git describe --tags --abbrev=0 "$GITHUB_REF_NAME^" 2>/dev/null || true)
@@ -41,7 +44,8 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "- Easiest: https://poppnn.github.io/m5dial-music/ (Chrome or Edge, M5Dial over USB-C)."
+            echo "- Easiest: https://poppnn.github.io/m5dial-music/ (Chrome or Edge, M5Dial over USB-C), then pick iPhone, Android or Windows."
+            echo "- One firmware per platform: iphone (AMS, ANCS), android (Gadgetbridge), windows (PC app in tools/windows)."
             echo "- \`*-full-0x0.bin\`: full image, flash at address 0x0 (esptool, Espressif web flasher)."
             echo "- \`*-firmware.bin\`: app only, at 0x10000 (update of an already installed M5Dial)."
           } > CHANGELOG.md

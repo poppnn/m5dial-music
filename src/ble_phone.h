@@ -2,6 +2,7 @@
 // Android / Windows -> télécommande HID (touches multimédia).
 #pragma once
 #include <NimBLEDevice.h>
+#include <functional>
 #include <mutex>
 #include <string>
 
@@ -24,6 +25,7 @@ extern volatile bool needSetup, titleChanged, volPing;
 extern volatile uint16_t connHandle;
 
 Media mediaSnapshot();  // copie sous verrou (écrit par la tâche BLE)
+void mediaEdit(const std::function<void(Media&)>& fn);  // modification sous verrou (gb.cpp), puis redessin
 bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& elapsed);
 void startBle();
 void startSetup();  // depuis loop() : si needSetup, découverte GATT (AMS, CTS, ANCS) dans une tâche à part

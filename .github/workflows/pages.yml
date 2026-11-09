@@ -26,18 +26,23 @@ jobs:
           V=$(git describe --tags --match 'v*' 2>/dev/null | sed 's/^v//')
           [ -n "$V" ] || V="1.$(git rev-list --count HEAD).0"
           echo "VERSION=$V" >> "$GITHUB_ENV"
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$V\"/" docs/manifest.json
-          grep -q "\"version\": \"$V\"" docs/manifest.json
-      - run: pio run
+          for M in docs/manifest*.json; do
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$V\"/" "$M"
+            grep -q "\"version\": \"$V\"" "$M"
+          done
+      - run: pio run  # les 3 firmwares : m5dial (iPhone), android, windows
         env:
           PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
-      - name: Merge firmware into one image (offset 0x0)
+      - name: Merge each firmware into one image (offset 0x0)
         run: |
-          B=.pio/build/m5dial
-          esptool.py --chip esp32s3 merge_bin -o docs/m5dial-music.bin --flash_mode keep --flash_size 8MB \
-            0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
-            0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
-            0x10000 $B/firmware.bin
+          for E in m5dial android windows; do
+            B=.pio/build/$E
+            OUT=docs/m5dial-music$([ $E = m5dial ] || echo "-$E").bin
+            esptool.py --chip esp32s3 merge_bin -o "$OUT" --flash_mode keep --flash_size 8MB \
+              0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
+              0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+              0x10000 $B/firmware.bin
+          done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

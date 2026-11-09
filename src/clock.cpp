@@ -29,6 +29,16 @@ bool clockFromCts(const uint8_t* d, size_t len) {
   return true;
 }
 
+bool clockFromLocalEpoch(long long t) {
+  time_t tt = (time_t)t;
+  tm x;
+  gmtime_r(&tt, &x);
+  if (x.tm_year + 1900 < 2024) return false;
+  pending = x;
+  pendingSet = true;
+  return true;
+}
+
 void clockService() {
   if (!pendingSet) return;
   pendingSet = false;
