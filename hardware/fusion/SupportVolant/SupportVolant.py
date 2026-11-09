@@ -31,17 +31,20 @@ NAME = "Support M5Dial"
 # (nom, valeur par défaut, unité, commentaire). Les cotes MESURER viennent d'une photo ou d'une estimation.
 PARAMS = [
     ("DIAL_D", 51.0, "mm", "Ø extérieur de l'anneau = Ø du M5Dial"),
-    ("DEV_X", 58.0, "mm", "Centre M5Dial, X (au plus près du moyeu : 3-4 mm des pattes)"),
-    ("DEV_Y", -55.0, "mm", "Centre M5Dial, Y"),
-    # Mesures sur photos (règle + entraxe 6 x 70 du moyeu, perspective corrigée) d'un OMP 350 tulipage 90 :
-    # branches latérales relevées de ~18°, pente des branches ~43°, épaisseur 5, trous Ø 16 (mesurés).
-    ("R_X", 66.7, "mm", "MESURER : grand trou de la branche droite, X (centre du moyeu = 0)"),
-    ("R_Y", 6.0, "mm", "MESURER : grand trou de la branche droite, Y"),
-    ("R_RADIAL", 18.0, "deg", "MESURER : direction de la branche droite (relevée de ~18° sur l'OMP)"),
+    ("DEV_X", 58.5, "mm", "Centre M5Dial, X (au plus près du moyeu : ~3 mm des pattes)"),
+    ("DEV_Y", -57.5, "mm", "Centre M5Dial, Y"),
+    # Volant OMP Corsica 350, dish 95. Photos de l'utilisateur (règle + entraxe 6 x 70, perspective corrigée) :
+    # pente des branches ~43° ; au pied à coulisse : épaisseur 5, trous Ø 16, largeurs 40 (bas) et 38 (droite).
+    # Branche droite recalée sur la photo de face OMP (Corsica OD0-1954, Ø 350, dish 95 ; échelle : entraxe 6 x 70) :
+    # ses trous sont à la même distance du moyeu que ceux du bas, l'axe des trous monte de 12,7° et la branche
+    # s'affine vers la jante (bords à ~7,5° en haut et ~17,4° en bas, soit ~5° par côté).
+    ("R_X", 64.0, "mm", "Grand trou de la branche droite, X (centre du moyeu = 0)"),
+    ("R_Y", 1.5, "mm", "Grand trou de la branche droite, Y"),
+    ("R_RADIAL", 12.7, "deg", "Direction de la branche droite (axe de ses deux trous, photo OMP de face)"),
     ("R_TILT", 43.0, "deg", "MESURER : pente de la branche droite (photo de profil : ~43°)"),
-    ("R_DZ", 2.8, "mm", "Profondeur du trou droit par rapport au trou bas (il est plus loin du moyeu)"),
+    ("R_DZ", 0.0, "mm", "Profondeur du trou droit par rapport au trou bas (même distance du moyeu : 0)"),
     ("R_SPOKE_W", 38.0, "mm", "Largeur de la branche droite au trou (mesurée)"),
-    ("R_TAPER", 1.0, "deg", "Évasement de la branche droite, par côté (plus large vers le moyeu)"),
+    ("R_TAPER", 5.0, "deg", "Évasement de la branche droite, par côté (plus large vers le moyeu, photo OMP)"),
     ("B_X", 0.0, "mm", "MESURER : grand trou de la branche du bas, X"),
     ("B_Y", -64.0, "mm", "MESURER : grand trou de la branche du bas, Y"),
     ("B_RADIAL", -90.0, "deg", "Direction de la branche du bas"),

@@ -123,8 +123,8 @@ spoke, for the area between the bottom spoke and the right spoke of a GT2i Race 
 (90 mm dish).
 
 - **Thin plate** (6 mm), one smooth outline between the two pads and the tube, open under the M5Dial.
-- **M5Dial**, raised 33 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58 mm right,
-  55 mm below the hub centre, 3-4 mm from the pads), fixed as on a panel: its body goes through a **flat 3.5 mm
+- **M5Dial**, raised 33 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58.5 mm right,
+  57.5 mm below the hub centre, ~3 mm from the pads), fixed as on a panel: its body goes through a **flat 3.5 mm
   ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on from
   underneath** through the Ø 52.8 opening and screwed up. The ring sits on a solid tube with **2 arched windows**
   between 3 wide pillars (in line with the two arms and towards the rim): fingers reach the clamp, and **USB-C**
@@ -134,10 +134,11 @@ spoke, for the area between the bottom spoke and the right spoke of a GT2i Race 
   no hooks, no peg: the part goes onto both spokes in one move). Per spoke: **M5 × 16 screw** (longer sticks out at the back) through the spoke
   hole nearest the hub (Ø 16) from the driver side, with a **wide washer Ø 20 or more** (fender washer
   5 × 20 or 5 × 25; a plain M5 washer would drop into the hole), and an **M5 nut** in the hex pocket at the back of the pad.
-- Geometry measured from photos of the wheel (OMP-type, 350 mm, 90 mm dish; ruler and the 6 × 70 mm hub bolt
-  circle as scale, perspective corrected): spokes slope ~43°, side spokes raised ~18° above horizontal, bottom
-  spoke 40 mm wide at the hole (tapering ~4° per side), right spoke 38 mm (~1° per side); widths, 5 mm
-  thickness and Ø 16 holes measured with a caliper.
+- Wheel: OMP Corsica (OD0-1954), 350 mm, 95 mm dish. Spoke slope (~43°) from photos of the wheel; widths
+  (bottom 40 mm, right 38 mm at the hole), 5 mm thickness and Ø 16 holes measured with a caliper. Right spoke
+  from OMP's front product photo (6 × 70 mm bolt circle as scale): its holes are as far from the hub as the
+  bottom ones, their axis rises 12.7° and the spoke narrows towards the rim by ~5° per side (edges at ~7.5° and
+  ~17.4°); the bottom spoke tapers ~4° per side.
 
 - Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
