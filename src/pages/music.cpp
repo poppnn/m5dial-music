@@ -8,6 +8,7 @@
 #include "../config.h"
 #include "../clock.h"
 #include "../display.h"
+#include "../settings.h"
 
 #define DOUBLE_TAP_MS 300  // < 500 ms : délai au-delà duquel M5Unified remet le compte de taps à zéro
 #define HEART_MS      900
@@ -72,7 +73,7 @@ static bool draw(float) {
   const int c = 120;
   uint32_t now = millis();
   canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
-  if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, 0xFA20);
+  if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, accent());
 
   // Anneau de volume intérieur : visible 1,5 s après un changement, fondu au noir sur les 300 dernières ms
   bool volVisible = (int32_t)(volUntil - now) > 0 && m.volume >= 0;
@@ -107,8 +108,8 @@ static bool draw(float) {
     canvas.drawString(fit(shownArtist, 170).c_str(), x, 137);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString(mmss(el) + " / " + mmss(m.duration), c, 178);
-    if (m.shuffle >= 0) drawShuffle(SHUF_X, ICON_Y, m.shuffle ? 0xFA20 : 0x4208);
-    if (m.repeat >= 0) drawRepeat(REP_X, ICON_Y, m.repeat ? 0xFA20 : 0x4208, m.repeat == 1);
+    if (m.shuffle >= 0) drawShuffle(SHUF_X, ICON_Y, m.shuffle ? accent() : 0x4208);
+    if (m.repeat >= 0) drawRepeat(REP_X, ICON_Y, m.repeat ? accent() : 0x4208, m.repeat == 1);
   }
   tm t;
   if (clockNow(t)) {

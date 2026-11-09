@@ -11,9 +11,16 @@ struct Settings {
   uint8_t briDay, briNight;  // luminosité de l'écran (%)
   uint8_t briMode;         // 0 jour, 1 nuit, 2 auto (nuit entre nightFrom et nightTo, heure de l'iPhone)
   uint8_t nightFrom, nightTo;  // heures
-  bool notifText;          // notifications iPhone : afficher titre et texte (sinon app + compteur seulement)
+  uint8_t notifMode;       // notifications iPhone : 0 aucune, 1 app + expéditeur, 2 app + expéditeur + texte
+  uint8_t accent;          // couleur d'accent de l'interface (index de ACCENT_COLORS)
 };
 extern Settings settings;
+
+enum : uint8_t { NOTIF_OFF, NOTIF_SENDER, NOTIF_FULL };
+extern const uint16_t ACCENT_COLORS[];  // RGB565
+extern const char* const ACCENT_NAMES[];
+extern const int ACCENT_COUNT;
+uint16_t accent();  // couleur d'accent choisie (arcs, icônes actives, bordures)
 
 void settingsLoad();
 void settingsSave();

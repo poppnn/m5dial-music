@@ -7,3 +7,4 @@ void imuInit();            // l'orientation au démarrage sert de référence "d
 void imuUpdate(float dt);  // à chaque tour de loop()
 bool imuTurning();         // la rotation affichée n'a pas encore rejoint sa cible
 void imuFlipped();         // à appeler après avoir changé settings.imuDir
+bool imuTemp(float& c);    // température du capteur de l'Unit IMU (°C, lissée) ; false sans IMU

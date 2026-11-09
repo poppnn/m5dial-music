@@ -7,7 +7,7 @@
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
  * iPhone : un appel entrant prend tout l'écran (appui = décrocher, appui long = refuser) ; une notification
- * s'affiche par-dessus la page (nom de l'app + compteur ; texte en option), appui, tap ou glissement = la fermer.
+ * s'affiche par-dessus la page (app + expéditeur ; texte ou rien : Réglages), appui, tap ou glissement = la fermer.
  *
  * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)

@@ -40,4 +40,14 @@ void imuFlipped() {
   rot = -rot;
 }
 
+// Puce de l'IMU : chauffe très peu, donc proche de la température de l'habitacle (le processeur, lui, chauffe).
+bool imuTemp(float& c) {
+  static float avg = NAN;
+  float t;
+  if (!imuOk || !M5.Imu.getTemp(&t) || t < -40 || t > 100) return false;
+  avg = isnan(avg) ? t : avg + (t - avg) * 0.05f;  // ~1 s de lissage à 4 images/s : pas de chiffre qui saute
+  c = avg;
+  return true;
+}
+
 bool imuTurning() { return fabsf(wrap180(targetRot - rot)) > 0.3f; }

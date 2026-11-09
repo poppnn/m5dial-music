@@ -19,6 +19,7 @@ static NimBLEClient* goveeClient = nullptr;
 static NimBLERemoteCharacteristic* goveeWr = nullptr;
 static NimBLEAddress goveeAddr;
 static volatile bool goveeFound = false;
+static volatile bool connecting = false;  // connexion en cours dans connectTask
 uint32_t goveeRetry = 0;
 bool ledOn = true, ledCustom = false, ledHueMode = false;
 // Luminosité en % : le H7090 attend 0-100 (au-delà il sature : avec 0-255, seul le bas de la course agissait).
@@ -84,6 +85,31 @@ static void sendColor() {
   goveeSend({0x33, 0x05, 0x15, 0x01, c.r, c.g, c.b, 0, 0, 0, 0, 0, 0xFF, 0x7F});
 }
 
+// Connexion + découverte des services : jusqu'à ~3 s bloquantes, faites dans une tâche à part pour que l'interface
+// (glissement vers la page LED, molette) ne gèle pas.
+static void connectTask(void*) {
+  if (!goveeClient) {
+    goveeClient = NimBLEDevice::createClient();
+    goveeClient->setConnectTimeout(3000);
+  }
+  NimBLERemoteCharacteristic* wr = nullptr;
+  if (goveeClient->connect(goveeAddr)) {
+    NimBLERemoteService* s = goveeClient->getService(GOVEE_SVC);
+    wr = s ? s->getCharacteristic(GOVEE_WR) : nullptr;
+  }
+  if (wr && ledOn) {  // connectée : la barre reprend la couleur et la luminosité mémorisées
+    colorPending = true;
+    ledBriSent = -1;
+  } else {
+    ledBriSent = ledBri;  // éteinte : rien à envoyer (une luminosité pourrait la rallumer)
+  }
+  goveeWr = wr;
+  goveeRetry = millis();
+  dirty = true;
+  connecting = false;
+  vTaskDelete(nullptr);
+}
+
 void goveeChanged() { changedAt = millis() | 1; }
 void goveeColorChanged() { colorPending = true; goveeChanged(); }
 
@@ -107,25 +133,12 @@ void goveeService(bool ledPage) {
     }
     return;
   }
+  if (connecting) return;
   goveeWr = nullptr;
   if (goveeFound) {
     goveeFound = false;
-    if (!goveeClient) {
-      goveeClient = NimBLEDevice::createClient();
-      goveeClient->setConnectTimeout(3000);
-    }
-    if (goveeClient->connect(goveeAddr)) {
-      NimBLERemoteService* s = goveeClient->getService(GOVEE_SVC);
-      goveeWr = s ? s->getCharacteristic(GOVEE_WR) : nullptr;
-      if (goveeWr && ledOn) {  // connectée : la barre reprend la couleur et la luminosité mémorisées
-        colorPending = true;
-        ledBriSent = -1;
-      } else {
-        ledBriSent = ledBri;  // éteinte : rien à envoyer (une luminosité pourrait la rallumer)
-      }
-    }
-    goveeRetry = millis();
-    dirty = true;
+    connecting = true;
+    if (xTaskCreate(connectTask, "govee_conn", 4096, nullptr, 1, nullptr) != pdPASS) connecting = false;
   } else if (ledPage && !NimBLEDevice::getScan()->isScanning() && millis() - goveeRetry > 8000) {
     goveeRetry = millis();
     NimBLEDevice::getScan()->start(4000, false);  // asynchrone : l'UI continue de tourner

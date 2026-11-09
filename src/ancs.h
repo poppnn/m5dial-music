@@ -1,5 +1,5 @@
 // Apple Notification Center Service (iPhone) : appels entrants et notifications.
-// Sécurité en conduite : par défaut seuls le nom de l'app et le compteur s'affichent (texte : option des Réglages).
+// Sécurité en conduite : par défaut le nom de l'app et l'expéditeur (titre) ; texte ou aucune notification : Réglages.
 #pragma once
 #include <NimBLEDevice.h>
 #include <string>

@@ -26,9 +26,9 @@ Through Apple's ANCS service (no app to install, pairing is enough):
 
 - **Incoming call**: full screen on any page, caller name in large type. **Press** the wheel = answer,
   **hold** (0.8 s) = decline. The screen then goes back to the previous page.
-- **Notification**: for safety while driving, only the **app name** and the **notification count** are shown (4 s).
-  Settings › Notif text › shown: title and text in large type (8 s). Press, tap or swipe = close (it slides
-  away). Emojis are removed (the screen font has none; they would show as squares).
+- **Notification**: for safety while driving, the **app name**, the **sender** (contact name in messaging apps)
+  and the notification count (5 s). Settings › Notifs: **off** (none shown), **sender** (default), **full** (plus
+  the message text, 8 s). Press, tap or swipe = close (it slides away). Emojis are removed (the screen font has none; they would show as squares).
 - Simple gestures only (wheel, press): no precise swipes on these screens.
 - If the iPhone does not offer notifications for "M5Dial Music": iOS Settings › Bluetooth › (i) ›
   "Share System Notifications".
@@ -53,16 +53,18 @@ Or download a version's binaries from [Releases](https://github.com/poppnn/m5dia
 Swipe vertically to the LED page. The M5Dial connects to the bar over BLE (unofficial Govee protocol):
 wheel = brightness, press = on / off, swipe left / right = colour (9 presets).
 **Short hold** (0.6 s) on the wheel = **hue** mode: the ring becomes a colour wheel and the wheel scrolls the hue
-(5° per detent, one wheel turn is about one colour circle); another short hold goes back to brightness (the bottom line alternates between what the wheel
-does and how to switch). The last colour (preset or hue) and brightness are
-remembered and sent to the bar on every connection.
+(5° per detent, one wheel turn is about one colour circle); another short hold goes back to brightness. The bottom
+line shows the bar connection: **Connected** in green, **Disconnected** in red (connecting runs in the background,
+the page never freezes). The last colour (preset or hue) and brightness are remembered and sent to the bar on every
+connection.
 Close the Govee Home app: the bar only accepts one connection.
 
 ## Stopwatch, Clock, System and Settings
 
 - **Stopwatch**: 7-segment display, hundredths, second-hand ring (one turn per minute). Press = start / pause,
   swipe left or right = reset. It keeps running when you change page.
-- **Clock**: iPhone time and date (Current Time Service), seconds ring. The M5Dial RTC keeps the time while
+- **Clock**: iPhone time and date (Current Time Service), seconds ring, and the **temperature** from the IMU Unit
+  sensor on Port A (close to cabin temperature; not shown without the IMU). The M5Dial RTC keeps the time while
   disconnected and off; it is set again on every connection (and when daylight saving time changes).
 - **System**: last boot reason (normal, crash, watchdog, brownout), connected phone and its signal, Govee LEDs,
   CPU frequency and temperature, frames per second and render time, free RAM, uptime. Battery level cannot be
@@ -71,8 +73,9 @@ Close the Govee Home app: the bar only accepts one connection.
 - **Settings** (stored in the M5Dial memory, kept across power off and updates): turn = choose a row,
   press = edit (turn = value, applied immediately), press = done.
   - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
-    power-off delay without a device (never to 60 min), day and night brightness, notification text
-    (hidden by default).
+    power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
+    full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
+    active icons, notification border).
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".

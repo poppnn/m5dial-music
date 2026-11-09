@@ -41,6 +41,7 @@ enum Pending : uint8_t { PEND_NONE, PEND_NOTIF, PEND_APP };
 static Pending pending = PEND_NONE;
 static uint32_t pendingUid = 0, pendingSince = 0;
 static std::string pendingApp, pendingTitle, pendingMsg;
+static bool pendingWithMsg = false;  // le message a été demandé : 3 attributs attendus dans la réponse
 
 static uint32_t le32(const uint8_t* p) { return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24; }
 
@@ -112,7 +113,7 @@ static void requestNotif(uint32_t uid, bool withMessage) {
                             ATTR_APP_ID, ATTR_TITLE, 64, 0};
   if (withMessage) v.insert(v.end(), {ATTR_MESSAGE, 120, 0});
   { std::lock_guard<std::mutex> lock(rxMtx); rx.clear(); }
-  if (write(v)) { pending = PEND_NOTIF; pendingUid = uid; pendingSince = millis(); }
+  if (write(v)) { pending = PEND_NOTIF; pendingUid = uid; pendingSince = millis(); pendingWithMsg = withMessage; }
 }
 
 static void requestApp(const std::string& appId) {
@@ -153,7 +154,7 @@ static bool handleResponse() {
   if (pending == PEND_NOTIF) {
     if (buf.size() < 5 || buf[0] != CMD_NOTIF_ATTR || le32(&buf[1]) != pendingUid) return false;
     std::map<uint8_t, std::string> a;
-    if (!parseAttrs(&buf[5], buf.size() - 5, settings.notifText ? 3 : 2, a)) return false;
+    if (!parseAttrs(&buf[5], buf.size() - 5, pendingWithMsg ? 3 : 2, a)) return false;
     pending = PEND_NONE;
     if (callActive && pendingUid == callUid) {  // appel : le titre est le nom (ou le numéro) de l'appelant
       if (!cleanText(a[ATTR_TITLE]).empty()) callName = cleanText(a[ATTR_TITLE]);
@@ -201,8 +202,8 @@ bool ancsService() {
         callName = "Incoming call";
         fresh = true;
         requestNotif(e.uid, false);
-      } else if (!(e.flags & FLAG_SILENT)) {
-        requestNotif(e.uid, settings.notifText);
+      } else if (!(e.flags & FLAG_SILENT) && settings.notifMode != NOTIF_OFF) {
+        requestNotif(e.uid, settings.notifMode == NOTIF_FULL);
       }
     }
   }

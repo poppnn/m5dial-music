@@ -7,7 +7,7 @@
 #include "../display.h"
 #include "../settings.h"
 
-#define TOAST_MS      4000  // app + compteur
+#define TOAST_MS      5000  // app + expéditeur
 #define TOAST_TEXT_MS 8000  // avec titre et texte (option des Réglages)
 #define TOAST_IN_MS   320
 #define TOAST_OUT_MS  220
@@ -56,7 +56,7 @@ static int wrap(const std::string& s, int maxW, std::string* lines, int maxLines
   return n;
 }
 
-static bool withText(const NotifToast& t) { return settings.notifText && (!t.title.empty() || !t.message.empty()); }
+static bool withText(const NotifToast& t) { return settings.notifMode == NOTIF_FULL && (!t.title.empty() || !t.message.empty()); }
 
 static uint32_t life(const NotifToast& t) { return withText(t) ? TOAST_TEXT_MS : TOAST_MS; }
 
@@ -80,20 +80,22 @@ bool drawToast(uint32_t now) {
   bool text = withText(t);
   const int c = 120;
   // Tailles choisies pour que les coins arrondis restent dans l'écran rond
-  int x0 = text ? 28 : 18, top = (text ? 40 : 64) + dy, h = text ? 164 : 112, room = 240 - 2 * x0 - 16;
+  int x0 = text ? 28 : 18, top = (text ? 40 : 56) + dy, h = text ? 164 : 128, room = 240 - 2 * x0 - 16;
   canvas.fillRoundRect(x0, top, 240 - 2 * x0, h, 14, 0x18E3);
-  canvas.drawRoundRect(x0, top, 240 - 2 * x0, h, 14, 0xFA20);
+  canvas.drawRoundRect(x0, top, 240 - 2 * x0, h, 14, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
   canvas.drawString(fit(t.app.empty() ? "Notification" : t.app, room).c_str(), c, top + 28);
   canvas.setFont(&fonts::efontJA_16);
-  if (!text) {
+  if (!text) {  // app + expéditeur (titre : nom du contact dans une messagerie), puis le compteur
     char b[32];
     int n = ancsCount();
     snprintf(b, sizeof(b), "%d notification%s", n, n > 1 ? "s" : "");
+    canvas.setTextColor(TFT_WHITE);
+    if (!t.title.empty()) canvas.drawString(fit(t.title, room).c_str(), c, top + 56);
     canvas.setTextColor(0xAD55);
-    canvas.drawString(b, c, top + 60);
+    canvas.drawString(b, c, t.title.empty() ? top + 60 : top + 80);
   } else {
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString(fit(t.title, room).c_str(), c, top + 54);

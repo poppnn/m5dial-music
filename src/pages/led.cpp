@@ -109,13 +109,9 @@ static bool draw(float dt) {
   else snprintf(name, sizeof(name), "%s", lc.name);
   canvas.drawString(name, c + off, 150);
   canvas.setFont(&fonts::efontJA_16);
-  canvas.setTextColor(0xAD55);
-  const char* status = !goveeConnected() ? "Searching H7090..." : ledOn ? "LEDs on" : "LEDs off";
-  canvas.drawString(status, c, 176);
-  canvas.setTextColor(0x5AEB);
-  // Alterne toutes les 2,5 s : ce que fait la molette, puis comment changer (128 px max : tient à cette hauteur)
-  bool how = now / 2500 % 2;
-  canvas.drawString(ledHueMode ? (how ? "Hold: brightness" : "Turn: hue") : (how ? "Hold: hue mode" : "Turn: brightness"), c, 196);
+  bool conn = goveeConnected();
+  canvas.setTextColor(conn ? 0x07E8 : 0xF8A2);  // barre LED connectée : vert, sinon rouge
+  canvas.drawString(conn ? "Connected" : "Disconnected", c, 180);
   return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
 }
 

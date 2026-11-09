@@ -1,6 +1,7 @@
 // Écran de démarrage (aucun appareil connecté) et table des pages.
 #include "pages.h"
 #include "../display.h"
+#include "../settings.h"
 #include "../logo.h"
 
 extern const PageOps musicPage, ledPage, chronoPage, clockPage, systemPage, settingsPage;
@@ -21,7 +22,7 @@ void drawBoot(uint32_t now) {
   }
   float a = (now % 1200) * (360.f / 1200) - 180;  // 1 tour en 1,2 s
   canvas.fillArc(c, c, 119, 114, 0, 360, 0x2104);
-  canvas.fillArc(c, c, 119, 114, a, a + 70, 0xFA20);
+  canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
