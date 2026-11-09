@@ -41,7 +41,7 @@ PARAMS = [
     ("R_X", 68.8, "mm", "Grand trou de la branche droite, X (centre du moyeu = 0 ; 95 mm entre les trous des deux branches)"),
     ("R_Y", 1.5, "mm", "Grand trou de la branche droite, Y"),
     ("R_RADIAL", 0.0, "deg", "Direction de la branche droite (à 90° de celle du bas, mesuré sur le volant)"),
-    ("R_TILT", 43.0, "deg", "MESURER : pente de la branche droite (photo de profil : ~43°)"),
+    ("R_TILT", 38.0, "deg", "Pente de la branche droite (essai sur le volant : 38°)"),
     ("R_DZ", 0.0, "mm", "Profondeur du trou droit par rapport au trou bas (même distance du moyeu : 0)"),
     ("R_SPOKE_W", 38.0, "mm", "Largeur de la branche droite au trou (mesurée)"),
     ("R_TAPER", 4.0, "deg", "Évasement de la branche droite, par côté (plus large vers le moyeu, photo du volant réel ~4°)"),
