@@ -71,6 +71,7 @@ PARAMS = [
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
     ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
     ("LEG_ANG", 60.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : fenêtres en arche)"),
+    ("TEST_FIT", 0, "", "1 = pièce d'essai rapide : les deux pattes reliées par la plaque, sans tube ni anneau du M5Dial"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
@@ -262,12 +263,11 @@ def build(comp, P):
     raised = P["DIAL_RISE"] > slab + 3
     r_clr = P["CLAMP_D"] / 2 + P["CLAMP_GAP"]  # vide sous l'anneau rehaussé : le collier s'y visse
     r_base = r_clr + P["TUBE_WALL"] if raised else r_out
+    test = P["TEST_FIT"] >= 0.5  # essai d'angle : mêmes pattes et même plaque entre elles, sans la partie M5Dial
 
-    cup = b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
-    cup.name = NAME
     # Plaque d'un seul contour convexe : base du tube + côté intérieur des deux pattes (pas de bras ni de recoins)
     rp = r_base - 1  # un peu dans le tube : le contour ne frôle pas le cylindre (échec "osculating curves")
-    pts = [(cx + rp * math.cos(math.radians(a)), cy + rp * math.sin(math.radians(a))) for a in range(0, 360, 2)]
+    pts = [] if test else [(cx + rp * math.cos(math.radians(a)), cy + rp * math.sin(math.radians(a))) for a in range(0, 360, 2)]
     for k in ("R", "B"):
         x, y, rad, til = P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"]
         u = (math.cos(math.radians(rad)), math.sin(math.radians(rad)))
@@ -278,7 +278,13 @@ def build(comp, P):
         hl = P["PAD_L"] / 2 * math.cos(math.radians(til))
         for su, hw in ((-1, pad_w(P, k) / 2 + 2.5), (1, pad_w(P, k) / 2 - P["FILLET_V"])):
             pts.append((x + su * hl * u[0] + sd * hw * n[0], y + su * hl * u[1] + sd * hw * n[1]))
-    b.combine(cup, b.solid(b.poly(hull(pts)), z_b, slab), JOIN)
+    plate = b.solid(b.poly(hull(pts)), z_b, slab)
+    if test:
+        cup = plate
+    else:
+        cup = b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
+        b.combine(cup, plate, JOIN)
+    cup.name = NAME
 
     a_out = math.degrees(math.atan2(cy, cx))  # direction opposée au moyeu
     for k in ("R", "B"):
@@ -301,12 +307,13 @@ def build(comp, P):
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
     z_floor = z_b - 1  # ouvert dessous : le collier se met par-dessous
-    b.extrude(b.circles([(cx, cy)], r_in), z_floor, 200, CUT, [cup])
-    if raised:  # sous l'anneau plat de RING_T : rien dans le rayon du collier
+    if not test:
+        b.extrude(b.circles([(cx, cy)], r_in), z_floor, 200, CUT, [cup])
+    if raised and not test:  # sous l'anneau plat de RING_T : rien dans le rayon du collier
         b.extrude(b.circles([(cx, cy)], r_clr), z_floor, z_ring - z_floor, CUT, [cup])
     # Anneau de RING_T seulement : le corps du M5Dial (et son USB-C) ressort dessous. Sans rehausse, la plaque autour
     # est abaissée au même niveau, 1 mm plus large que la collerette pour qu'elle ne frotte pas.
-    if P["DIAL_RISE"] + P["RING_T"] < slab:
+    if P["DIAL_RISE"] + P["RING_T"] < slab and not test:
         b.extrude(b.circles([(cx, cy)], r_out + 1), z_b + P["RING_T"], 60, CUT, [cup])
     # Face plateau : tout ce qui est sous z_b disparaît -> une seule face plane, pas de support
     b.extrude(b.rect(cx, cy, 500, 500, 0), z_b - 80, 80, CUT, [cup])
@@ -333,7 +340,7 @@ def build(comp, P):
     # Tube plein, percé de fenêtres en arche entre 3 piliers (dans l'axe des deux bras et à l'opposé du moyeu) :
     # les doigts y passent pour tenir le collier, ainsi que la prise USB-C (au dos du M5Dial) et le câble de batterie.
     # Le haut en arche s'imprime sans support et garde le tube rigide.
-    if raised:
+    if raised and not test:
         legs = sorted(math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) % 360 for k in ("R", "B"))
         legs = sorted(legs + [a_out % 360])
         h = z_ring - 1 - (z_b + slab)  # hauteur de fenêtre, 1 mm sous l'anneau
@@ -352,7 +359,7 @@ def build(comp, P):
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
     tip, root = P["BODY_D"] / 2 - P["CRUSH"] / 2, r_in + 0.6
-    for i in range(6):
+    for i in range(0 if test else 6):
         a = math.radians(30 + 60 * i)
         rc = (tip + root) / 2
         rib = b.solid(b.rect(cx + rc * math.cos(a), cy + rc * math.sin(a), root - tip, 1.2, math.degrees(a)), z_ring, P["RING_T"])
