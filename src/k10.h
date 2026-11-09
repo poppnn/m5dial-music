@@ -1,4 +1,4 @@
-// Style "K10" (Réglages > Style) : bandes de la Micra K10 en fond des pages et sur l'écran de démarrage.
+// Décor "K10" (Réglages > K10 decals : on / off) : bandes de la Micra K10 en fond des pages et sur l'écran de démarrage.
 #pragma once
 #include <stdint.h>
 

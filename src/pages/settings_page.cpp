@@ -84,7 +84,7 @@ static void valueText(int it, char* b, size_t n) {
     case IT_IMU: snprintf(b, n, "%s", i ? "reversed" : "normal"); break;
     case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "full" : i == NOTIF_SENDER ? "sender" : "off"); break;
     case IT_ACCENT: snprintf(b, n, "%s", ACCENT_NAMES[i]); break;
-    case IT_STYLE: snprintf(b, n, "%s", i == STYLE_K10 ? "Micra K10" : "plain"); break;
+    case IT_STYLE: snprintf(b, n, "%s", i == STYLE_K10 ? "on" : "off"); break;
     case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (night)" : "auto (day)") : i ? "night" : "day"); break;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d:00", i); break;
     case IT_ENC: snprintf(b, n, "%d pulse%s", i + 1, i ? "s" : ""); break;
@@ -96,7 +96,7 @@ static void valueText(int it, char* b, size_t n) {
 }
 
 static const char* LABELS[IT_VALUES] = {"IMU dir", "Wheel", "Dim after", "Power off", "Day level",
-                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent", "Style"};
+                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent", "K10 decals"};
 
 // Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {
