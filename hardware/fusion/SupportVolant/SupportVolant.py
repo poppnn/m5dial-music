@@ -71,12 +71,18 @@ PARAMS = [
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
     ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
     ("LEG_ANG", 60.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : fenêtres en arche)"),
+    ("BAT_L", 54.0, "mm", "Coque batterie : longueur intérieure (LiPo 103450 = 50 + carte de protection et fils)"),
+    ("BAT_W", 36.0, "mm", "Coque batterie : largeur intérieure (LiPo 103450 = 34)"),
+    ("BAT_T", 11.0, "mm", "Coque batterie : profondeur intérieure (LiPo 103450 = 10)"),
+    ("SHELL_WALL", 1.6, "mm", "Coque batterie : épaisseur des parois et du fond"),
+    ("BAT_ROT", 0.0, "deg", "Coque batterie : orientation sous le M5Dial (0 = grand côté dans l'axe moyeu -> M5Dial)"),
+    ("BAT_TWIST", 35.0, "deg", "Coque batterie : quart de tour de la baïonnette (vissage vu de dessous)"),
     ("TEST_FIT", 0, "", "1 = pièce d'essai rapide : les deux pattes reliées par la plaque, sans tube ni anneau du M5Dial"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
             "SEAT_T", "SEAT_D", "SLOT_W", "SLOT_L",  # ancienne fixation par vis M5
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
-            "CASE_WALL", "BAT_L", "BAT_W", "BAT_T", "BAT_X", "BAT_Y",  # ancien logement / plateau batterie
+            "CASE_WALL", "BAT_X", "BAT_Y",  # ancien logement / plateau batterie
             "ARM_W", "ARM_ROOT_W",  # anciens bras (remplacés par une plaque d'un seul contour)
             "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton, crochets, fenêtres
 
@@ -252,6 +258,66 @@ def steep(e):
     return L > 0 and abs(c.z - a.z) / L > 0.5
 
 
+def sector(cx, cy, r0, r1, a0, a1):
+    """Secteur d'anneau (angles en degrés, a0 < a1) en polygone, pas de 3° au plus."""
+    n = max(2, int(math.ceil((a1 - a0) / 3)))
+    arc = [a0 + (a1 - a0) * i / n for i in range(n + 1)]
+    pol = lambda r, a: (cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a)))
+    return [pol(r1, a) for a in arc] + [pol(r0, a) for a in reversed(arc)]
+
+
+# Baïonnette de la coque batterie (z depuis le dessous du support, z_b) : 2 tenons sur la couronne de la coque
+# passent par 2 encoches verticales, puis tournent de BAT_TWIST dans une gorge ; le dessous de la gorge les retient.
+BOSS_H, BOSS_T = 5.0, 2.5    # couronne de la coque qui entre dans l'alésage du collier (jeu radial 0,3)
+LUG_ANG, LUG_P = 20.0, 1.5   # tenons : largeur angulaire, saillie hors de la couronne
+LUG_Z0, LUG_Z1 = 2.4, 4.4    # tenons : hauteur
+GROOVE_Z0, GROOVE_Z1, GROOVE_D = 2.2, 4.6, 1.6  # gorge dans le pied du tube (paroi restante : TUBE_WALL - 1,6)
+BUMP_D, BUMP_H = 2.0, 0.4    # bossage sous chaque tenon : frotte 0,2 mm sur la gorge puis tombe dans un creux (clic)
+
+
+def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
+    """Coque de la LiPo sous le tube du M5Dial (corps séparé "Coque batterie", imprimé fond sur le plateau),
+    et dans le pied du tube : encoches d'entrée, gorge et creux de verrouillage."""
+    ang = a_out + P["BAT_ROT"]   # grand côté de la coque
+    r_b = r_clr - 0.3            # couronne
+    r_g = r_clr + GROOVE_D       # fond de la gorge
+    half = LUG_ANG / 2 + 2       # encoche et gorge : 2° de jeu de chaque côté du tenon
+    for k in (90, 270):          # tenons au milieu des grands côtés
+        af = ang + k
+        ae = af - P["BAT_TWIST"]
+        b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, ae + half)), z_b - 1, 1 + GROOVE_Z1, CUT, [cup])
+        b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, af + half)), z_b + GROOVE_Z0,
+                  GROOVE_Z1 - GROOVE_Z0, CUT, [cup])
+        rm = r_b + LUG_P / 2
+        b.extrude(b.circles([(cx + rm * math.cos(math.radians(af)), cy + rm * math.sin(math.radians(af)))], BUMP_D / 2 + 0.4),
+                  z_b + GROOVE_Z0 - 0.6, 0.7, CUT, [cup])
+
+    wall, h_tray = P["SHELL_WALL"], P["BAT_T"] + P["SHELL_WALL"]
+    shell = b.solid(b.rect(cx, cy, P["BAT_L"] + 2 * wall, P["BAT_W"] + 2 * wall, ang), z_b - h_tray, h_tray)
+    shell.name = "Coque batterie"
+    # Collerette à 45° du bord de la coque jusqu'à la couronne : imprimable sans support
+    w2 = P["BAT_W"] / 2 + wall
+    if r_b > w2:
+        ext = b.f.extrudeFeatures
+        inp = ext.createInput(b.circles([(cx, cy)], w2).profiles.item(0), NEW)
+        inp.setOneSideExtent(adsk.fusion.DistanceExtentDefinition.create(adsk.core.ValueInput.createByReal((r_b - w2) / 10)),
+                             adsk.fusion.ExtentDirections.PositiveExtentDirection, adsk.core.ValueInput.createByString("45 deg"))
+        inp.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal((z_b - (r_b - w2)) / 10))
+        b.combine(shell, ext.add(inp).bodies.item(0), JOIN)
+    b.combine(shell, b.solid(b.circles([(cx, cy)], r_b), z_b, BOSS_H), JOIN)  # couronne
+    for k in (90, 270):
+        af = ang + k
+        b.combine(shell, b.solid(b.poly(sector(cx, cy, r_b - 0.2, r_b + LUG_P, af - LUG_ANG / 2, af + LUG_ANG / 2)),
+                                 z_b + LUG_Z0, LUG_Z1 - LUG_Z0), JOIN)
+        rm = r_b + LUG_P / 2
+        b.combine(shell, b.solid(b.circles([(cx + rm * math.cos(math.radians(af)), cy + rm * math.sin(math.radians(af)))],
+                                           BUMP_D / 2), z_b + LUG_Z0 - BUMP_H, BUMP_H), JOIN)
+    # Logement de la batterie (ouvert en haut : la batterie se pose dedans, le pied du tube la tient) et couronne évidée
+    b.extrude(b.rect(cx, cy, P["BAT_L"], P["BAT_W"], ang), z_b - P["BAT_T"], P["BAT_T"] + BOSS_H + 1, CUT, [shell])
+    b.extrude(b.circles([(cx, cy)], r_b - BOSS_T), z_b, BOSS_H + 1, CUT, [shell])
+    return shell
+
+
 def build(comp, P):
     b = Builder(comp)
     cx, cy = P["DEV_X"], P["DEV_Y"]
@@ -377,6 +443,8 @@ def build(comp, P):
         for t in (hole, nut):
             b.tilt(t, x, y, rad, til, dz)
             b.combine(cup, t, CUT)
+    if raised and not test:
+        battery(b, P, cup, cx, cy, z_b, r_clr, a_out)
     return cup
 
 

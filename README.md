@@ -163,7 +163,13 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
   underneath** through the Ø 52.8 opening and screwed up. The ring sits on a solid tube with **2 arched windows**
   between 3 wide pillars (in line with the two arms and towards the rim): fingers reach the clamp, and **USB-C**
   (on the back of the M5Dial) and the battery cable go through them.
-- **Battery**: no holder on the mount; tape the LiPo where it suits you.
+- **Battery shell** ([`hardware/coque_batterie.stl`](hardware/coque_batterie.stl)): holds a LiPo 103450
+  (50 × 34 × 10 mm; cavity 54 × 36 × 11 for the protection board and wires) under the M5Dial tube, long side
+  pointing away from the hub. **Quarter-turn bayonet**: its round collar goes into the tube from underneath (2 lugs
+  through 2 notches in the tube foot), then turn it 35° clockwise as seen from below until it clicks (a small bump
+  under each lug drops into a dimple). The battery lies in the open tray and is held by the tube foot; its cable goes
+  up through the collar to the M5Dial. Remove the shell to reach the M5Dial clamp ring. Prints floor down, no
+  supports (45° collar). Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
 - **Attachment**: each pad sits on the back of its spoke (no guide wall, hook or peg: the part goes onto both
   spokes in one move). Per spoke: **M5 screw** through the spoke hole nearest the hub (Ø 16) and the pad, with a
   **wide washer Ø 20** (fender washer 5 × 20; a plain M5 washer would drop into the hole) and an **M5 nut**; the
