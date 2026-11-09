@@ -103,7 +103,14 @@ closes into a circle while shrinking to the centre, then bursts into a check mar
 edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) runs in the background meanwhile, so
 the screen never freezes.
 
-To use your own logo (PNG or BMP, ideally on a transparent or black background):
+**Boot image or GIF from the browser** (no build needed): on https://poppnn.github.io/m5dial-music/, section 6, pick a
+picture or an animated GIF (square crop, 240 × 240, up to 300 frames), then "Send to the M5Dial" with the M5Dial on
+USB-C (Chrome or Edge: Web Serial). The page turns it into JPEG frames, sends them over USB and the M5Dial stores them
+in its own flash partition (`bootanim`, 4.9 MB, `partitions.csv`); it is then shown full screen while waiting for the
+phone, under the spinning arc. "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
+installed with the web flasher's full install (it adds the partition; settings are kept).
+
+To build your own logo into the firmware instead (PNG or BMP, ideally on a transparent or black background):
 
 ```bash
 pip install pillow
@@ -178,5 +185,5 @@ Only the IMU is supported by the firmware today (its chip temperature is shown o
 - Android and Windows do not expose track info over BLE: that would need a companion app.
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
 - Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications),
-  `govee`, `display` (DMA rendering), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
+  `govee`, `display` (DMA rendering), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.

@@ -1,0 +1,8 @@
+# Flash 8 Mo du StampS3 : huge_app (app 3 Mo, NVS au même endroit : réglages conservés) + "bootanim" sur le reste,
+# pour l'image / le GIF de démarrage envoyé depuis le web flasher (src/bootanim.cpp).
+# Name,   Type, SubType,  Offset,   Size
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xe000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x300000,
+coredump, data, coredump, 0x310000, 0x10000,
+bootanim, data, 0x40,     0x320000, 0x4E0000,

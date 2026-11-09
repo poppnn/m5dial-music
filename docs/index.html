@@ -26,6 +26,15 @@
   esp-web-install-button button[slot="activate"]:focus-visible { outline:3px solid var(--fg); outline-offset:2px; }
   .muted { color:var(--muted); font-size:14px; }
   a { color:var(--accent); }
+  .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
+  .btn { font:inherit; font-weight:600; border-radius:10px; padding:10px 16px; min-height:44px; cursor:pointer;
+         background:var(--accent); color:#fff; border:0; }
+  .btn.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn:focus-visible, input[type=file]:focus-visible { outline:3px solid var(--fg); outline-offset:2px; }
+  #ba-prev { width:160px; height:160px; border-radius:50%; background:#000; border:6px solid var(--line); display:block; }
+  #ba-prog { width:100%; height:8px; accent-color:var(--accent); }
+  input[type=file] { font:inherit; max-width:100%; }
 </style>
 </head>
 <body>
@@ -94,6 +103,22 @@
     <p class="muted">Other wheels: Fusion 360 script with editable dimensions in <a href="https://github.com/poppnn/m5dial-music/tree/main/hardware/fusion/SupportVolant">hardware/fusion</a>.</p>
   </section>
 
+  <section>
+    <h2>6. Boot image or GIF (optional)</h2>
+    <p>Shown full screen while the M5Dial waits for the phone. Plug the M5Dial in over USB-C (firmware 1.1 or later, installed with the button above), pick a picture or an animated GIF, then send it.</p>
+    <input type="file" id="ba-file" accept="image/*" aria-label="Boot image or GIF">
+    <div class="row">
+      <canvas id="ba-prev" width="240" height="240" aria-label="Preview on the round screen"></canvas>
+      <p class="muted" id="ba-info" aria-live="polite">Square crop, 240 × 240. Animated GIF: up to 300 frames.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="ba-send" disabled>Send to the M5Dial</button>
+      <button class="btn ghost" id="ba-clear">Remove the boot image</button>
+    </div>
+    <progress id="ba-prog" max="1" value="0" hidden></progress>
+    <p class="muted" id="ba-status" aria-live="polite"></p>
+  </section>
+
   <p class="muted">Source code: <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
 </main>
 <script>
@@ -102,6 +127,165 @@
     .then(r => r.json())
     .then(m => { document.getElementById("fw-version").textContent = "Firmware version: v" + m.version; })
     .catch(() => { document.getElementById("fw-version").textContent = ""; });
+</script>
+<script>
+  // Image / GIF de démarrage : découpée ici en images JPEG 240 x 240, puis envoyée au M5Dial par le port USB
+  // (Web Serial). Format et protocole : src/bootanim.h et src/bootanim.cpp.
+  const W = 240, MAX_FRAMES = 300, CHUNK = 4096;
+  const $ = id => document.getElementById(id);
+  let frames = [], previewTimer = 0;
+
+  function status(t) { $("ba-status").textContent = t; }
+
+  async function loadFile(file) {
+    frames = [];
+    $("ba-send").disabled = true;
+    status("Reading the file...");
+    const work = new OffscreenCanvas(W, W), g = work.getContext("2d");
+    const draw = (src, sw, sh) => {  // recadrage carré au centre, fond noir
+      g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
+      const k = Math.max(W / sw, W / sh);
+      g.drawImage(src, (W - sw * k) / 2, (W - sh * k) / 2, sw * k, sh * k);
+    };
+    const jpeg = async () => new Uint8Array(await (await work.convertToBlob({ type: "image/jpeg", quality: 0.85 })).arrayBuffer());
+    if ("ImageDecoder" in window && await ImageDecoder.isTypeSupported(file.type)) {
+      const dec = new ImageDecoder({ data: file.stream(), type: file.type });
+      await dec.completed;
+      const n = Math.min(dec.tracks.selectedTrack.frameCount, MAX_FRAMES);
+      for (let i = 0; i < n; i++) {
+        const { image } = await dec.decode({ frameIndex: i });
+        draw(image, image.displayWidth, image.displayHeight);
+        const ms = Math.round((image.duration || 100000) / 1000);
+        image.close();
+        frames.push({ jpg: await jpeg(), ms: Math.min(Math.max(ms || 100, 20), 10000) });
+      }
+      dec.close();
+    } else {  // navigateur sans ImageDecoder : première image seulement
+      const bmp = await createImageBitmap(file);
+      draw(bmp, bmp.width, bmp.height);
+      frames.push({ jpg: await jpeg(), ms: 1000 });
+    }
+    const kb = Math.round(pack().length / 1024);
+    $("ba-info").textContent = `${frames.length} frame${frames.length > 1 ? "s" : ""}, ${kb} KB` +
+      (frames.length === MAX_FRAMES ? " (cut to 300 frames)" : "");
+    status("");
+    $("ba-send").disabled = !frames.length;
+    preview();
+  }
+
+  async function preview() {
+    clearTimeout(previewTimer);
+    const ctx = $("ba-prev").getContext("2d");
+    const bmps = await Promise.all(frames.map(f => createImageBitmap(new Blob([f.jpg], { type: "image/jpeg" }))));
+    let i = 0;
+    const step = () => {
+      ctx.drawImage(bmps[i], 0, 0);
+      const ms = frames[i].ms;
+      i = (i + 1) % bmps.length;
+      if (bmps.length > 1) previewTimer = setTimeout(step, ms);
+    };
+    if (bmps.length) step();
+  }
+
+  // "M5BA", u16 images, u16 0, u32 taille totale ; par image {u32 position, u32 taille, u16 ms, u16 0} ; JPEG
+  function pack() {
+    const head = 12 + frames.length * 12;
+    const total = head + frames.reduce((s, f) => s + f.jpg.length, 0);
+    const out = new Uint8Array(total), dv = new DataView(out.buffer);
+    out.set([77, 53, 66, 65], 0);
+    dv.setUint16(4, frames.length, true);
+    dv.setUint32(8, total, true);
+    let off = head;
+    frames.forEach((f, i) => {
+      dv.setUint32(12 + i * 12, off, true);
+      dv.setUint32(16 + i * 12, f.jpg.length, true);
+      dv.setUint16(20 + i * 12, f.ms, true);
+      out.set(f.jpg, off);
+      off += f.jpg.length;
+    });
+    return out;
+  }
+
+  // Ouvre le port, envoie les commandes, lit les réponses "BOOTANIM ..." (le reste du journal est ignoré).
+  async function withDial(job) {
+    if (!("serial" in navigator)) throw new Error("This browser has no Web Serial: use Chrome or Edge on a computer.");
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    const reader = port.readable.getReader(), writer = port.writable.getWriter();
+    const enc = new TextEncoder(), dec = new TextDecoder();
+    let text = "", pending = null;
+    const send = d => writer.write(typeof d === "string" ? enc.encode(d + "\n") : d);
+    const answer = async (ms = 8000) => {
+      const end = Date.now() + ms;
+      for (;;) {
+        const nl = text.indexOf("\n");
+        if (nl >= 0) {
+          const l = text.slice(0, nl).trim();
+          text = text.slice(nl + 1);
+          if (l.startsWith("BOOTANIM ")) return l.slice(9);
+          continue;
+        }
+        pending ??= reader.read().then(r => { pending = null; return r; });
+        const r = await Promise.race([pending, new Promise(ok => setTimeout(() => ok(null), Math.max(0, end - Date.now())))]);
+        if (!r) throw new Error("No answer from the M5Dial. Is it running firmware 1.1 or later?");
+        if (r.done) throw new Error("The USB port was closed.");
+        text += dec.decode(r.value, { stream: true });
+      }
+    };
+    try {
+      let info = null;
+      for (let i = 0; i < 3 && !info; i++) {  // l'ouverture du port peut redémarrer le M5Dial : on réessaie
+        await send("BOOTANIM INFO");
+        info = await answer(2500).catch(() => null);
+      }
+      if (!info) throw new Error("No answer from the M5Dial. Is it running firmware 1.1 or later?");
+      const cap = +info.split(" ")[1];
+      if (!cap) throw new Error("This M5Dial has no room for a boot image yet: install the firmware again with the button above.");
+      await job({ send, answer, cap });
+    } finally {
+      await reader.cancel().catch(() => {});
+      reader.releaseLock();
+      writer.releaseLock();
+      await port.close().catch(() => {});
+    }
+  }
+
+  async function run(button, job) {
+    button.disabled = true;
+    try { await withDial(job); }
+    catch (e) { if (e.name !== "NotFoundError") status(e.message); }  // NotFoundError : aucun port choisi
+    finally { button.disabled = button.id === "ba-send" && !frames.length; $("ba-prog").hidden = true; }
+  }
+
+  $("ba-file").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (f) loadFile(f).catch(err => { frames = []; status("This file could not be read: " + err.message); });
+  });
+
+  $("ba-send").addEventListener("click", () => run($("ba-send"), async ({ send, answer, cap }) => {
+    const data = pack();
+    if (data.length > cap) throw new Error(`Too big: ${Math.round(data.length / 1024)} KB for ${Math.round(cap / 1024)} KB of room. Use a shorter GIF.`);
+    status("Sending...");
+    await send("BOOTANIM PUT " + data.length);
+    let r = await answer();
+    if (r !== "READY") throw new Error("The M5Dial refused the image (" + r + ").");
+    const prog = $("ba-prog");
+    prog.hidden = false;
+    for (let off = 0; off < data.length; off += CHUNK) {
+      await send(data.subarray(off, off + CHUNK));
+      r = await answer(15000);
+      if (r.startsWith("ERR")) throw new Error("Error on the M5Dial: " + r.slice(4));
+      prog.value = Math.min(1, (off + CHUNK) / data.length);
+    }
+    if (!r.startsWith("DONE")) throw new Error("The transfer did not finish (" + r + ").");
+    status("Done: the image shows while the M5Dial waits for the phone.");
+  }));
+
+  $("ba-clear").addEventListener("click", () => run($("ba-clear"), async ({ send, answer }) => {
+    await send("BOOTANIM CLEAR");
+    const r = await answer();
+    status(r === "OK" ? "Removed: the M5Dial shows its default logo again." : "Error on the M5Dial: " + r);
+  }));
 </script>
 </body>
 </html>

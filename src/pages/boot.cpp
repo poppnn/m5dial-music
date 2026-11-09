@@ -2,6 +2,7 @@
 #include <algorithm>
 #include "pages.h"
 #include "../anim.h"
+#include "../bootanim.h"
 #include "../config.h"
 #include "../display.h"
 #include "../power.h"
@@ -41,9 +42,10 @@ static void drawLinked(uint32_t now, uint32_t t) {
 void drawBoot(uint32_t now) {
   const int c = 120;
   if (linkedAt) { drawLinked(now, now - linkedAt); return; }
-  if (LOGO_W) {
+  bool custom = bootAnimDraw(now);  // image ou GIF envoyé depuis le web flasher, plein écran
+  if (!custom && LOGO_W) {
     canvas.pushImage(c - LOGO_W / 2, 100 - LOGO_H / 2, LOGO_W, LOGO_H, logo_data);
-  } else {  // logo neutre par défaut (aucun logo.h personnalisé) : double croche, sans bitmap en flash
+  } else if (!custom) {  // logo neutre par défaut (aucun logo.h personnalisé) : double croche, sans bitmap en flash
     canvas.fillEllipse(97, 128, 13, 10, TFT_WHITE);
     canvas.fillEllipse(147, 118, 13, 10, TFT_WHITE);
     canvas.fillRect(104, 68, 6, 60, TFT_WHITE);
@@ -56,6 +58,7 @@ void drawBoot(uint32_t now) {
   canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
+  if (custom) canvas.fillRoundRect(c - 78, 175, 156, 43, 12, TFT_BLACK);  // textes lisibles sur l'image
   canvas.setTextColor(0xAD55);
   canvas.drawString("Waiting for phone", c, 186);
   canvas.setTextColor(0x5AEB);

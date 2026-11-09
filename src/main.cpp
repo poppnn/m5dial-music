@@ -22,6 +22,7 @@
 #include "anim.h"
 #include "app.h"
 #include "ble_phone.h"
+#include "bootanim.h"
 #include "config.h"
 #include "display.h"
 #include "govee.h"
@@ -93,6 +94,7 @@ static bool draw(float dt) {
 
 void setup() {
   setCpuFrequencyMhz(CPU_MHZ);  // ~-20 mA ; le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas
+  Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
@@ -102,6 +104,7 @@ void setup() {
   settingsSelfTest();
   ancsSelfTest();
   cleanTextSelfTest();
+  bootAnimSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
   assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 
@@ -112,6 +115,7 @@ void setup() {
 
   imuInit();      // référence "droit" = orientation au démarrage (volant au centre)
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
+  bootAnimInit();
   startBle();
   goveeInit();
   lastInput = millis();
@@ -125,6 +129,7 @@ void loop() {
 
   M5Dial.update();
   startSetup();  // téléphone connecté et chiffré : découverte GATT en tâche de fond
+  bootAnimService();  // image / GIF de démarrage envoyé depuis le web flasher (USB)
   static Link prevLink = LINK_NONE;
   if (linkMode == LINK_NONE && prevLink != LINK_NONE) ancsReset();
   prevLink = linkMode;
