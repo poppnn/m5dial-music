@@ -27,6 +27,7 @@ volatile bool needSetup = false, titleChanged = false, volPing = false;
 volatile uint16_t connHandle = 0;
 static NimBLERemoteCharacteristic* rcChar = nullptr;
 static NimBLECharacteristic* hidInput = nullptr;
+static volatile uint32_t linkGen = 0;  // +1 à chaque déconnexion : une découverte GATT périmée ne se déclare pas connectée
 
 // Rapport HID "Consumer Control" : 1 bit par touche multimédia (bits 0..4), 3 bits de bourrage.
 static const uint8_t hidReportMap[] = {
@@ -86,6 +87,7 @@ class ServerCB : public NimBLEServerCallbacks {
     else NimBLEDevice::getServer()->disconnect(info.getConnHandle());
   }
   void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
+    linkGen++;
     rcChar = nullptr;
     linkMode = LINK_NONE;
     needSetup = false;
@@ -96,6 +98,7 @@ class ServerCB : public NimBLEServerCallbacks {
 
 static void setupAms() {
   needSetup = false;
+  uint32_t gen = linkGen;  // téléphone déconnecté pendant la découverte (1-2 s) : on ne passe pas en "connecté"
   // getClient() efface les services GATT déjà découverts : à n'appeler qu'ici, une fois par connexion.
   NimBLEClient* client = NimBLEDevice::getServer()->getClient(connHandle);
   NimBLERemoteService* svc = client ? client->getService(AMS_SVC) : nullptr;
@@ -104,6 +107,7 @@ static void setupAms() {
   // Nom du téléphone (service GAP 0x1800, caractéristique 0x2A00) : NimBLE ne garde que l'adresse des appairés.
   if (client) bondNameSave(connectedPeer(), client->getValue(NimBLEUUID((uint16_t)0x1800), NimBLEUUID((uint16_t)0x2A00)));
   if (!eu || !rc || !eu->subscribe(true, onEntityUpdate) || !rc->subscribe(true)) {
+    if (gen != linkGen) return;
     linkMode = LINK_HID;  // pas un iPhone (Android/Windows) : touches multimédia HID
     dirty = true;
     return;
@@ -124,6 +128,7 @@ static void setupAms() {
     ct->subscribe(true, [](NimBLERemoteCharacteristic*, uint8_t* d, size_t len, bool) { clockFromCts(d, len); });
   }
   ancsSetup(client);  // appels et notifications
+  if (gen != linkGen) return;
   rcChar = rc;
   linkMode = LINK_AMS;
   dirty = true;

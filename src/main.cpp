@@ -128,6 +128,7 @@ void loop() {
   lastUs = nowUs;
 
   M5Dial.update();
+  if (needSetup) lastInput = millis();  // téléphone connecté : écran rallumé (il était atténué pendant l'attente) avant l'animation de validation
   startSetup();  // téléphone connecté et chiffré : découverte GATT en tâche de fond
   bootAnimService();  // image / GIF de démarrage envoyé depuis le web flasher (USB)
   static Link prevLink = LINK_NONE;
