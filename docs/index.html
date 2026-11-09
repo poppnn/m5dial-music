@@ -32,7 +32,7 @@
 <main>
   <div class="dial" aria-hidden="true">♪</div>
   <h1>M5Dial Music</h1>
-  <p class="lead">Bluetooth media remote for iPhone, Android and Windows. On iPhone it also shows the title, artist, progress, calls and notifications.</p>
+  <p class="lead">Bluetooth media remote for iPhone, Android and Windows, made for the steering wheel. On iPhone it also shows the title, artist, progress, time, calls and notifications. It drives Govee H7090 LEDs too.</p>
 
   <section>
     <h2>1. Install the firmware</h2>
@@ -65,10 +65,12 @@
       <li>No input for 20 s dims the screen; no device for 10 min powers off (WAKE button to turn back on). Both delays are adjustable.</li>
       <li>Swipe left / right: next / previous track</li>
       <li>iPhone: tap the icons at the bottom = shuffle / repeat, double tap = "Like"</li>
-      <li>Incoming call (iPhone): press = answer, hold = decline · notification: app name and count, press / tap / swipe = close</li>
+      <li>Incoming call (iPhone): press = answer, hold = decline</li>
+      <li>Notification (iPhone): app name and sender (contact in messaging apps), message text optional · press / tap / swipe = close</li>
       <li>Swipe up or down: Music, LED, Stopwatch, Clock, System and Settings pages</li>
       <li>Stopwatch: press = start / pause, swipe left or right = reset</li>
-      <li>Settings: turn = choose, press = edit then done (IMU direction, wheel, delays, day / night / auto brightness from the iPhone time, paired devices)</li>
+      <li>Clock: time, date and cabin temperature (with the IMU Unit on Port A)</li>
+      <li>Settings: turn = choose, press = edit then done: IMU direction, wheel, delays, day / night / auto brightness from the iPhone time, notifications (off / sender / full), accent colour, Micra K10 decals (on / off), paired devices</li>
     </ul>
   </section>
 
@@ -77,8 +79,19 @@
     <ul>
       <li>On the LED page, the M5Dial finds and connects to the H7090 bar by itself.</li>
       <li>Wheel: brightness · Press: on / off · Swipe left / right: colour · Short hold (0.6 s): the wheel switches to hue mode (colour wheel)</li>
+      <li>Bottom line: <strong>Connected</strong> in green or <strong>Disconnected</strong> in red</li>
     </ul>
     <p class="muted">Close the Govee Home app on your phone: the bar only accepts one connection at a time.</p>
+  </section>
+
+  <section>
+    <h2>5. Steering wheel mount</h2>
+    <ul>
+      <li>3D-printed part for an OMP Corsica 350 mm wheel (95 mm dish), between the bottom and right spokes: <a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant.stl">support_volant.stl</a></li>
+      <li>Per spoke: M5 × 16 screw, fender washer Ø 20 or more, M5 nut. The M5Dial clamp ring goes on from underneath.</li>
+      <li>Print flat, supports under the raised ring only, PETG or ASA.</li>
+    </ul>
+    <p class="muted">Other wheels: Fusion 360 script with editable dimensions in <a href="https://github.com/poppnn/m5dial-music/tree/main/hardware/fusion/SupportVolant">hardware/fusion</a>.</p>
   </section>
 
   <p class="muted">Source code: <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>

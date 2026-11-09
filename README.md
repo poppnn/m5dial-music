@@ -16,7 +16,7 @@ Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, And
   without a connected Bluetooth device; the WAKE button turns it back on. Both delays are adjustable.
 - Swipe left / right: next / previous track (LED: colour, Stopwatch: reset)
 - Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day
-- iPhone: **shuffle** and **repeat** icons at the bottom (orange = on, "1" = repeat one): tap them to change.
+- iPhone: **shuffle** and **repeat** icons at the bottom (accent colour = on, "1" = repeat one): tap them to change.
   **Double tap** elsewhere = "Like" (a heart pops up). A single tap (play / pause) is sent after 0.3 s, to leave
   room for a double tap; the wheel press stays instant.
 
@@ -100,9 +100,9 @@ Close the Govee Home app: the bar only accepts one connection.
 
 ## Boot screen
 
-While no device is connected, the M5Dial shows a logo (by default a music note drawn by the firmware), a spinning
-arc and "Waiting for phone". Controls are locked, except the hold to power off. On connection, a fade leads to the
-UI.
+While no device is connected, the M5Dial shows a spinning arc and "Waiting for phone": on a silver disc with the
+Micra K10 side stripes (Settings › K10 decals › on, the default), otherwise a logo on black (by default a music note
+drawn by the firmware). Controls are locked, except the hold to power off. On connection, a fade leads to the UI.
 
 To use your own logo (PNG or BMP, ideally on a transparent or black background):
 
@@ -122,8 +122,8 @@ that `logo.h` to yourself (do not publish it).
 ## Steering wheel mount (3D printed)
 
 [`hardware/support_volant.stl`](hardware/support_volant.stl): a single printed part, held by one M5 screw per
-spoke, for the area between the bottom spoke and the right spoke of a GT2i Race 350 mm steering wheel
-(90 mm dish).
+spoke, for the area between the bottom spoke and the right spoke of an **OMP Corsica** 350 mm steering wheel
+(95 mm dish).
 
 - **Thin plate** (6 mm), one smooth outline between the two pads and the tube, open under the M5Dial.
 - **M5Dial**, raised 33 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58.5 mm right,
@@ -163,6 +163,14 @@ pio run -t upload
 ## License
 
 [MIT](LICENSE).
+
+## Sensors (planned)
+
+Ports: **A** = I2C (G13 SDA / G15 SCL), **B** = G2 / G1 (can be set up as a second I2C bus). Suggested M5Stack units:
+**IMU Pro Mini** (BMI270 + BMM150 + BMP280) on Port A for "always upright", **ENV III** (SHT30 + QMP6988:
+temperature, humidity, pressure) on Port B; their I2C addresses do not clash (avoid ENV IV with the IMU Pro Mini:
+both have a BMP280 at 0x76). Also worth a look: **DLight** (BH1750, ambient light → automatic screen brightness).
+Only the IMU is supported by the firmware today (its chip temperature is shown on the Clock page).
 
 ## Notes
 
