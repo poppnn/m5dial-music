@@ -38,7 +38,7 @@ PARAMS = [
     # Branche droite recalée sur la photo de face OMP (Corsica OD0-1954, Ø 350, dish 95 ; échelle : entraxe 6 x 70) :
     # ses trous sont à la même distance du moyeu que ceux du bas, l'axe des trous monte de 12,7° et la branche
     # s'affine vers la jante (bords à ~7,5° en haut et ~17,4° en bas, soit ~5° par côté).
-    ("R_X", 68.8, "mm", "Grand trou de la branche droite, X (centre du moyeu = 0 ; 95 mm entre les trous des deux branches)"),
+    ("R_X", 70.2, "mm", "Grand trou de la branche droite, X (centre du moyeu = 0 ; 96 mm entre les trous des deux branches)"),
     ("R_Y", 1.5, "mm", "Grand trou de la branche droite, Y"),
     ("R_RADIAL", 0.0, "deg", "Direction de la branche droite (à 90° de celle du bas, mesuré sur le volant)"),
     ("R_TILT", 40.0, "deg", "Pente de la branche droite (essai sur le volant : 40°)"),
