@@ -25,6 +25,7 @@
 #include "bootanim.h"
 #include "config.h"
 #include "display.h"
+#include "encoder.h"
 #include "govee.h"
 #include "imu.h"
 #include "power.h"
@@ -97,7 +98,8 @@ void setup() {
   Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
-  M5Dial.begin(cfg, true, false);  // encodeur oui, RFID non
+  M5Dial.begin(cfg, false, false);  // ni l'encodeur de la lib (lu par sondage : perdait des pas), ni RFID
+  encoderInit();  // molette : compteur matériel PCNT
   M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
   settingsLoad();
@@ -140,8 +142,8 @@ void loop() {
   goveeService(page == PAGE_LED);
 
   // Encodeur (accumule les impulsions jusqu'à un cran complet)
-  static long encLast = M5Dial.Encoder.read();
-  long enc = M5Dial.Encoder.read();
+  static long encLast = encoderRead();
+  long enc = encoderRead();
   int detents = 0;
   const long steps = settings.encSteps;
   while (enc - encLast >= steps) { detents++; encLast += steps; }

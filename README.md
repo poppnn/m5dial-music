@@ -185,5 +185,5 @@ Only the IMU is supported by the firmware today (its chip temperature is shown o
 - Android and Windows do not expose track info over BLE: that would need a companion app.
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
 - Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications),
-  `govee`, `display` (DMA rendering), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
+  `govee`, `display` (DMA rendering), `encoder` (wheel on the PCNT hardware counter), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.
