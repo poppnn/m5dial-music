@@ -70,7 +70,7 @@ PARAMS = [
     ("TUBE_WALL", 3.5, "mm", "Épaisseur du tube qui porte l'anneau rehaussé (et la gorge de la baïonnette de la batterie)"),
     ("LEG_ANG", 36.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : grandes fenêtres pour serrer le collier)"),
     ("BAT_L", 54.0, "mm", "Coque batterie : longueur intérieure (LiPo 103450 = 50 + carte de protection et fils)"),
-    ("BAT_W", 36.0, "mm", "Coque batterie : largeur intérieure (LiPo 103450 = 34)"),
+    ("BAT_W", 38.5, "mm", "Coque batterie : largeur intérieure (LiPo 103450 = 34, + les 2 pattes du couvercle)"),
     ("BAT_T", 11.0, "mm", "Coque batterie : profondeur intérieure (LiPo 103450 = 10)"),
     ("SHELL_WALL", 1.6, "mm", "Coque batterie : épaisseur des parois et du fond"),
     ("BAT_ROT", 0.0, "deg", "Coque batterie : orientation sous le M5Dial (0 = grand côté dans l'axe moyeu -> M5Dial)"),
@@ -324,8 +324,34 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     b.extrude(b.circles([(cx, cy)], r_b - BOSS_T), z_b, BOSS_H + 1, CUT, [shell])
     x0, x1 = r_b - BOSS_T - 6, L / 2 + wall + 1
     b.extrude(b.rect(*at((x0 + x1) / 2), x1 - x0, WIRE_W, ang), z_b - wall - 0.5, wall + BOSS_H + 2, CUT, [shell])
-    # Petit rebord de 0,8 mm au fond, à l'entrée : la batterie ne ressort pas toute seule
-    b.combine(shell, b.solid(b.rect(*at(L / 2 - 0.75), 1.5, W, ang), z_b - wall - T, 0.8), JOIN)
+
+    # Aérations : fentes dans le fond, les flancs et le dessus (dans la couronne : l'air chaud monte dans le tube)
+    v = (-u[1], u[0])
+    loc = lambda px, py: (cx + px * u[0] + py * v[0], cy + px * u[1] + py * v[1])
+    z_mid = z_b - wall - T / 2
+    for py in (-12, -6, 0, 6, 12):
+        b.extrude(b.rect(*loc(-2, py), 36, 3, ang), z_b - h_tray - 1, wall + 1.2, CUT, [shell])
+    for px in (-18, -6, 6):
+        for sy in (1, -1):
+            b.extrude(b.rect(*loc(px, sy * (W / 2 + wall / 2)), 8, wall + 1, ang), z_mid - 2, 3.5, CUT, [shell])
+    for py in (-10, 10):
+        b.extrude(b.rect(*loc(-3, py), 22, 3, ang), z_b - wall - 0.5, wall + 1, CUT, [shell])
+
+    # Couvercle (corps séparé "Couvercle batterie") : plaque sur le bout ouvert, 2 pattes souples le long des flancs
+    # de la batterie ; leur bossage clique dans un trou du flanc (qui aère aussi). Pour l'ouvrir : appuyer sur les
+    # bossages par les trous. Imprimé plaque à plat sur le plateau.
+    e = L / 2 + wall                      # face extérieure du bout ouvert
+    flap_l, flap_t, gap = 8.0, 1.2, 0.2   # pattes : longueur, épaisseur, jeu avec le flanc
+    bump_x = e - 7                        # bossage à 7 mm de la plaque (patte assez longue pour plier)
+    for sy in (1, -1):                    # trous du clic dans les flancs
+        b.extrude(b.rect(*loc(bump_x, sy * (W / 2 + wall / 2)), 4, wall + 1, ang), z_mid - 2.5, 5, CUT, [shell])
+    lid = b.solid(b.rect(*loc(e + 0.8, 0), 1.6, W + 2 * wall, ang), z_b - h_tray, h_tray)
+    lid.name = "Couvercle batterie"
+    for sy in (1, -1):
+        yf = sy * (W / 2 - gap - flap_t / 2)
+        b.combine(lid, b.solid(b.rect(*loc(e - flap_l / 2 + 0.05, yf), flap_l + 0.1, flap_t, ang), z_b - wall - T + 0.5, T - 1), JOIN)
+        yb = sy * (W / 2 - gap + 0.2)     # bossage : dépasse de 0,4 mm la face intérieure du flanc
+        b.combine(lid, b.solid(b.rect(*loc(bump_x, yb), 3, 0.8, ang), z_mid - 2, 4), JOIN)
     return shell
 
 

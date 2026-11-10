@@ -166,12 +166,15 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
   windows** between 3 narrow pillars (36°, in line with the two pads and towards the rim): room for the fingers to
   turn the clamp ring, and for **USB-C** and the battery cable.
 - **Battery shell** ([`hardware/coque_batterie.stl`](hardware/coque_batterie.stl)): holds a LiPo 103450
-  (50 × 34 × 10 mm; cavity 54 × 36 × 11 for the protection board and wires) under the M5Dial tube, long side
+  (50 × 34 × 10 mm; cavity 54 × 38.5 × 11 for the protection board, wires and the lid tabs) under the M5Dial tube, long side
   pointing away from the hub. **Quarter-turn bayonet**: its full round collar goes into the tube from underneath
   (**3 lugs**, 30° wide and 2.4 mm tall, through 3 notches in the tube foot), then turn it 35° clockwise as seen from
   below until it clicks (a small bump under each lug drops into a dimple); a 2.4 mm lip under the groove holds them.
-  The battery **slides in from the open end** (rim side, a 0.8 mm ridge keeps it in) and its cable goes up through
-  the slot in the lid into the tube. Remove the shell to reach the M5Dial clamp ring. Prints floor down without
+  The battery **slides in from the open end** (rim side), closed by a **snap-on lid**
+  ([`hardware/couvercle_batterie.stl`](hardware/couvercle_batterie.stl), print it flat): its 2 flexible tabs run
+  along the battery sides and click into holes in the shell walls (press the bumps through the holes to open it).
+  Its cable goes up through the slot in the top into the tube. **Vent slots** in the floor, the sides and the top
+  (into the tube) keep the battery cool. Remove the shell to reach the M5Dial clamp ring. Prints floor down without
   supports (45° collar; the lid bridges 36 mm). Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`,
   `BAT_TWIST`.
 - **Attachment**: each pad sits on the back of its spoke (no guide wall, hook or peg: the part goes onto both
