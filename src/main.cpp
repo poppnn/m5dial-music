@@ -96,7 +96,7 @@ static bool draw(float dt) {
 }
 
 void setup() {
-  setCpuFrequencyMhz(CPU_MHZ);  // ~-20 mA ; le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas
+  setCpuFrequencyMhz(CPU_MHZ);  // ~-20 mA au repos (240 MHz seulement pendant les animations : voir loop)
   Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
@@ -221,6 +221,14 @@ void loop() {
   // ~60 FPS max pendant une animation, 4 Hz au repos (économie de batterie)
   static uint32_t lastDraw = 0, lastFrameUs = micros();
   static bool animating = true;
+  // Pleine vitesse pendant une animation ou juste après un geste (images fluides, réaction immédiate), 80 MHz au
+  // repos et sur l'écran d'attente (spinner animé en continu, parfois 10 min). L'APB reste à 80 MHz dans les deux
+  // cas : BLE, SPI de l'écran et I2C ne voient pas le changement.
+  static uint32_t busyAt = 0;
+  uint32_t ms = millis();
+  if (dirty || ms - lastInput < CPU_BOOST_MS || (animating && !(bootShown && !linkedAt))) busyAt = ms;
+  uint32_t mhz = ms - busyAt < CPU_BOOST_MS ? CPU_FAST_MHZ : CPU_MHZ;
+  if (getCpuFrequencyMhz() != mhz) setCpuFrequencyMhz(mhz);
   if (dirty || millis() - lastDraw >= (animating ? 16u : 250u)) {
     // Plafonné : après 250 ms de repos, un pas de temps entier ferait sauter les animations lissées (~87 % d'un coup)
     float fdt = std::min((micros() - lastFrameUs) / 1e6f, 1 / 30.f);

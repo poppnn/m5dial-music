@@ -17,7 +17,7 @@
 #define ICON_Y        204
 
 static Media m;
-static float el = 0, arcTarget = 0, arcShown = 0, volShown = 0;
+static float el = 0, arcTarget = 0, arcShown = 0, arcLag = 0, volShown = 0;
 static uint32_t volUntil = 0, tapDeadline = 0, heartStart = 0;
 static std::string shownTitle, shownArtist;
 
@@ -26,7 +26,17 @@ void musicTick(float dt, uint32_t now) {
   el = m.elapsed + (m.playing ? m.rate * (now - m.stamp) / 1000.f : 0);
   if (m.duration > 0 && el > m.duration) el = m.duration;
   arcTarget = m.duration > 0 ? el / m.duration : 0;
-  arcShown += (arcTarget - arcShown) * smoothK(dt, ARC_TAU_S);
+  // Seuls les sauts (piste suivante, avance rapide : > 1 % d'un coup) sont lissés : l'arc part de son ancienne
+  // position et rattrape. La lecture normale est suivie directement : lissée, elle laissait l'arc en retard et
+  // relançait les 60 images/s par à-coups pendant toute la lecture.
+  // shortcut: piste < 25 s, chaque image au repos (250 ms) avance de > 1 % et compte comme un saut (60 images/s) ;
+  // seuil à rapporter à la durée de la piste si ça gêne.
+  static float prevTarget = 0;
+  if (fabsf(arcTarget - prevTarget) > 0.01f) arcLag -= arcTarget - prevTarget;
+  prevTarget = arcTarget;
+  arcLag *= 1 - smoothK(dt, ARC_TAU_S);
+  if (fabsf(arcLag) < 0.004f) arcLag = 0;
+  arcShown = arcTarget + arcLag;
   if (m.volume >= 0) volShown += (m.volume - volShown) * smoothK(dt, VOL_TAU_S);
   if (!slideOutPhase) { shownTitle = m.title; shownArtist = m.artist; }  // ancien texte figé pendant la sortie
   if (tapDeadline && (int32_t)(now - tapDeadline) >= 0) {  // pas de second tap : c'était un tap simple
@@ -128,7 +138,7 @@ static bool draw(float) {
     float fade = th < HEART_MS / 2 ? 1.f : 1.f - (th - HEART_MS / 2) / (HEART_MS / 2.f);
     drawHeart(c, 100, 34 * k, canvas.color565(255 * fade, 40 * fade, 90 * fade));
   }
-  return volVisible || heart || tapDeadline || fabsf(arcTarget - arcShown) > 0.004f;
+  return volVisible || heart || tapDeadline || arcLag;
 }
 
 static void click() { sendCmd(CMD_TOGGLE); }
