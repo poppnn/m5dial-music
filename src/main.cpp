@@ -95,54 +95,24 @@ static bool draw(float dt) {
   return anim || dimming || fadeStart || slideDir || pageDir || imuTurning();
 }
 
-// shortcut: DIAGNOSTIC temporaire (écran noir depuis la v1.1.3, M5Dial non branché en USB) : chaque étape du
-// démarrage s'affiche 0,3 s, avec la cause du redémarrage précédent. À retirer une fois la panne trouvée.
-static void bootStep(const char* s) {
-  auto& d = M5Dial.Display;
-  d.fillRect(0, 150, 240, 30, TFT_BLACK);
-  d.setTextDatum(middle_center);
-  d.setFont(&fonts::efontJA_16);
-  d.setTextColor(TFT_WHITE, TFT_BLACK);
-  d.drawString(s, 120, 165);
-  Serial.println(s);
-  delay(300);
-}
-
 void setup() {
-  setCpuFrequencyMhz(CPU_MHZ);  // ~-20 mA au repos (240 MHz seulement pendant les animations : voir loop)
+  // ~-20 mA ; le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas. Fixé ici une fois pour toutes : passer
+  // ensuite de 80 à 240 MHz pendant le fonctionnement plantait le M5Dial (écran noir au démarrage).
+  setCpuFrequencyMhz(CPU_MHZ);
   Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
   cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, false, false);  // ni l'encodeur de la lib (lu par sondage : perdait des pas), ni RFID
-  M5Dial.Display.setBrightness(128);
-  M5Dial.Display.fillScreen(TFT_BLACK);
-  esp_reset_reason_t rr = esp_reset_reason();
-  M5Dial.Display.setTextDatum(middle_center);
-  M5Dial.Display.setFont(&fonts::efontJA_16);
-  M5Dial.Display.setTextColor(TFT_YELLOW, TFT_BLACK);
-  M5Dial.Display.drawString(rr == ESP_RST_PANIC ? "prev: crash" : rr == ESP_RST_BROWNOUT ? "prev: brownout"
-                            : (rr == ESP_RST_INT_WDT || rr == ESP_RST_TASK_WDT || rr == ESP_RST_WDT) ? "prev: watchdog"
-                            : "prev: normal", 120, 120);
-  M5Dial.Display.drawString("DIAG " FW_VARIANT, 120, 90);
-  bootStep("1 encoder");
   encoderInit();  // molette : compteur matériel PCNT
   M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
-  bootStep("2 settings");
   settingsLoad();
-  bootStep("3 test settings");
   settingsSelfTest();
-  bootStep("4 test ancs");
   ancsSelfTest();
-  bootStep("5 test gb");
   gbSelfTest();
-  bootStep("6 test sensors");
   sensorsSelfTest();
-  bootStep("7 test text");
   cleanTextSelfTest();
-  bootStep("8 test bootanim");
   bootAnimSelfTest();
-  bootStep("9 test misc");
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
   assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 
@@ -151,19 +121,12 @@ void setup() {
   assert(fabsf(wrap180(350.f) + 10.f) < 1e-3f && fabsf(wrap180(-190.f) - 170.f) < 1e-3f);
   assert(fabsf(easeOutBack(0)) < 1e-4f && fabsf(easeOutBack(1) - 1) < 1e-4f && easeOutBack(0.7f) > 1);  // rebond
 
-  bootStep("10 imu");
   imuInit();      // référence "droit" = orientation au démarrage (volant au centre)
-  bootStep("11 sensors");
   sensorsInit();  // ENV III / baromètre de l'IMU Pro Mini, Port A ou B
-  bootStep("12 display");
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
-  bootStep("13 bootanim");
   bootAnimInit();
-  bootStep("14 ble");
   startBle();
-  bootStep("15 govee");
   goveeInit();
-  bootStep("16 loop");
   lastInput = millis();
 }
 
@@ -260,17 +223,6 @@ void loop() {
   // ~60 FPS max pendant une animation, 4 Hz au repos (économie de batterie)
   static uint32_t lastDraw = 0, lastFrameUs = micros();
   static bool animating = true;
-  // Pleine vitesse pendant une animation ou juste après un geste (images fluides, réaction immédiate), 80 MHz au
-  // repos et sur l'écran d'attente (spinner animé en continu, parfois 10 min). L'APB reste à 80 MHz dans les deux
-  // cas : BLE, SPI de l'écran et I2C ne voient pas le changement.
-  static uint32_t busyAt = 0;
-  uint32_t ms = millis();
-  if (dirty || ms - lastInput < CPU_BOOST_MS || (animating && !(bootShown && !linkedAt))) busyAt = ms;
-  uint32_t mhz = ms - busyAt < CPU_BOOST_MS ? CPU_FAST_MHZ : CPU_MHZ;
-  static bool firstLoop = true;
-  if (firstLoop) bootStep("17 cpu 240");
-  if (getCpuFrequencyMhz() != mhz) setCpuFrequencyMhz(mhz);
-  if (firstLoop) { bootStep("18 first frame"); firstLoop = false; }
   if (dirty || millis() - lastDraw >= (animating ? 16u : 250u)) {
     // Plafonné : après 250 ms de repos, un pas de temps entier ferait sauter les animations lissées (~87 % d'un coup)
     float fdt = std::min((micros() - lastFrameUs) / 1e6f, 1 / 30.f);

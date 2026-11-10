@@ -50,9 +50,7 @@
 #define LINK_ANIM_MS   800    // ... puis éclate en pastille de validation, avant le fondu vers l'interface
 
 // Batterie
-#define CPU_MHZ        80     // au repos ; 80 MHz = minimum pour la radio BLE
-#define CPU_FAST_MHZ   240    // pendant une animation ou un geste : 60 images/s (le bus de l'écran suit : 11,5 ms/image)
-#define CPU_BOOST_MS   300    // garde la pleine vitesse un instant après la dernière animation / le dernier geste
+#define CPU_MHZ        80     // largement assez pour l'UI ; 80 MHz = minimum pour la radio BLE
 #define DIM_AFTER_MS   20000  // sans geste : écran atténué...
 #define DIM_LEVEL      0.12f  // ... à 12 % de la luminosité normale
 #define DIM_TAU_S      0.35f
