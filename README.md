@@ -152,61 +152,91 @@ that `logo.h` to yourself (do not publish it).
 
 ## Steering wheel mount (3D printed)
 
-[`hardware/support_volant.stl`](hardware/support_volant.stl): a single printed part, held by one M5 screw per
-spoke, for the area between the bottom spoke and the right spoke of an **OMP Corsica** 350 mm steering wheel
-(95 mm dish).
+Made for the **OMP Corsica** steering wheel, reference **OD0-1954** (suede, black / blue spokes), **Ø 350 mm,
+95 mm dish**, 3 spokes, 6 × 70 mm bolt circle: [ompracing.com](https://www.ompracing.com/p/corsica-steering-wheel-suede/).
+The M5Dial sits between the **bottom spoke and the right spoke**, held by one M5 screw in each spoke's large hole
+(Ø 16, the one nearest the hub). Other wheels: edit the dimensions in the Fusion 360 script (below).
 
-- **Pads** as wide as the spoke at their rim end minus 1 mm (they no longer stick out past the spoke edges), sloped
-  like the spoke; on the M5Dial side each pad carries on with the same slope **into the tube wall**, so pads and tube
-  are one smooth body. The low end of each slope is the first layer (`PAD_MIN` 0.2 mm): the part is 30.7 mm tall. The tube windows stay clear of where the pads meet it.
-- **M5Dial** at the same height on the wheel as before (`DIAL_RISE` 27.2 mm above the part's underside) and moved
-  towards the hub (centre 58.5 mm right, 57.5 mm below the hub centre), fixed as on a panel: its body goes through a
-  **flat 3.5 mm ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on
-  from underneath** through the Ø 52.8 opening and screwed up. The ring sits on a 3.5 mm tube with **3 large arched
-  windows** between 3 narrow pillars (36°, in line with the two pads and towards the rim): room for the fingers to
-  turn the clamp ring, and for **USB-C** and the battery cable.
-- **Battery shell** ([`hardware/coque_batterie.stl`](hardware/coque_batterie.stl)): holds a LiPo 103450
-  (50 × 34 × 10 mm; cavity 54 × 38.5 × 11 for the protection board, wires and the lid tabs) under the M5Dial tube, long side
-  pointing away from the hub. **Quarter-turn bayonet**: its full round collar goes into the tube from underneath
-  (**3 lugs**, 30° wide and 2.4 mm tall, through 3 notches in the tube foot), then turn it 35° clockwise as seen from
-  below until it clicks (a small bump under each lug drops into a dimple); a 2.4 mm lip under the groove holds them.
-  The battery **slides in from the open end** (rim side), closed by a **snap-on lid**
-  ([`hardware/couvercle_batterie.stl`](hardware/couvercle_batterie.stl), print it flat): its 2 flexible tabs run
-  along the battery sides and click into holes in the shell walls (press the bumps through the holes to open it).
-  Its cable goes up through the slot in the top into the tube. **Vent slots** in the floor, the sides and the top
-  (into the tube) keep the battery cool. Remove the shell to reach the M5Dial clamp ring. Prints floor down without
-  supports (45° collar; the lid bridges 36 mm). Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`,
-  `BAT_TWIST`.
-- **Attachment**: each pad sits on the back of its spoke (no guide wall, hook or peg: the part goes onto both
-  spokes in one move). Per spoke: **M5 screw** through the spoke hole nearest the hub (Ø 16) and the pad, with a
-  **wide washer Ø 20** (fender washer 5 × 20; a plain M5 washer would drop into the hole) and an **M5 nut**; the
-  hex pocket at the back of the pad holds a nut on that side.
-- **Nut caps** ([`hardware/cache_ecrou.stl`](hardware/cache_ecrou.stl), print 2): round dome Ø 24 × 10 mm that
-  pushes onto the nut on the driver side (tight hex socket, 8.1 mm across flats), flat base on the spoke face, with
-  or without the Ø 20 washer underneath; the screw tip goes into its centre hole. Base on the bed, no supports.
-  Source: [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou) (`NUT_AF` 8.0 if too loose, 8.2 if too tight).
-- Wheel: OMP Corsica (OD0-1954), 350 mm, 95 mm dish. Pads set by fit checks on the wheel: the right pad at 90° to
-  the bottom one, **96 mm between the two hole centres**, both spoke slopes **40°**. Widths (bottom 40 mm, right
-  38 mm at the hole), 5 mm thickness and Ø 16 holes measured with a caliper.
-- Quick fit check: set `TEST_FIT` to 1 and run the script again to get only the two pads joined by a bar
-  (`hardware/support_volant_test.stl`, ~20 cm³, no supports); back to 0 for the full mount.
+The print files will also be on **MakerWorld** (link coming).
 
-- Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
-  Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).
-  Spoke widths, thickness and hole size are measured; hole positions, slope and taper come from the photos
-  (±2 mm / ±2°). Check the M5Dial body Ø (`BODY_D`) before printing. Run the script again, then export
-  the STL.
-- Printing: flat as is (one face on the bed, the back), **supports from the build plate under the raised ring**
-  only (nothing else overhangs).
-  PETG or ASA (PLA warps in the sun), 4 perimeters, 30-40 % infill.
-- With the IMU on Port A, the screen stays level when the wheel turns.
-- Check that nothing touches the stalks when turning the wheel lock to lock before driving.
+### Parts to print
+
+| File | Qty | On the bed | Supports |
+|---|---|---|---|
+| [`support_volant.stl`](hardware/support_volant.stl) | 1 | flat underside (as exported) | only from the bed under the M5Dial ring |
+| [`coque_batterie.stl`](hardware/coque_batterie.stl) | 1 | floor down (as exported) | none (the top bridges 38 mm) |
+| [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
+| [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
+| [`support_volant_test.stl`](hardware/support_volant_test.stl) | optional | flat underside | none |
+
+PETG or ASA (PLA softens in a car in the sun), 4 perimeters, 30–40 % infill for the mount, 3 perimeters for the
+other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit on the wheel before the full print.
+
+### Hardware
+
+- M5Stack **M5Dial** (v1.1), and optionally an M5Stack **IMU Unit** on Port A (screen stays level).
+- LiPo **103450** (50 × 34 × 10 mm) with its protection board and a lead long enough to reach the M5Dial.
+- Per spoke: **M5 × 16 screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
+
+### Assembly
+
+1. Install the firmware for your phone or PC from the [web flasher](https://poppnn.github.io/m5dial-music/).
+2. Put the M5Dial into the flat ring from the top, then screw its **clamp ring on from underneath** through the tube
+   (the 3 large windows leave room for the fingers).
+3. Plug the battery into the M5Dial (check the polarity), slide it into the shell through the open end, its lead
+   going up through the slot in the top, then **clip the lid** on (to open it: press the 2 bumps through the side holes).
+4. Push the shell's round collar into the tube from underneath (3 lugs into 3 notches) and **turn it 35° clockwise
+   as seen from below** until it clicks.
+5. Fit the mount behind the bottom and right spokes, one screw per spoke through the Ø 16 hole with the Ø 20
+   washer, nut and screw head on either side (the hex pocket at the back of the pad holds a nut or a screw head),
+   then press a **nut cap** onto each nut on the driver side.
+6. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
+
+### Design notes
+
+- **Pads** as wide as the spoke at their rim end minus 1 mm (they do not stick out past the spoke edges), sloped like
+  the spoke (40°); on the M5Dial side each pad carries on with the same slope into the tube wall, so pads and tube
+  are one body. The low end of each slope is the first layer (`PAD_MIN` 0.2 mm): the part is 30.7 mm tall.
+- Pads set by fit checks on the wheel: the right pad at 90° to the bottom one, **96 mm between the two hole
+  centres**, both slopes 40°. Widths (bottom 40 mm, right 38 mm at the hole), 5 mm thickness and Ø 16 holes
+  measured with a caliper.
+- **M5Dial** centre 58.5 mm right of and 57.5 mm below the hub centre, 27.2 mm above the part's underside
+  (`DIAL_RISE`): its body goes through a flat 3.5 mm ring (Ø 45.6, 6 crush ribs), its clamp ring (Ø 49.8 × 12.6)
+  goes on from underneath through the Ø 52.8 bore. The ring sits on a 3.5 mm tube with 3 arched windows (up to
+  the ring) between 3 narrow pillars, kept clear of where the pads meet the tube; USB-C and the battery lead go
+  through them.
+- **Battery shell**: cavity 54 × 38.5 × 11 mm, long side pointing away from the hub. Quarter-turn bayonet with
+  3 lugs (30° wide, 2.4 mm tall) in a groove of the tube foot, a bump under each lug clicks into a dimple. Snap-on
+  lid with 2 flexible tabs; vent slots in the floor, the sides and the top (into the tube). Remove the shell to
+  reach the M5Dial clamp ring. Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
+- **Nut caps**: dome Ø 24 × 10 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the washer
+  underneath. Source [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou): `NUT_AF` 8.0 if too loose, 8.2 if
+  too tight.
+- **Source model**: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
+  Add-Ins › Scripts › "+" › pick the folder › Run. Dimensions are user parameters (Modify › Change Parameters);
+  run the script again, then export the STLs. `TEST_FIT` = 1 builds the test part, 0 the full mount.
 
 ## Build
 
 ```bash
 pio run -e m5dial -t upload    # iPhone ; -e android or -e windows for the other platforms
 ```
+
+## Roadmap
+
+To do next (owner's list):
+
+- [ ] Print the new mount, battery shell and lid; check the bayonet and lid clicks, the 38 mm bridge of the shell
+      top and the thin low end of the pads (0.2 mm).
+- [ ] Mount it on the wheel, turn lock to lock, check the stalks and that the shell clears the bottom spoke.
+- [ ] Test the **Android** firmware with Gadgetbridge (does it accept "Bangle.js M5Dial", track info, notifications,
+      calls).
+- [ ] Test the **Windows** firmware with the PC app (`tools/windows`).
+- [ ] Boot GIF: send the exact error message shown under the buttons (section 6 of the web flasher).
+- [ ] Publish the print files on **MakerWorld** and add the link here and on the web flasher.
+- [ ] Add photos to `docs/img/` (wheel, pages, mount).
+- [ ] Release **v1.2.0** (three firmwares) once Android and Windows are checked.
+- [ ] Later: ENV III and DLight sensors (see below), battery level (needs a voltage divider to an ADC pin).
 
 ## License
 

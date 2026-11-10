@@ -108,12 +108,25 @@
 
   <section>
     <h2>5. Steering wheel mount</h2>
+    <p>Made for the <strong>OMP Corsica</strong> wheel, ref. <strong>OD0-1954</strong> (suede, black / blue spokes, Ø 350 mm, 95 mm dish): <a href="https://www.ompracing.com/p/corsica-steering-wheel-suede/">ompracing.com</a>. The M5Dial sits between the bottom and right spokes, one M5 screw in each spoke's Ø 16 hole nearest the hub.</p>
+    <p><strong>Print</strong> (PETG or ASA, 4 perimeters, 30–40 % infill):</p>
     <ul>
-      <li>3D-printed part for an OMP Corsica 350 mm wheel (95 mm dish), between the bottom and right spokes: <a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant.stl">support_volant.stl</a></li>
-      <li>Per spoke: M5 × 16 screw, fender washer Ø 20 or more, M5 nut. The M5Dial clamp ring goes on from underneath.</li>
-      <li>Print flat, supports under the raised ring only, PETG or ASA.</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant.stl">support_volant.stl</a> ×1, flat underside, supports from the bed under the M5Dial ring only</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/coque_batterie.stl">coque_batterie.stl</a> ×1 (battery shell), floor down, no supports</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/couvercle_batterie.stl">couvercle_batterie.stl</a> ×1 (shell lid), lay it on its flat plate</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/cache_ecrou.stl">cache_ecrou.stl</a> ×2 (nut caps), flat base</li>
+      <li>Optional fit check first: <a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant_test.stl">support_volant_test.stl</a> (the two pads only)</li>
     </ul>
-    <p class="muted">Other wheels: Fusion 360 script with editable dimensions in <a href="https://github.com/poppnn/m5dial-music/tree/main/hardware/fusion/SupportVolant">hardware/fusion</a>.</p>
+    <p><strong>Hardware</strong>: LiPo 103450 (50 × 34 × 10 mm); per spoke an M5 × 16 screw, an M5 × 20 fender washer (a plain washer drops into the hole) and an M5 nut.</p>
+    <p><strong>Assembly</strong>:</p>
+    <ol>
+      <li>M5Dial into the ring from the top, clamp ring screwed on from underneath through the tube windows.</li>
+      <li>Battery plugged in (check the polarity), slid into the shell, lead up through the slot, lid clipped on.</li>
+      <li>Shell collar into the tube from underneath, then a 35° turn clockwise (seen from below) until it clicks.</li>
+      <li>Mount behind the two spokes, screw + washer + nut per spoke, nut caps pressed on, driver side.</li>
+      <li>Turn the wheel lock to lock: nothing must touch the stalks.</li>
+    </ol>
+    <p class="muted">Print files also coming on MakerWorld. Other wheels: Fusion 360 scripts with editable dimensions in <a href="https://github.com/poppnn/m5dial-music/tree/main/hardware/fusion">hardware/fusion</a>.</p>
   </section>
 
   <section>
@@ -130,6 +143,18 @@
     </div>
     <progress id="ba-prog" max="1" value="0" hidden></progress>
     <p class="muted" id="ba-status" aria-live="polite"></p>
+  </section>
+
+  <section>
+    <h2>7. Roadmap</h2>
+    <ul>
+      <li>Print and fit the new mount, battery shell and lid on the wheel.</li>
+      <li>Check the Android firmware with Gadgetbridge and the Windows firmware with the PC app.</li>
+      <li>Fix the boot GIF upload error.</li>
+      <li>Publish the print files on MakerWorld.</li>
+      <li>Photos, then release v1.2.0 with the three firmwares.</li>
+      <li>Later: temperature / humidity and ambient light sensors, battery level.</li>
+    </ul>
   </section>
 
   <p class="muted">Source code: <a href="https://github.com/poppnn/m5dial-music">github.com/poppnn/m5dial-music</a></p>
