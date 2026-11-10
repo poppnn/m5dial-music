@@ -158,8 +158,7 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
 
 - **Pads** as wide as the spoke at their rim end minus 1 mm (they no longer stick out past the spoke edges), sloped
   like the spoke; on the M5Dial side each pad carries on with the same slope **into the tube wall**, so pads and tube
-  are one smooth body. The low end of each slope is the first layer (`PAD_MIN` 0.2 mm): the part is 30.7 mm tall.
-  A 2 mm plate (`ARM_T`) closes the outline underneath.
+  are one smooth body. The low end of each slope is the first layer (`PAD_MIN` 0.2 mm): the part is 30.7 mm tall. The tube windows stay clear of where the pads meet it.
 - **M5Dial** at the same height on the wheel as before (`DIAL_RISE` 27.2 mm above the part's underside) and moved
   towards the hub (centre 58.5 mm right, 57.5 mm below the hub centre), fixed as on a panel: its body goes through a
   **flat 3.5 mm ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on

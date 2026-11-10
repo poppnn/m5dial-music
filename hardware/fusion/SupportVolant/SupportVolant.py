@@ -58,7 +58,7 @@ PARAMS = [
     ("NUT_FLOOR", 3.0, "mm", "Plastique entre la branche et l'écrou"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
     ("PAD_MIN", 0.2, "mm", "Patte : épaisseur au bas de la pente (0,2 = première couche : pièce la plus basse possible)"),
-    ("ARM_T", 2.0, "mm", "Épaisseur de la plaque de fond entre les pattes et le tube (6 mm pour la pièce d'essai)"),
+    ("ARM_T", 6.0, "mm", "Pièce d'essai : épaisseur de la plaque qui relie les deux pattes"),
     ("FILLET_V", 4.0, "mm", "Congé des arêtes verticales (contour)"),
     ("FILLET_TOP", 1.5, "mm", "Congé des arêtes du dessus des bras"),
     ("BODY_D", 45.0, "mm", "MESURER : Ø du corps du M5Dial derrière la collerette (découpe recommandée Ø45)"),
@@ -329,6 +329,27 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     return shell
 
 
+def free_runs(busy):
+    """Plages libres autour du tube : [(début en degrés, largeur en degrés)] hors des degrés occupés (modulo 360)."""
+    occ = [False] * 360
+    for v in busy:
+        occ[v % 360] = True
+    if all(occ) or not any(occ):
+        return [] if all(occ) else [(0, 360)]
+    start, runs, cur = occ.index(True), [], None
+    for i in range(1, 361):
+        d = start + i
+        if not occ[d % 360]:
+            cur = [d, 1] if cur is None else [cur[0], cur[1] + 1]
+        elif cur:
+            runs.append(tuple(cur))
+            cur = None
+    return runs
+
+
+assert free_runs(set(range(350, 371)) | set(range(100, 120))) == [(11, 89), (120, 230)]
+
+
 def build(comp, P):
     b = Builder(comp)
     cx, cy = P["DEV_X"], P["DEV_Y"]
@@ -336,17 +357,19 @@ def build(comp, P):
     # Plan du plateau (= dos de la plaque, où se colle la batterie) : sous le bout le plus bas des coins
     z_b = min(P[k + "_DZ"] - P["PAD_L"] / 2 * math.sin(math.radians(P[k + "_TILT"])) for k in ("R", "B")) - P["PAD_MIN"]
     test = P["TEST_FIT"] >= 0.5  # essai d'angle : mêmes pattes et même plaque entre elles, sans la partie M5Dial
-    slab = max(P["ARM_T"], 6) if test else P["ARM_T"]  # pièce d'essai : seule la plaque relie les pattes
+    slab = P["ARM_T"]  # pièce d'essai : plaque entre les pattes ; support complet : disque caché dans le tube
     z_ring = z_b + P["DIAL_RISE"]  # bas de l'anneau qui tient le M5Dial
     raised = P["DIAL_RISE"] > 9
     r_clr = P["CLAMP_D"] / 2 + P["CLAMP_GAP"]  # vide sous l'anneau rehaussé : le collier s'y visse
     r_base = r_clr + P["TUBE_WALL"] if raised else r_out
     z_win = z_b + GROOVE_Z1 + 1.2  # bas des fenêtres du tube, au-dessus de la gorge de la baïonnette
 
-    # Plaque d'un seul contour convexe : base du tube + côté intérieur des deux pattes (pas de bras ni de recoins)
-    rp = r_base - 1  # un peu dans le tube : le contour ne frôle pas le cylindre (échec "osculating curves")
+    # Pièce d'essai : plaque d'un seul contour convexe entre les côtés intérieurs des deux pattes. Support complet :
+    # les pattes prolongées rejoignent le tube, plus de plaque (elle laissait des languettes au pied du tube) ;
+    # le corps de départ est un disque caché dans le tube.
+    rp = r_base - 1
     pts = [] if test else [(cx + rp * math.cos(math.radians(a)), cy + rp * math.sin(math.radians(a))) for a in range(0, 360, 2)]
-    for k in ("R", "B"):
+    for k in ("R", "B") if test else ():
         x, y, rad, til = P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"]
         u = (math.cos(math.radians(rad)), math.sin(math.radians(rad)))
         n = (-u[1], u[0])
@@ -360,6 +383,7 @@ def build(comp, P):
     cup.name = NAME
 
     a_out = math.degrees(math.atan2(cy, cx))  # direction opposée au moyeu
+    busy = set()  # degrés (autour du M5Dial) où le tube doit rester plein
     for k in ("R", "B"):
         x, y, rad, til, dz = (P[k + "_X"], P[k + "_Y"], P[k + "_RADIAL"], P[k + "_TILT"], P[k + "_DZ"])
 
@@ -382,6 +406,11 @@ def build(comp, P):
         join = 0 if test else max(0, reach - pw / 2)
         ox, oy = sd * join / 2 * nx, sd * join / 2 * ny
         b.combine(cup, tilted(b.rect(x - 10 * ux + ox, y - 10 * uy + oy, P["PAD_L"] + 20, pw + join, rad), -40, 40), JOIN)
+        hl0 = P["PAD_L"] / 2 * math.cos(math.radians(til))
+        for d in range(360):  # degrés du tube touchés par la patte prolongée (+ 4° de marge) : pas de fenêtre là
+            px, py = cx + r_base * math.cos(math.radians(d)) - x, cy + r_base * math.sin(math.radians(d)) - y
+            if -hl0 <= ux * px + uy * py <= hl0 and -pw / 2 <= sd * (nx * px + ny * py) <= pw / 2 + join:
+                busy.update(range(d - 4, d + 5))
         hl = P["PAD_L"] / 2 * math.cos(math.radians(til)) + 15
         b.combine(cup, b.solid(b.rect(x - hl * ux + ox, y - hl * uy + oy, 30, pw + join + 4, rad), z_b - 1, 100), CUT)
         # Rien au-dessus de la face arrière de la branche (elle s'élargit vers le moyeu)
@@ -425,21 +454,22 @@ def build(comp, P):
     # Tube plein, percé de fenêtres en arche entre 3 piliers (dans l'axe des deux bras et à l'opposé du moyeu) :
     # les doigts y passent pour tenir le collier, ainsi que la prise USB-C (au dos du M5Dial) et le câble de batterie.
     # Le haut en arche s'imprime sans support et garde le tube rigide.
+    # Les fenêtres évitent aussi l'endroit où chaque patte rejoint le tube (sinon : ailettes et entailles).
     if raised and not test:
-        legs = sorted(math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) % 360 for k in ("R", "B"))
-        legs = sorted(legs + [a_out % 360])
+        legs = [math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) for k in ("R", "B")] + [a_out]
+        for a in legs:
+            busy.update(range(int(round(a - P["LEG_ANG"] / 2)), int(round(a + P["LEG_ANG"] / 2)) + 1))
         h = z_ring - 1 - z_win  # hauteur de fenêtre, 1 mm sous l'anneau
-        for a1, a2 in zip(legs, legs[1:] + [legs[0] + 360]):
-            span = a2 - a1 - P["LEG_ANG"]
+        for a0, span in free_runs(busy):
             ww = min(2 * r_clr * math.sin(math.radians(span / 2)), 2 * (h - 3))  # largeur à l'intérieur du tube
             if ww < 12:
                 continue
             ra = ww / 2
             pts = ([(ra, 0), (ra, h - ra)] + [(ra * math.cos(math.radians(t)), h - ra + ra * math.sin(math.radians(t)))
                                                for t in range(15, 180, 15)] + [(-ra, h - ra), (-ra, 0)])
-            win = b.solid(b.poly(pts), 0, r_base + 0.5)  # arche dans le plan XZ, poussée selon -Y : la paroi seule
+            win = b.solid(b.poly(pts), 0, r_base + 5)  # arche dressée dans le plan XZ, poussée selon -Y
             b.rotate(win, (1, 0, 0), (0, 0, 0), 90)
-            b.rotate(win, (0, 0, 1), (0, 0, 0), (a1 + a2) / 2 + 90, z_win, cx, cy)
+            b.rotate(win, (0, 0, 1), (0, 0, 0), a0 + span / 2 + 90, z_win, cx, cy)
             b.combine(cup, win, CUT)
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
