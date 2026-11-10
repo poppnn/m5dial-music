@@ -10,6 +10,7 @@
 #define PORT_B_PIN2 2
 
 static SensorData d;
+static uint32_t seenT, seenH, seenP;  // dernière mesure valide : au-delà de 5 s (module débranché), "-"
 static int portNum = -1, aSda = -1, aScl = -1, bSda = PORT_B_PIN2, bScl = PORT_B_PIN1;
 static bool onB = false;
 static uint8_t bmpAddr = 0x76;
@@ -22,7 +23,7 @@ const SensorData& sensors() { return d; }
 static bool usePort(char p) {
   bool wantB = p == 'B';
   if (portNum < 0) return false;
-  if (wantB == onB) return true;
+  if (wantB == onB && M5.Ex_I2C.isEnabled()) return true;  // bus pas rouvert la dernière fois : on réessaie
   M5.Ex_I2C.release();
   onB = wantB;
   return M5.Ex_I2C.begin((i2c_port_t)portNum, wantB ? bSda : aSda, wantB ? bScl : aScl);
@@ -61,8 +62,8 @@ static void shtRead() {
   uint8_t b[6];
   if (!cmd2(0x44, 0xE0, 0x00) || !readRaw(0x44, b, 6) || crc8(b, 2) != b[2] || crc8(b + 3, 2) != b[5]) return;
   float t = -45 + 175.f * (b[0] << 8 | b[1]) / 65535.f, h = 100.f * (b[3] << 8 | b[4]) / 65535.f;
-  if (t > -40 && t < 85) d.temp = t, d.tempSrc = "SHT30";
-  if (h >= 0 && h <= 100) d.hum = h;
+  if (t > -40 && t < 85) d.temp = t, d.tempSrc = "SHT30", seenT = millis();
+  if (h >= 0 && h <= 100) d.hum = h, seenH = millis();
 }
 
 // ---------- BMP280 (IMU Pro Mini, 0x76) : formules de compensation de la datasheet Bosch ----------
@@ -87,7 +88,8 @@ static bool bmpInit() {
   auto u = [&](int i) { return (uint16_t)(c[i] | c[i + 1] << 8); };
   T1 = u(0); T2 = u(2); T3 = u(4);
   P1 = u(6); P2 = u(8); P3 = u(10); P4 = u(12); P5 = u(14); P6 = u(16); P7 = u(18); P8 = u(20); P9 = u(22);
-  return writeReg(bmpAddr, 0xF5, 0x08) && writeReg(bmpAddr, 0xF4, 0x2F);  // filtre x4 ; T x1, P x4, continu
+  // pause 1 s (lu une fois par seconde : pas d'auto-échauffement), filtre x4 ; T x1, P x4, continu
+  return writeReg(bmpAddr, 0xF5, 0xA8) && writeReg(bmpAddr, 0xF4, 0x2F);
 }
 
 static void bmpRead(bool useTemp, bool usePress) {
@@ -95,8 +97,8 @@ static void bmpRead(bool useTemp, bool usePress) {
   if (!readReg(bmpAddr, 0xF7, b, 6)) return;
   double t, p;
   bmpCompensate(b[3] << 12 | b[4] << 4 | b[5] >> 4, b[0] << 12 | b[1] << 4 | b[2] >> 4, t, p);
-  if (useTemp && t > -40 && t < 85) d.temp = t, d.tempSrc = "BMP280";
-  if (usePress && p > 30000 && p < 110000) d.press = p / 100;
+  if (useTemp && t > -40 && t < 85) d.temp = t, d.tempSrc = "BMP280", seenT = millis();
+  if (usePress && p > 30000 && p < 110000) d.press = p / 100, seenP = millis();
 }
 
 // ---------- QMP6988 (ENV III, 0x70) : coefficients OTP et formules de la datasheet QST ----------
@@ -120,7 +122,8 @@ static bool qmpInit() {
   qbp3 = 1.3e-16 + 7.9e-17 * s16(16) / 32767.0;
   qa1 = -6.3e-03 + 4.3e-04 * s16(20) / 32767.0;
   qa2 = -1.9e-11 + 1.2e-10 * s16(22) / 32767.0;
-  return writeReg(0x70, 0xF1, 0x02) && writeReg(0x70, 0xF4, 0x2F);  // filtre IIR x4 ; T x1, P x4, continu
+  // pause 1 s, filtre IIR x4 ; T x1, P x4, continu
+  return writeReg(0x70, 0xF5, 0xA0) && writeReg(0x70, 0xF1, 0x02) && writeReg(0x70, 0xF4, 0x2F);
 }
 
 static void qmpRead(bool useTemp) {
@@ -130,8 +133,8 @@ static void qmpRead(bool useTemp) {
   double tr = qa0 + qa1 * dt + qa2 * dt * dt;  // 1/256 °C
   double pr = qb00 + qbt1 * tr + qbp1 * dp + qb11 * dp * tr + qbt2 * tr * tr + qbp2 * dp * dp + qb12 * dp * tr * tr
               + qb21 * dp * dp * tr + qbp3 * dp * dp * dp;  // Pa
-  if (useTemp && tr / 256 > -40 && tr / 256 < 85) d.temp = tr / 256, d.tempSrc = "QMP6988";
-  if (pr > 30000 && pr < 110000) d.press = pr / 100;
+  if (useTemp && tr / 256 > -40 && tr / 256 < 85) d.temp = tr / 256, d.tempSrc = "QMP6988", seenT = millis();
+  if (pr > 30000 && pr < 110000) d.press = pr / 100, seenP = millis();
 }
 
 // ---------- détection et lecture ----------
@@ -171,6 +174,10 @@ void sensorsUpdate() {
   if (d.bmp && usePort(d.bmpPort)) bmpRead(!d.sht, !d.qmp);
   if (d.sht && usePort(d.shtPort)) shtRead();
   usePort('A');  // l'IMU est lue sur le Port A à chaque image
+  uint32_t now = millis();
+  if (now - seenT > 5000) d.temp = NAN;
+  if (now - seenH > 5000) d.hum = NAN;
+  if (now - seenP > 5000) d.press = NAN;
 }
 
 float altitudeM(float hPa) { return 44330.f * (1.f - powf(hPa / 1013.25f, 0.1903f)); }
