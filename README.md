@@ -225,9 +225,11 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
   [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou): `NUT_AF` 8.0 if too loose, 8.2 if too tight.
 - **Sensor holders** (`ENV_HOLDER`, `IMU_HOLDER` = 1): the IMU Pro Mini (24 × 24 × 8) lies flat in a holder on top
-  of the battery shell, inside the tube (parallel to the screen, as "always upright" needs), held by two lips; the
+  of the battery shell, inside the tube (parallel to the screen, as "always upright" needs), held by two 2 mm lips
+  and tied to the shell collar by 5 ribs; the
   ENV III (32 × 24 × 8) slides from the top into a slot on the outside of the tube, rim side, in open air away from
-  the battery (two ribs hold it, open front and open ends for the Grove plug).
+  the battery (two ribs hold it, 6 mm front lips, ends open above 8 mm for the Grove plug). Holder walls,
+  floor and lips are 2.4 mm (`HOLDER_WALL`).
 - **Source model**: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick the folder › Run. Dimensions are user parameters (Modify › Change Parameters);
   run the script again, then export the STLs. `TEST_FIT` = 1 builds the test part, 0 the full mount.

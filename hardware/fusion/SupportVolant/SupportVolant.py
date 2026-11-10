@@ -281,6 +281,7 @@ GROOVE_Z0, GROOVE_Z1, GROOVE_D = 2.4, 5.2, 1.6  # gorge dans le pied du tube : r
 BUMP_D, BUMP_H = 2.0, 0.4    # bossage sous chaque tenon : frotte 0,2 mm sur la gorge puis tombe dans un creux (clic)
 IMU_S, IMU_T = 24.0, 8.0       # Unit IMU Pro Mini (BMI270 + BMM150 + BMP280) : 24 x 24 x 8
 ENV_L, ENV_W, ENV_T = 32.0, 24.0, 8.0  # Unit ENV III (SHT30 + QMP6988) : 32 x 24 x 8
+HOLDER_WALL = 2.4             # parois des logements des Units
 WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de la coque, depuis le bout ouvert
 
 
@@ -359,11 +360,21 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     # Logement de l'IMU Pro Mini sur le dessus de la coque, dans la couronne : à plat (parallèle à l'écran, ce que
     # demande "toujours droit"), sous le M5Dial, câble court vers le Port A. Ouvert côté jante : l'unité s'y glisse
     # (prise Grove de ce côté), deux rebords la tiennent par-dessus.
+    # Parois de 2,4 mm, rebords de 2 x 1,6 mm, et nervures qui l'ancrent à la couronne (posée, elle, sur la
+    # collerette pleine) : le dessus de la coque n'est qu'un pont de 1,6 mm au-dessus de la batterie.
     if P["IMU_HOLDER"] >= 0.5:
-        s_, hc = IMU_S + 0.4, -2.0
-        b.combine(shell, b.solid(b.rect(*loc(hc, 0), s_ + 3.2, s_ + 3.2, ang), z_b, IMU_T + 0.4 + 1.2), JOIN)
-        b.extrude(b.rect(*loc(hc + 1.3, 0), s_ + 2.6, s_, ang), z_b, IMU_T + 0.4, CUT, [shell])
-        b.extrude(b.rect(*loc(hc + 1.3, 0), s_ + 2.6, s_ - 3, ang), z_b + IMU_T + 0.3, 2, CUT, [shell])
+        s_, hc, hw = IMU_S + 0.4, -2.0, HOLDER_WALL
+        h_box = IMU_T + 0.4 + 1.6
+        b.combine(shell, b.solid(b.rect(*loc(hc, 0), s_ + 2 * hw, s_ + 2 * hw, ang), z_b, h_box), JOIN)
+        r_ring = r_b - BOSS_T + 0.5   # un peu dans la couronne
+        for px in (hc - 7, hc + 5):   # 2 nervures de chaque côté, jusqu'à la couronne
+            y0, y1 = s_ / 2 + hw - 0.5, math.sqrt(r_ring ** 2 - px ** 2)
+            for sy in (1, -1):
+                b.combine(shell, b.solid(b.rect(*loc(px, sy * (y0 + y1) / 2), 2.4, y1 - y0, ang), z_b, BOSS_H), JOIN)
+        x0 = hc - s_ / 2 - hw + 0.5   # et une derrière
+        b.combine(shell, b.solid(b.rect(*loc((x0 - r_ring) / 2, 0), x0 + r_ring, 2.4, ang), z_b, BOSS_H), JOIN)
+        b.extrude(b.rect(*loc(hc + (hw + 1) / 2, 0), s_ + hw + 1, s_, ang), z_b, IMU_T + 0.4, CUT, [shell])
+        b.extrude(b.rect(*loc(hc + (hw + 1) / 2, 0), s_ + hw + 1, s_ - 4, ang), z_b + IMU_T + 0.3, 2, CUT, [shell])
     return shell
 
 
@@ -375,15 +386,16 @@ def env_holder(b, cup, cx, cy, z_b, r_base, a_out):
     at_r = lambda r, t: (cx + w[0] * r - w[1] * t, cy + w[1] * r + w[0] * t)  # (rayon, décalage tangentiel)
     ang_t = a_out + 90
     L_, H_, T_ = ENV_L + 0.4, ENV_W + 0.4, ENV_T + 0.2    # logement : tangentiel, hauteur, profondeur
-    r0, rs = r_base - 6, r_base + 0.5                     # arrière dans la paroi ; fond du logement
-    r1 = rs + T_ + 1.6                                    # face avant
-    b.combine(cup, b.solid(b.rect(*at_r((r0 + r1) / 2, 0), L_ + 3.2, r1 - r0, ang_t), z_b, H_ + 1.6), JOIN)
-    b.extrude(b.rect(*at_r(rs + T_ / 2, 0), L_, T_, ang_t), z_b + 1.6, H_ + 1, CUT, [cup])
-    b.extrude(b.rect(*at_r(rs + T_ + 1, 0), L_ - 6.4, 3, ang_t), z_b + 4.6, H_, CUT, [cup])  # face avant ajourée
-    for sgn in (1, -1):  # bouts ouverts (prise Grove) et nervures de serrage sur le fond
-        b.extrude(b.rect(*at_r(rs + T_ / 2, sgn * (L_ / 2 + 1)), 3, T_, ang_t), z_b + 6.6, H_, CUT, [cup])
-        b.combine(cup, b.solid(b.rect(*at_r(rs + 0.2, sgn * 8), 1.0, 0.4, ang_t), z_b + 1.6, H_), JOIN)
-    return math.degrees(math.asin(min(1.0, (L_ / 2 + 3.6) / r_base))) + 4
+    hw = HOLDER_WALL                                      # parois, fond et face avant
+    r0, rs = r_base - 8, r_base + 0.5                     # arrière noyé dans la paroi du tube sur toute la largeur
+    r1 = rs + T_ + hw                                     # face avant
+    b.combine(cup, b.solid(b.rect(*at_r((r0 + r1) / 2, 0), L_ + 2 * hw, r1 - r0, ang_t), z_b, H_ + hw), JOIN)
+    b.extrude(b.rect(*at_r(rs + T_ / 2, 0), L_, T_, ang_t), z_b + hw, H_ + 1, CUT, [cup])
+    b.extrude(b.rect(*at_r(rs + T_ + hw / 2, 0), L_ - 12, hw + 2, ang_t), z_b + hw + 4, H_, CUT, [cup])  # rebords de 6 mm
+    for sgn in (1, -1):  # bouts ouverts au-dessus de 8 mm (prise Grove) et nervures de serrage sur le fond
+        b.extrude(b.rect(*at_r(rs + T_ / 2, sgn * (L_ / 2 + hw / 2)), hw + 2, T_, ang_t), z_b + hw + 8, H_, CUT, [cup])
+        b.combine(cup, b.solid(b.rect(*at_r(rs + 0.2, sgn * 8), 1.0, 0.4, ang_t), z_b + hw, H_), JOIN)
+    return math.degrees(math.asin(min(1.0, (L_ / 2 + hw + 2) / r_base))) + 4
 
 
 def free_runs(busy):
