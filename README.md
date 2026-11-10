@@ -156,20 +156,25 @@ that `logo.h` to yourself (do not publish it).
 spoke, for the area between the bottom spoke and the right spoke of an **OMP Corsica** 350 mm steering wheel
 (95 mm dish).
 
-- **Thin plate** (6 mm), one smooth outline between the two pads and the tube, open under the M5Dial.
-- **M5Dial**, raised 33 mm (`DIAL_RISE`) to sit closer to the rim and moved towards the hub (centre 58.5 mm right,
-  57.5 mm below the hub centre, ~3 mm from the pads), fixed as on a panel: its body goes through a **flat 3.5 mm
-  ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on from
-  underneath** through the Ø 52.8 opening and screwed up. The ring sits on a solid tube with **2 arched windows**
-  between 3 wide pillars (in line with the two arms and towards the rim): fingers reach the clamp, and **USB-C**
-  (on the back of the M5Dial) and the battery cable go through them.
+- **Pads** as wide as the spoke at their rim end minus 1 mm (they no longer stick out past the spoke edges), sloped
+  like the spoke; on the M5Dial side each pad carries on with the same slope **into the tube wall**, so pads and tube
+  are one smooth body. The low end of each slope is the first layer (`PAD_MIN` 0.2 mm): the part is 30.7 mm tall.
+  A 2 mm plate (`ARM_T`) closes the outline underneath.
+- **M5Dial** at the same height on the wheel as before (`DIAL_RISE` 27.2 mm above the part's underside) and moved
+  towards the hub (centre 58.5 mm right, 57.5 mm below the hub centre), fixed as on a panel: its body goes through a
+  **flat 3.5 mm ring** (Ø 45.6, 6 crush ribs) and its clamp ring (Ø 49.8 × 12.6 mm, from the M5Dial STL) is **put on
+  from underneath** through the Ø 52.8 opening and screwed up. The ring sits on a 3.5 mm tube with **3 large arched
+  windows** between 3 narrow pillars (36°, in line with the two pads and towards the rim): room for the fingers to
+  turn the clamp ring, and for **USB-C** and the battery cable.
 - **Battery shell** ([`hardware/coque_batterie.stl`](hardware/coque_batterie.stl)): holds a LiPo 103450
   (50 × 34 × 10 mm; cavity 54 × 36 × 11 for the protection board and wires) under the M5Dial tube, long side
-  pointing away from the hub. **Quarter-turn bayonet**: its round collar goes into the tube from underneath (2 lugs
-  through 2 notches in the tube foot), then turn it 35° clockwise as seen from below until it clicks (a small bump
-  under each lug drops into a dimple). The battery lies in the open tray and is held by the tube foot; its cable goes
-  up through the collar to the M5Dial. Remove the shell to reach the M5Dial clamp ring. Prints floor down, no
-  supports (45° collar). Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
+  pointing away from the hub. **Quarter-turn bayonet**: its full round collar goes into the tube from underneath
+  (**3 lugs**, 30° wide and 2.4 mm tall, through 3 notches in the tube foot), then turn it 35° clockwise as seen from
+  below until it clicks (a small bump under each lug drops into a dimple); a 2.4 mm lip under the groove holds them.
+  The battery **slides in from the open end** (rim side, a 0.8 mm ridge keeps it in) and its cable goes up through
+  the slot in the lid into the tube. Remove the shell to reach the M5Dial clamp ring. Prints floor down without
+  supports (45° collar; the lid bridges 36 mm). Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`,
+  `BAT_TWIST`.
 - **Attachment**: each pad sits on the back of its spoke (no guide wall, hook or peg: the part goes onto both
   spokes in one move). Per spoke: **M5 screw** through the spoke hole nearest the hub (Ø 16) and the pad, with a
   **wide washer Ø 20** (fender washer 5 × 20; a plain M5 washer would drop into the hole) and an **M5 nut**; the
@@ -182,7 +187,7 @@ spoke, for the area between the bottom spoke and the right spoke of an **OMP Cor
   the bottom one, **96 mm between the two hole centres**, both spoke slopes **40°**. Widths (bottom 40 mm, right
   38 mm at the hole), 5 mm thickness and Ø 16 holes measured with a caliper.
 - Quick fit check: set `TEST_FIT` to 1 and run the script again to get only the two pads joined by a bar
-  (`hardware/support_volant_test.stl`, ~43 cm³, no supports); back to 0 for the full mount.
+  (`hardware/support_volant_test.stl`, ~20 cm³, no supports); back to 0 for the full mount.
 
 - Source model: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick this folder › Run. Dimensions are user parameters (Modify › Change Parameters).

@@ -57,20 +57,18 @@ PARAMS = [
     ("NUT_AF", 8.4, "mm", "Empreinte d'écrou M5 : sur plats (écrou 8 + jeu)"),
     ("NUT_FLOOR", 3.0, "mm", "Plastique entre la branche et l'écrou"),
     ("PAD_L", 24.0, "mm", "Patte : longueur le long de la branche"),
-    ("PAD_MIN", 6.0, "mm", "Patte : épaisseur mini (bout bas du coin) = ARM_T : la plaque affleure le coin, sans marche"),
-    ("CLIP_WALL", 2.2, "mm", "Marge de la patte de chaque côté de la branche (anciennes parois de guidage)"),
-    ("CLIP_GAP", 0.3, "mm", "Marge supplémentaire de la patte de chaque côté de la branche"),
-    ("ARM_T", 6.0, "mm", "Hauteur du dessus de la plaque au-dessus du bas des pattes (assise du M5Dial)"),
+    ("PAD_MIN", 0.2, "mm", "Patte : épaisseur au bas de la pente (0,2 = première couche : pièce la plus basse possible)"),
+    ("ARM_T", 2.0, "mm", "Épaisseur de la plaque de fond entre les pattes et le tube (6 mm pour la pièce d'essai)"),
     ("FILLET_V", 4.0, "mm", "Congé des arêtes verticales (contour)"),
     ("FILLET_TOP", 1.5, "mm", "Congé des arêtes du dessus des bras"),
     ("BODY_D", 45.0, "mm", "MESURER : Ø du corps du M5Dial derrière la collerette (découpe recommandée Ø45)"),
     ("CRUSH", 0.5, "mm", "Serrage (sur le Ø) des nervures sur le corps du M5Dial"),
     ("RING_T", 3.5, "mm", "Hauteur de l'anneau (le corps du M5Dial et son USB-C ressortent dessous)"),
-    ("DIAL_RISE", 33.0, "mm", "Rehausse du M5Dial au-dessus de la plaque (0 = anneau posé sur la plaque)"),
+    ("DIAL_RISE", 27.2, "mm", "Rehausse du M5Dial au-dessus du dessous du support (27,2 : même hauteur sur le volant qu'avec PAD_MIN 6)"),
     ("CLAMP_D", 49.8, "mm", "Ø extérieur du collier de serrage du M5Dial (STL Dial_v1.1 : 49,8, 12,6 de haut)"),
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
-    ("TUBE_WALL", 3.0, "mm", "Épaisseur des pieds qui portent l'anneau rehaussé"),
-    ("LEG_ANG", 60.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : fenêtres en arche)"),
+    ("TUBE_WALL", 3.5, "mm", "Épaisseur du tube qui porte l'anneau rehaussé (et la gorge de la baïonnette de la batterie)"),
+    ("LEG_ANG", 36.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : grandes fenêtres pour serrer le collier)"),
     ("BAT_L", 54.0, "mm", "Coque batterie : longueur intérieure (LiPo 103450 = 50 + carte de protection et fils)"),
     ("BAT_W", 36.0, "mm", "Coque batterie : largeur intérieure (LiPo 103450 = 34)"),
     ("BAT_T", 11.0, "mm", "Coque batterie : profondeur intérieure (LiPo 103450 = 10)"),
@@ -84,7 +82,7 @@ OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "
             "FLOOR_HOLE_D", "BODY_H", "PORT_W", "PORT_ANG", "SPOKE_W", "PAD_W",  # ancien boîtier arrière, encoche USB-C
             "CASE_WALL", "BAT_X", "BAT_Y",  # ancien logement / plateau batterie
             "ARM_W", "ARM_ROOT_W",  # anciens bras (remplacés par une plaque d'un seul contour)
-            "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG"]  # anciens téton, crochets, fenêtres
+            "PEG_D", "CLIP_LIP", "CLIP_LIP_T", "WIN_ANG", "CLIP_WALL", "CLIP_GAP"]  # anciens téton, crochets, parois
 
 NEW = adsk.fusion.FeatureOperations.NewBodyFeatureOperation
 JOIN = adsk.fusion.FeatureOperations.JoinFeatureOperation
@@ -225,9 +223,14 @@ class Builder:
 
 
 def pad_w(P, k):
-    """Largeur de la patte : branche + jeu et parois des deux côtés + évasement sur toute la longueur."""
-    return (P[k + "_SPOKE_W"] + 2 * (P["CLIP_GAP"] + P["CLIP_WALL"])
-            + P["PAD_L"] * math.tan(math.radians(P[k + "_TAPER"])) + 1)
+    """Largeur de la patte : celle de la branche au bout côté jante (elle s'élargit vers le moyeu), moins 1 mm :
+    la patte ne dépasse pas des bords de la branche."""
+    return P[k + "_SPOKE_W"] - P["PAD_L"] * math.tan(math.radians(P[k + "_TAPER"])) - 1
+
+
+def band_w(P, k):
+    """Largeur dégagée au-dessus de la face arrière de la branche, sur 35 mm de part et d'autre du trou."""
+    return P[k + "_SPOKE_W"] + 70 * math.tan(math.radians(P[k + "_TAPER"])) + 2
 
 
 def hull(pts):
@@ -266,37 +269,43 @@ def sector(cx, cy, r0, r1, a0, a1):
     return [pol(r1, a) for a in arc] + [pol(r0, a) for a in reversed(arc)]
 
 
-# Baïonnette de la coque batterie (z depuis le dessous du support, z_b) : 2 tenons sur la couronne de la coque
-# passent par 2 encoches verticales, puis tournent de BAT_TWIST dans une gorge ; le dessous de la gorge les retient.
-BOSS_H, BOSS_T = 5.0, 2.5    # couronne de la coque qui entre dans l'alésage du collier (jeu radial 0,3)
-LUG_ANG, LUG_P = 20.0, 1.5   # tenons : largeur angulaire, saillie hors de la couronne
-LUG_Z0, LUG_Z1 = 2.4, 4.4    # tenons : hauteur
-GROOVE_Z0, GROOVE_Z1, GROOVE_D = 2.2, 4.6, 1.6  # gorge dans le pied du tube (paroi restante : TUBE_WALL - 1,6)
+# Baïonnette de la coque batterie (z depuis le dessous du support, z_b) : 3 tenons sur la couronne de la coque
+# passent par 3 encoches verticales, puis tournent de BAT_TWIST dans une gorge ; le dessous de la gorge les retient.
+BOSS_H, BOSS_T = 5.0, 3.0    # couronne pleine de la coque, dans l'alésage du collier (jeu radial 0,3)
+LUGS = (60, 180, 300)        # tenons, en degrés depuis le bout ouvert de la coque (0 : fente du câble)
+LUG_ANG, LUG_P = 30.0, 1.5   # tenons : largeur angulaire, saillie hors de la couronne
+LUG_Z0, LUG_Z1 = 2.6, 5.0    # tenons : hauteur (2,4 mm)
+GROOVE_Z0, GROOVE_Z1, GROOVE_D = 2.4, 5.2, 1.6  # gorge dans le pied du tube : rebord de 2,4 mm sous les tenons
 BUMP_D, BUMP_H = 2.0, 0.4    # bossage sous chaque tenon : frotte 0,2 mm sur la gorge puis tombe dans un creux (clic)
+WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de la coque, depuis le bout ouvert
 
 
 def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
-    """Coque de la LiPo sous le tube du M5Dial (corps séparé "Coque batterie", imprimé fond sur le plateau),
-    et dans le pied du tube : encoches d'entrée, gorge et creux de verrouillage."""
-    ang = a_out + P["BAT_ROT"]   # grand côté de la coque
+    """Coque de la LiPo sous le tube du M5Dial (corps séparé "Coque batterie", imprimé fond sur le plateau) et,
+    dans le pied du tube : encoches d'entrée, gorge et creux de verrouillage. La batterie se glisse par le bout
+    ouvert de la coque (côté jante), son câble remonte par la fente jusqu'au M5Dial."""
+    ang = a_out + P["BAT_ROT"]   # grand côté de la coque, bout ouvert vers l'extérieur du volant
+    u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
+    at = lambda d: (cx + d * u[0], cy + d * u[1])  # point sur le grand axe, à d mm du centre
     r_b = r_clr - 0.3            # couronne
     r_g = r_clr + GROOVE_D       # fond de la gorge
     half = LUG_ANG / 2 + 2       # encoche et gorge : 2° de jeu de chaque côté du tenon
-    for k in (90, 270):          # tenons au milieu des grands côtés
+    rm = r_b + LUG_P / 2
+    bump = lambda a: (cx + rm * math.cos(math.radians(a)), cy + rm * math.sin(math.radians(a)))
+    for k in LUGS:
         af = ang + k
         ae = af - P["BAT_TWIST"]
         b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, ae + half)), z_b - 1, 1 + GROOVE_Z1, CUT, [cup])
         b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, af + half)), z_b + GROOVE_Z0,
                   GROOVE_Z1 - GROOVE_Z0, CUT, [cup])
-        rm = r_b + LUG_P / 2
-        b.extrude(b.circles([(cx + rm * math.cos(math.radians(af)), cy + rm * math.sin(math.radians(af)))], BUMP_D / 2 + 0.4),
-                  z_b + GROOVE_Z0 - 0.6, 0.7, CUT, [cup])
+        b.extrude(b.circles([bump(af)], BUMP_D / 2 + 0.4), z_b + GROOVE_Z0 - 0.6, 0.7, CUT, [cup])
 
-    wall, h_tray = P["SHELL_WALL"], P["BAT_T"] + P["SHELL_WALL"]
-    shell = b.solid(b.rect(cx, cy, P["BAT_L"] + 2 * wall, P["BAT_W"] + 2 * wall, ang), z_b - h_tray, h_tray)
+    wall, L, W, T = P["SHELL_WALL"], P["BAT_L"], P["BAT_W"], P["BAT_T"]
+    h_tray = T + 2 * wall        # fond, logement, dessus plein
+    shell = b.solid(b.rect(cx, cy, L + 2 * wall, W + 2 * wall, ang), z_b - h_tray, h_tray)
     shell.name = "Coque batterie"
     # Collerette à 45° du bord de la coque jusqu'à la couronne : imprimable sans support
-    w2 = P["BAT_W"] / 2 + wall
+    w2 = W / 2 + wall
     if r_b > w2:
         ext = b.f.extrudeFeatures
         inp = ext.createInput(b.circles([(cx, cy)], w2).profiles.item(0), NEW)
@@ -305,16 +314,18 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
         inp.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal((z_b - (r_b - w2)) / 10))
         b.combine(shell, ext.add(inp).bodies.item(0), JOIN)
     b.combine(shell, b.solid(b.circles([(cx, cy)], r_b), z_b, BOSS_H), JOIN)  # couronne
-    for k in (90, 270):
+    for k in LUGS:
         af = ang + k
         b.combine(shell, b.solid(b.poly(sector(cx, cy, r_b - 0.2, r_b + LUG_P, af - LUG_ANG / 2, af + LUG_ANG / 2)),
                                  z_b + LUG_Z0, LUG_Z1 - LUG_Z0), JOIN)
-        rm = r_b + LUG_P / 2
-        b.combine(shell, b.solid(b.circles([(cx + rm * math.cos(math.radians(af)), cy + rm * math.sin(math.radians(af)))],
-                                           BUMP_D / 2), z_b + LUG_Z0 - BUMP_H, BUMP_H), JOIN)
-    # Logement de la batterie (ouvert en haut : la batterie se pose dedans, le pied du tube la tient) et couronne évidée
-    b.extrude(b.rect(cx, cy, P["BAT_L"], P["BAT_W"], ang), z_b - P["BAT_T"], P["BAT_T"] + BOSS_H + 1, CUT, [shell])
+        b.combine(shell, b.solid(b.circles([bump(af)], BUMP_D / 2), z_b + LUG_Z0 - BUMP_H, BUMP_H), JOIN)
+    # Logement ouvert au bout côté jante ; couronne évidée ; fente du câble du bout ouvert jusque dans la couronne
+    b.extrude(b.rect(*at((wall + 1) / 2), L + wall + 1, W, ang), z_b - wall - T, T, CUT, [shell])
     b.extrude(b.circles([(cx, cy)], r_b - BOSS_T), z_b, BOSS_H + 1, CUT, [shell])
+    x0, x1 = r_b - BOSS_T - 6, L / 2 + wall + 1
+    b.extrude(b.rect(*at((x0 + x1) / 2), x1 - x0, WIRE_W, ang), z_b - wall - 0.5, wall + BOSS_H + 2, CUT, [shell])
+    # Petit rebord de 0,8 mm au fond, à l'entrée : la batterie ne ressort pas toute seule
+    b.combine(shell, b.solid(b.rect(*at(L / 2 - 0.75), 1.5, W, ang), z_b - wall - T, 0.8), JOIN)
     return shell
 
 
@@ -324,12 +335,13 @@ def build(comp, P):
     r_out = P["DIAL_D"] / 2
     # Plan du plateau (= dos de la plaque, où se colle la batterie) : sous le bout le plus bas des coins
     z_b = min(P[k + "_DZ"] - P["PAD_L"] / 2 * math.sin(math.radians(P[k + "_TILT"])) for k in ("R", "B")) - P["PAD_MIN"]
-    slab = P["ARM_T"]
+    test = P["TEST_FIT"] >= 0.5  # essai d'angle : mêmes pattes et même plaque entre elles, sans la partie M5Dial
+    slab = max(P["ARM_T"], 6) if test else P["ARM_T"]  # pièce d'essai : seule la plaque relie les pattes
     z_ring = z_b + P["DIAL_RISE"]  # bas de l'anneau qui tient le M5Dial
-    raised = P["DIAL_RISE"] > slab + 3
+    raised = P["DIAL_RISE"] > 9
     r_clr = P["CLAMP_D"] / 2 + P["CLAMP_GAP"]  # vide sous l'anneau rehaussé : le collier s'y visse
     r_base = r_clr + P["TUBE_WALL"] if raised else r_out
-    test = P["TEST_FIT"] >= 0.5  # essai d'angle : mêmes pattes et même plaque entre elles, sans la partie M5Dial
+    z_win = z_b + GROOVE_Z1 + 1.2  # bas des fenêtres du tube, au-dessus de la gorge de la baïonnette
 
     # Plaque d'un seul contour convexe : base du tube + côté intérieur des deux pattes (pas de bras ni de recoins)
     rp = r_base - 1  # un peu dans le tube : le contour ne frôle pas le cylindre (échec "osculating curves")
@@ -344,12 +356,7 @@ def build(comp, P):
         hl = P["PAD_L"] / 2 * math.cos(math.radians(til))
         for su, hw in ((-1, pad_w(P, k) / 2 + 2.5), (1, pad_w(P, k) / 2 - P["FILLET_V"])):
             pts.append((x + su * hl * u[0] + sd * hw * n[0], y + su * hl * u[1] + sd * hw * n[1]))
-    plate = b.solid(b.poly(hull(pts)), z_b, slab)
-    if test:
-        cup = plate
-    else:
-        cup = b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"]))  # tube jusqu'à l'anneau
-        b.combine(cup, plate, JOIN)
+    cup = b.solid(b.poly(hull(pts)), z_b, slab)
     cup.name = NAME
 
     a_out = math.degrees(math.atan2(cy, cx))  # direction opposée au moyeu
@@ -361,14 +368,26 @@ def build(comp, P):
             b.tilt(body, x, y, rad, til, dz)
             return body
 
-        # Coin sous la branche : dessus = face arrière de la branche
-        # Coin allongé côté moyeu puis recoupé à la verticale : bout net, sans face penchée en contre-dépouille
+        # Coin sous la branche : dessus = face arrière de la branche. Côté M5Dial, il est prolongé (même pente)
+        # jusque dans la paroi du tube : patte et tube ne font qu'un. Coin allongé côté moyeu puis recoupé à la
+        # verticale : bout net, sans face penchée en contre-dépouille.
         ux, uy = math.cos(math.radians(rad)), math.sin(math.radians(rad))
-        b.combine(cup, tilted(b.rect(x - 10 * ux, y - 10 * uy, P["PAD_L"] + 20, pad_w(P, k), rad), -40, 40), JOIN)
+        nx, ny = -uy, ux
+        sd = 1 if nx * (cx - x) + ny * (cy - y) > 0 else -1  # côté du M5Dial
+        pw = pad_w(P, k)
+        # Largeur ajoutée côté M5Dial : jusqu'à 3 mm dans la paroi du tube au droit du bout côté jante de la patte
+        # (le plus loin du tube) ; ce qui dépasse dans l'alésage est retiré avec lui.
+        t_end = P["PAD_L"] / 2 * math.cos(math.radians(til)) - (ux * (cx - x) + uy * (cy - y))
+        reach = abs(nx * (cx - x) + ny * (cy - y)) - math.sqrt(max(0.0, r_base ** 2 - t_end ** 2)) + 3
+        join = 0 if test else max(0, reach - pw / 2)
+        ox, oy = sd * join / 2 * nx, sd * join / 2 * ny
+        b.combine(cup, tilted(b.rect(x - 10 * ux + ox, y - 10 * uy + oy, P["PAD_L"] + 20, pw + join, rad), -40, 40), JOIN)
         hl = P["PAD_L"] / 2 * math.cos(math.radians(til)) + 15
-        b.combine(cup, b.solid(b.rect(x - hl * ux, y - hl * uy, 30, pad_w(P, k) + 4, rad), z_b - 1, 100), CUT)
-        # Rien au-dessus de la face arrière de la branche, ni contre les parois des clips (2 mm de jeu)
-        b.combine(cup, tilted(b.rect(x, y, 70, pad_w(P, k) + 4, rad), 0, 40), CUT)
+        b.combine(cup, b.solid(b.rect(x - hl * ux + ox, y - hl * uy + oy, 30, pw + join + 4, rad), z_b - 1, 100), CUT)
+        # Rien au-dessus de la face arrière de la branche (elle s'élargit vers le moyeu)
+        b.combine(cup, tilted(b.rect(x, y, 70, band_w(P, k), rad), 0, 40), CUT)
+    if not test:  # tube ajouté après les recoupes des pattes, qui ne doivent pas l'entailler
+        b.combine(cup, b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"])), JOIN)
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3
@@ -409,7 +428,7 @@ def build(comp, P):
     if raised and not test:
         legs = sorted(math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) % 360 for k in ("R", "B"))
         legs = sorted(legs + [a_out % 360])
-        h = z_ring - 1 - (z_b + slab)  # hauteur de fenêtre, 1 mm sous l'anneau
+        h = z_ring - 1 - z_win  # hauteur de fenêtre, 1 mm sous l'anneau
         for a1, a2 in zip(legs, legs[1:] + [legs[0] + 360]):
             span = a2 - a1 - P["LEG_ANG"]
             ww = min(2 * r_clr * math.sin(math.radians(span / 2)), 2 * (h - 3))  # largeur à l'intérieur du tube
@@ -418,9 +437,9 @@ def build(comp, P):
             ra = ww / 2
             pts = ([(ra, 0), (ra, h - ra)] + [(ra * math.cos(math.radians(t)), h - ra + ra * math.sin(math.radians(t)))
                                                for t in range(15, 180, 15)] + [(-ra, h - ra), (-ra, 0)])
-            win = b.solid(b.poly(pts), 0, r_base + 5)  # arche dressée dans le plan XZ, poussée selon -Y
+            win = b.solid(b.poly(pts), 0, r_base + 0.5)  # arche dans le plan XZ, poussée selon -Y : la paroi seule
             b.rotate(win, (1, 0, 0), (0, 0, 0), 90)
-            b.rotate(win, (0, 0, 1), (0, 0, 0), (a1 + a2) / 2 + 90, z_b + slab, cx, cy)
+            b.rotate(win, (0, 0, 1), (0, 0, 0), (a1 + a2) / 2 + 90, z_win, cx, cy)
             b.combine(cup, win, CUT)
 
     # 6 nervures d'écrasement dans l'anneau : serrent le corps du M5Dial, absorbent la tolérance d'impression
