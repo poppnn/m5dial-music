@@ -459,14 +459,14 @@ def build(comp, P):
         legs = [math.degrees(math.atan2(P[k + "_Y"] - cy, P[k + "_X"] - cx)) for k in ("R", "B")] + [a_out]
         for a in legs:
             busy.update(range(int(round(a - P["LEG_ANG"] / 2)), int(round(a + P["LEG_ANG"] / 2)) + 1))
-        h = z_ring - 1 - z_win  # hauteur de fenêtre, 1 mm sous l'anneau
+        h = z_ring - z_win  # hauteur de fenêtre : le haut de l'arche touche le dessous de l'anneau
         for a0, span in free_runs(busy):
             ww = min(2 * r_clr * math.sin(math.radians(span / 2)), 2 * (h - 3))  # largeur à l'intérieur du tube
             if ww < 12:
                 continue
             ra = ww / 2
             pts = ([(ra, 0), (ra, h - ra)] + [(ra * math.cos(math.radians(t)), h - ra + ra * math.sin(math.radians(t)))
-                                               for t in range(15, 180, 15)] + [(-ra, h - ra), (-ra, 0)])
+                                               for t in range(5, 180, 5)] + [(-ra, h - ra), (-ra, 0)])
             win = b.solid(b.poly(pts), 0, r_base + 5)  # arche dressée dans le plan XZ, poussée selon -Y
             b.rotate(win, (1, 0, 0), (0, 0, 0), 90)
             b.rotate(win, (0, 0, 1), (0, 0, 0), a0 + span / 2 + 90, z_win, cx, cy)
