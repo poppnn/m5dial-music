@@ -96,8 +96,8 @@ static bool draw(float dt) {
 }
 
 void setup() {
-  // ~-20 mA ; le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas. Fixé ici une fois pour toutes : passer
-  // ensuite de 80 à 240 MHz pendant le fonctionnement plantait le M5Dial (écran noir au démarrage).
+  // Moins que les 240 MHz par défaut : le SPI de l'écran (APB 80 MHz) et le BLE ne changent pas. Fixé ici une fois
+  // pour toutes : passer ensuite de 80 à 240 MHz pendant le fonctionnement plantait le M5Dial (écran noir).
   setCpuFrequencyMhz(CPU_MHZ);
   Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
