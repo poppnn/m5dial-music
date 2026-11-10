@@ -2,7 +2,7 @@
 
 Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, Android and Windows**.
 
-- **iPhone**: native **Apple Media Service (AMS)** → controls + title, artist, progress, shuffle / repeat / like,
+- **iPhone**: native **Apple Media Service (AMS)** → controls + title, artist, progress, shuffle / repeat,
   plus time (CTS), calls and notifications (ANCS).
 - **Android**: **BLE HID** remote (standard media keys) for the controls; title, artist, progress, time, calls and
   notifications through [Gadgetbridge](https://gadgetbridge.org/) (free app), which takes the M5Dial for a Bangle.js watch.
@@ -42,8 +42,7 @@ It reads what Windows shows in its media panel (Spotify, Apple Music, browser...
 - Swipe left / right: next / previous track (LED: colour, Stopwatch: reset)
 - Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day
 - iPhone: **shuffle** and **repeat** icons at the bottom (accent colour = on, "1" = repeat one): tap them to change.
-  **Double tap** elsewhere = "Like" (a heart pops up). A single tap (play / pause) is sent after 0.3 s, to leave
-  room for a double tap; the wheel press stays instant.
+  A tap elsewhere = play / pause.
 
 ## Calls and notifications (iPhone)
 

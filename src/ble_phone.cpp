@@ -169,7 +169,7 @@ static void transmit(uint8_t cmd) {
     rc->writeValue(&cmd, 1, true);
   } else if (linkMode == LINK_HID) {
     static const uint8_t bit[] = {0, 0, 0x01, 0x02, 0x04, 0x08, 0x10};  // index = CMD_*
-    if (cmd >= sizeof(bit)) return;  // aléatoire, répétition, J'aime : pas d'équivalent HID
+    if (cmd >= sizeof(bit)) return;  // aléatoire, répétition : pas d'équivalent HID
     uint8_t v = bit[cmd];
     hidInput->setValue(&v, 1);
     hidInput->notify();

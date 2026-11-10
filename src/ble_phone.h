@@ -8,7 +8,7 @@
 
 // Remote Command AMS (les 5 premiers existent aussi en HID ; les autres sont propres à l'iPhone)
 enum : uint8_t { CMD_TOGGLE = 2, CMD_NEXT = 3, CMD_PREV = 4, CMD_VOL_UP = 5, CMD_VOL_DOWN = 6,
-                 CMD_REPEAT = 7, CMD_SHUFFLE = 8, CMD_LIKE = 11 };
+                 CMD_REPEAT = 7, CMD_SHUFFLE = 8 };
 
 struct Media {
   std::string title, artist;

@@ -1,6 +1,5 @@
 // Page Musique : arc de progression, titre / artiste (iPhone), anneau de volume, heure.
-// iPhone : icônes aléatoire / répétition (tap dessus = changer), double tap ailleurs = "J'aime" (cœur),
-// tap simple = lecture / pause, envoyé après DOUBLE_TAP_MS pour laisser la place au double tap.
+// iPhone : icônes aléatoire / répétition (tap dessus = changer), tap ailleurs = lecture / pause.
 #include <algorithm>
 #include "pages.h"
 #include "../anim.h"
@@ -10,15 +9,13 @@
 #include "../display.h"
 #include "../settings.h"
 
-#define DOUBLE_TAP_MS 300  // < 500 ms : délai au-delà duquel M5Unified remet le compte de taps à zéro
-#define HEART_MS      900
 #define SHUF_X        92   // icônes aléatoire / répétition, en bas de l'écran
 #define REP_X         148
 #define ICON_Y        204
 
 static Media m;
 static float el = 0, arcTarget = 0, arcShown = 0, arcLag = 0, volShown = 0;
-static uint32_t volUntil = 0, tapDeadline = 0, heartStart = 0;
+static uint32_t volUntil = 0;
 static std::string shownTitle, shownArtist;
 
 void musicTick(float dt, uint32_t now) {
@@ -39,10 +36,6 @@ void musicTick(float dt, uint32_t now) {
   arcShown = arcTarget + arcLag;
   if (m.volume >= 0) volShown += (m.volume - volShown) * smoothK(dt, VOL_TAU_S);
   if (!slideOutPhase) { shownTitle = m.title; shownArtist = m.artist; }  // ancien texte figé pendant la sortie
-  if (tapDeadline && (int32_t)(now - tapDeadline) >= 0) {  // pas de second tap : c'était un tap simple
-    tapDeadline = 0;
-    sendCmd(CMD_TOGGLE);
-  }
 }
 
 // Aléatoire : deux flèches croisées. Répétition : boucle fléchée, "1" pour répéter le morceau.
@@ -64,12 +57,6 @@ static void drawRepeat(int x, int y, uint16_t col, bool one) {
     canvas.setTextColor(col);
     canvas.drawString("1", x, y + 1);
   }
-}
-
-static void drawHeart(int x, int y, float r, uint16_t col) {
-  canvas.fillCircle(x - r * 0.5f, y, r * 0.55f, col);
-  canvas.fillCircle(x + r * 0.5f, y, r * 0.55f, col);
-  canvas.fillTriangle(x - r * 1.02f, y + r * 0.18f, x + r * 1.02f, y + r * 0.18f, x, y + r * 1.25f, col);
 }
 
 void musicVolumePing() { volUntil = millis() + VOL_SHOW_MS; }
@@ -131,32 +118,18 @@ static bool draw(float) {
     canvas.setTextColor(0x8410);
     canvas.drawString(hm, c, 30);
   }
-  uint32_t th = now - heartStart;
-  bool heart = heartStart && th < HEART_MS;
-  if (heart) {  // "J'aime" envoyé : cœur qui surgit puis s'efface
-    float k = th < HEART_MS / 2 ? easeOutBack(th / (HEART_MS / 2.f)) : 1.f;
-    float fade = th < HEART_MS / 2 ? 1.f : 1.f - (th - HEART_MS / 2) / (HEART_MS / 2.f);
-    drawHeart(c, 100, 34 * k, canvas.color565(255 * fade, 40 * fade, 90 * fade));
-  }
-  return volVisible || heart || tapDeadline || arcLag;
+  return volVisible || arcLag;
 }
 
 static void click() { sendCmd(CMD_TOGGLE); }
 
 static bool near(int x, int y, int cx) { return abs(x - cx) < 22 && abs(y - ICON_Y) < 20; }
 
-static void tap(int x, int y, uint8_t clicks) {
-  if (linkMode != LINK_AMS) { click(); return; }  // HID : ni J'aime ni icônes, pas d'attente
+static void tap(int x, int y, uint8_t) {
   Media cur = mediaSnapshot();
-  if (cur.shuffle >= 0 && near(x, y, SHUF_X)) { sendCmd(CMD_SHUFFLE); return; }
-  if (cur.repeat >= 0 && near(x, y, REP_X)) { sendCmd(CMD_REPEAT); return; }
-  if (clicks >= 2 && tapDeadline) {  // second tap rapproché : J'aime, et le tap simple en attente est annulé
-    tapDeadline = 0;
-    sendCmd(CMD_LIKE);
-    heartStart = millis() | 1;
-    return;
-  }
-  tapDeadline = millis() + DOUBLE_TAP_MS;
+  if (linkMode == LINK_AMS && cur.shuffle >= 0 && near(x, y, SHUF_X)) { sendCmd(CMD_SHUFFLE); return; }
+  if (linkMode == LINK_AMS && cur.repeat >= 0 && near(x, y, REP_X)) { sendCmd(CMD_REPEAT); return; }
+  click();  // tout de suite : plus d'attente d'un double tap
 }
 
 static void swipeX(int dir) {
