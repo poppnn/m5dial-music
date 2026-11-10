@@ -20,6 +20,7 @@
 #include <algorithm>
 #include "ancs.h"
 #include "gb.h"
+#include "sensors.h"
 #include "anim.h"
 #include "app.h"
 #include "ble_phone.h"
@@ -107,6 +108,7 @@ void setup() {
   settingsSelfTest();
   ancsSelfTest();
   gbSelfTest();
+  sensorsSelfTest();
   cleanTextSelfTest();
   bootAnimSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
@@ -118,6 +120,7 @@ void setup() {
   assert(fabsf(easeOutBack(0)) < 1e-4f && fabsf(easeOutBack(1) - 1) < 1e-4f && easeOutBack(0.7f) > 1);  // rebond
 
   imuInit();      // référence "droit" = orientation au démarrage (volant au centre)
+  sensorsInit();  // ENV III / baromètre de l'IMU Pro Mini, Port A ou B
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
   bootAnimInit();
   startBle();
@@ -142,6 +145,7 @@ void loop() {
   if (ancsService()) { lastInput = millis(); dirty = true; }  // appel ou notification : écran rallumé
   clockService();  // heure reçue de l'iPhone : appliquée ici (I2C du RTC hors de la tâche BLE)
   imuUpdate(dt);
+  sensorsUpdate();
   goveeService(page == PAGE_LED);
 
   // Encodeur (accumule les impulsions jusqu'à un cran complet)

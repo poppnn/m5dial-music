@@ -9,8 +9,8 @@
 #include "../settings.h"
 #include "../logo.h"
 
-extern const PageOps musicPage, ledPage, chronoPage, clockPage, systemPage, settingsPage;
-const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &clockPage, &systemPage, &settingsPage};
+extern const PageOps musicPage, ledPage, chronoPage, clockPage, sensorsPage, systemPage, settingsPage;
+const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &clockPage, &sensorsPage, &systemPage, &settingsPage};
 
 // Téléphone connecté : l'arc qui tourne se resserre vers le centre en se refermant en cercle, puis éclate en une
 // pastille de validation (coche) avec une onde qui part vers le bord. Ensuite, fondu vers l'interface.

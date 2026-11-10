@@ -89,9 +89,10 @@
       <li>iPhone: tap the icons at the bottom = shuffle / repeat, double tap = "Like"</li>
       <li>Incoming call (iPhone, Android with Gadgetbridge): press = answer, hold = decline</li>
       <li>Notification: app name and sender (contact in messaging apps), message text optional · press / tap / swipe = close</li>
-      <li>Swipe up or down: Music, LED, Stopwatch, Clock, System and Settings pages</li>
+      <li>Swipe up or down: Music, LED, Stopwatch, Clock, Sensors, System and Settings pages</li>
       <li>Stopwatch: press = start / pause, swipe left or right = reset</li>
-      <li>Clock: time, date and cabin temperature (with the IMU Unit on Port A)</li>
+      <li>Clock: time, date and cabin temperature (with a sensor unit)</li>
+      <li>Sensors: temperature, humidity, pressure and altitude from the M5Stack ENV III and IMU Pro Mini units (Port A or B, found at power on)</li>
       <li>Settings: turn = choose, press = edit then done: IMU direction, wheel, delays, day / night / auto brightness from the iPhone time, notifications (off / sender / full), accent colour, paired devices</li>
     </ul>
   </section>
@@ -114,16 +115,17 @@
       <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant.stl">support_volant.stl</a> ×1, flat underside, supports from the bed under the M5Dial ring only</li>
       <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/coque_batterie.stl">coque_batterie.stl</a> ×1 (battery shell), floor down, no supports</li>
       <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/couvercle_batterie.stl">couvercle_batterie.stl</a> ×1 (shell lid), lay it on its flat plate</li>
-      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/cache_ecrou.stl">cache_ecrou.stl</a> ×2 (nut caps), flat base</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/cache_ecrou.stl">cache_ecrou.stl</a> ×2 (low nut caps), flat base</li>
+      <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/cache_factice.stl">cache_factice.stl</a> ×1 (dummy cap that clips into the left spoke's hole), peg on the bed, supports under the dome rim</li>
       <li>Optional fit check first: <a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant_test.stl">support_volant_test.stl</a> (the two pads only)</li>
     </ul>
-    <p><strong>Hardware</strong>: LiPo 103450 (50 × 34 × 10 mm); per spoke an M5 × 16 screw, an M5 × 20 fender washer (a plain washer drops into the hole) and an M5 nut.</p>
+    <p><strong>Hardware</strong>: LiPo 103450 (50 × 34 × 10 mm); per spoke (bottom and right) an M5 × 14 hex screw, an M5 × 20 fender washer (a plain washer drops into the hole) and an M5 nut. Optional: M5Stack IMU Pro Mini (Port A, holder on the battery shell, inside the tube) and ENV III (Port B, slot on the outside of the tube) with short Grove cables.</p>
     <p><strong>Assembly</strong>:</p>
     <ol>
       <li>M5Dial into the ring from the top, clamp ring screwed on from underneath through the tube windows.</li>
       <li>Battery plugged in (check the polarity), slid into the shell, lead up through the slot, lid clipped on.</li>
       <li>Shell collar into the tube from underneath, then a 35° turn clockwise (seen from below) until it clicks.</li>
-      <li>Mount behind the two spokes, screw + washer + nut per spoke, nut caps pressed on, driver side.</li>
+      <li>Mount behind the two spokes, screw + washer + nut per spoke, nut caps pressed on, driver side; dummy cap clipped into the left spoke.</li>
       <li>Turn the wheel lock to lock: nothing must touch the stalks.</li>
     </ol>
     <p class="muted">Print files also coming on MakerWorld. Other wheels: Fusion 360 scripts with editable dimensions in <a href="https://github.com/poppnn/m5dial-music/tree/main/hardware/fusion">hardware/fusion</a>.</p>
@@ -153,7 +155,8 @@
       <li>Fix the boot GIF upload error.</li>
       <li>Publish the print files on MakerWorld.</li>
       <li>Photos, then release v1.2.0 with the three firmwares.</li>
-      <li>Later: temperature / humidity and ambient light sensors, battery level.</li>
+      <li>Check the ENV III and IMU Pro Mini readings on the Sensors page.</li>
+      <li>Later: ambient light sensor, battery level.</li>
     </ul>
   </section>
 

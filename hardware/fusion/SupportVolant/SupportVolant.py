@@ -75,6 +75,8 @@ PARAMS = [
     ("SHELL_WALL", 1.6, "mm", "Coque batterie : épaisseur des parois et du fond"),
     ("BAT_ROT", 0.0, "deg", "Coque batterie : orientation sous le M5Dial (0 = grand côté dans l'axe moyeu -> M5Dial)"),
     ("BAT_TWIST", 35.0, "deg", "Coque batterie : quart de tour de la baïonnette (vissage vu de dessous)"),
+    ("ENV_HOLDER", 1, "", "1 = logement de l'Unit ENV III (32 x 24 x 8) contre le tube, côté jante, glissée par le haut"),
+    ("IMU_HOLDER", 1, "", "1 = logement de l'Unit IMU Pro Mini (24 x 24 x 8) sur la coque, dans le tube, à plat"),
     ("TEST_FIT", 0, "", "1 = pièce d'essai rapide : les deux pattes reliées par la plaque, sans tube ni anneau du M5Dial"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
@@ -277,6 +279,8 @@ LUG_ANG, LUG_P = 30.0, 1.5   # tenons : largeur angulaire, saillie hors de la co
 LUG_Z0, LUG_Z1 = 2.6, 5.0    # tenons : hauteur (2,4 mm)
 GROOVE_Z0, GROOVE_Z1, GROOVE_D = 2.4, 5.2, 1.6  # gorge dans le pied du tube : rebord de 2,4 mm sous les tenons
 BUMP_D, BUMP_H = 2.0, 0.4    # bossage sous chaque tenon : frotte 0,2 mm sur la gorge puis tombe dans un creux (clic)
+IMU_S, IMU_T = 24.0, 8.0       # Unit IMU Pro Mini (BMI270 + BMM150 + BMP280) : 24 x 24 x 8
+ENV_L, ENV_W, ENV_T = 32.0, 24.0, 8.0  # Unit ENV III (SHT30 + QMP6988) : 32 x 24 x 8
 WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de la coque, depuis le bout ouvert
 
 
@@ -352,7 +356,34 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
         b.combine(lid, b.solid(b.rect(*loc(e - flap_l / 2 + 0.05, yf), flap_l + 0.1, flap_t, ang), z_b - wall - T + 0.5, T - 1), JOIN)
         yb = sy * (W / 2 - gap + 0.2)     # bossage : dépasse de 0,4 mm la face intérieure du flanc
         b.combine(lid, b.solid(b.rect(*loc(bump_x, yb), 3, 0.8, ang), z_mid - 2, 4), JOIN)
+    # Logement de l'IMU Pro Mini sur le dessus de la coque, dans la couronne : à plat (parallèle à l'écran, ce que
+    # demande "toujours droit"), sous le M5Dial, câble court vers le Port A. Ouvert côté jante : l'unité s'y glisse
+    # (prise Grove de ce côté), deux rebords la tiennent par-dessus.
+    if P["IMU_HOLDER"] >= 0.5:
+        s_, hc = IMU_S + 0.4, -2.0
+        b.combine(shell, b.solid(b.rect(*loc(hc, 0), s_ + 3.2, s_ + 3.2, ang), z_b, IMU_T + 0.4 + 1.2), JOIN)
+        b.extrude(b.rect(*loc(hc + 1.3, 0), s_ + 2.6, s_, ang), z_b, IMU_T + 0.4, CUT, [shell])
+        b.extrude(b.rect(*loc(hc + 1.3, 0), s_ + 2.6, s_ - 3, ang), z_b + IMU_T + 0.3, 2, CUT, [shell])
     return shell
+
+
+def env_holder(b, cup, cx, cy, z_b, r_base, a_out):
+    """Logement de l'Unit ENV III contre la paroi extérieure du tube, côté jante : à l'air libre, loin de la
+    batterie. L'unité (32 x 24 x 8, grand côté à l'horizontale) se glisse par le haut ; deux nervures la serrent,
+    la face avant est ajourée et les deux bouts sont ouverts pour la prise Grove. Renvoie sa demi-largeur angulaire."""
+    w = (math.cos(math.radians(a_out)), math.sin(math.radians(a_out)))
+    at_r = lambda r, t: (cx + w[0] * r - w[1] * t, cy + w[1] * r + w[0] * t)  # (rayon, décalage tangentiel)
+    ang_t = a_out + 90
+    L_, H_, T_ = ENV_L + 0.4, ENV_W + 0.4, ENV_T + 0.2    # logement : tangentiel, hauteur, profondeur
+    r0, rs = r_base - 6, r_base + 0.5                     # arrière dans la paroi ; fond du logement
+    r1 = rs + T_ + 1.6                                    # face avant
+    b.combine(cup, b.solid(b.rect(*at_r((r0 + r1) / 2, 0), L_ + 3.2, r1 - r0, ang_t), z_b, H_ + 1.6), JOIN)
+    b.extrude(b.rect(*at_r(rs + T_ / 2, 0), L_, T_, ang_t), z_b + 1.6, H_ + 1, CUT, [cup])
+    b.extrude(b.rect(*at_r(rs + T_ + 1, 0), L_ - 6.4, 3, ang_t), z_b + 4.6, H_, CUT, [cup])  # face avant ajourée
+    for sgn in (1, -1):  # bouts ouverts (prise Grove) et nervures de serrage sur le fond
+        b.extrude(b.rect(*at_r(rs + T_ / 2, sgn * (L_ / 2 + 1)), 3, T_, ang_t), z_b + 6.6, H_, CUT, [cup])
+        b.combine(cup, b.solid(b.rect(*at_r(rs + 0.2, sgn * 8), 1.0, 0.4, ang_t), z_b + 1.6, H_), JOIN)
+    return math.degrees(math.asin(min(1.0, (L_ / 2 + 3.6) / r_base))) + 4
 
 
 def free_runs(busy):
@@ -433,9 +464,12 @@ def build(comp, P):
         ox, oy = sd * join / 2 * nx, sd * join / 2 * ny
         b.combine(cup, tilted(b.rect(x - 10 * ux + ox, y - 10 * uy + oy, P["PAD_L"] + 20, pw + join, rad), -40, 40), JOIN)
         hl0 = P["PAD_L"] / 2 * math.cos(math.radians(til))
+        # Bout côté jante du coin : face penchée qui avance vers la jante jusqu'au pied (z_b)
+        depth = (P["PAD_L"] / 2 * math.sin(math.radians(til)) + dz - z_b) / math.cos(math.radians(til))
+        t_max = hl0 + depth * math.sin(math.radians(til))
         for d in range(360):  # degrés du tube touchés par la patte prolongée (+ 4° de marge) : pas de fenêtre là
             px, py = cx + r_base * math.cos(math.radians(d)) - x, cy + r_base * math.sin(math.radians(d)) - y
-            if -hl0 <= ux * px + uy * py <= hl0 and -pw / 2 <= sd * (nx * px + ny * py) <= pw / 2 + join:
+            if -hl0 <= ux * px + uy * py <= t_max and -pw / 2 <= sd * (nx * px + ny * py) <= pw / 2 + join:
                 busy.update(range(d - 4, d + 5))
         hl = P["PAD_L"] / 2 * math.cos(math.radians(til)) + 15
         b.combine(cup, b.solid(b.rect(x - hl * ux + ox, y - hl * uy + oy, 30, pw + join + 4, rad), z_b - 1, 100), CUT)
@@ -443,6 +477,9 @@ def build(comp, P):
         b.combine(cup, tilted(b.rect(x, y, 70, band_w(P, k), rad), 0, 40), CUT)
     if not test:  # tube ajouté après les recoupes des pattes, qui ne doivent pas l'entailler
         b.combine(cup, b.solid(b.circles([(cx, cy)], r_base), z_b, max(slab, P["DIAL_RISE"] + P["RING_T"])), JOIN)
+        if raised and P["ENV_HOLDER"] >= 0.5:
+            half_env = env_holder(b, cup, cx, cy, z_b, r_base, a_out)
+            busy.update(range(int(a_out - half_env), int(a_out + half_env) + 1))  # pas de fenêtre derrière
 
     # Passage du corps du M5Dial (les nervures le serrent, plus bas)
     r_in = P["BODY_D"] / 2 + 0.3

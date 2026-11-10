@@ -31,7 +31,7 @@ pythonw tools/windows/m5dial_pc.py
 It reads what Windows shows in its media panel (Spotify, Apple Music, browser...) and the Windows notifications
 (Settings › Privacy › Notifications must allow access). To start it with Windows: shortcut in `shell:startup`.
 
-6 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **System**, **Settings**.
+7 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **Sensors**, **System**, **Settings**.
 
 - Wheel: volume − / + (LED: brightness or hue)
 - Wheel press or screen tap: play / pause (LED: on / off, Stopwatch: start / pause)
@@ -88,9 +88,11 @@ Close the Govee Home app: the bar only accepts one connection.
 
 - **Stopwatch**: 7-segment display, hundredths, second-hand ring (one turn per minute). Press = start / pause,
   swipe left or right = reset. It keeps running when you change page.
-- **Clock**: iPhone time and date (Current Time Service), seconds ring, and the **temperature** from the IMU Unit
-  sensor on Port A (close to cabin temperature; not shown without the IMU). The M5Dial RTC keeps the time while
+- **Clock**: phone time and date, seconds ring, and the cabin **temperature** (ENV III, else the IMU Pro Mini
+  barometer, else the IMU chip; not shown without a sensor). The M5Dial RTC keeps the time while
   disconnected and off; it is set again on every connection (and when daylight saving time changes).
+- **Sensors**: temperature, humidity, pressure (hPa) and barometric altitude, plus the units found and their port
+  (see [Sensors](#sensors)).
 - **System**: last boot reason (normal, crash, watchdog, brownout), connected phone and its signal, Govee LEDs,
   CPU frequency and temperature, frames per second and render time, free RAM, uptime. Battery level cannot be
   measured: the M5Dial has no battery voltage or charge signal wired to the ESP32 (it would need a voltage divider
@@ -116,7 +118,7 @@ Close the Govee Home app: the bar only accepts one connection.
   during the transfer.
 - Every text is fitted to the round screen: long titles, names and settings rows are truncated with "..." to the
   width available at their height.
-- **Always upright**: with an **M5Stack IMU Unit on Port A**, the UI rotates to stay level. The M5Dial has no
+- **Always upright**: with an **M5Stack IMU Pro Mini (or IMU Unit) on Port A**, the UI rotates to stay level. The M5Dial has no
   built-in IMU. Mount the unit flat on the back of the case. The orientation at power on is the "upright"
   reference. If the screen turns the wrong way: Settings › IMU dir › reversed.
 
@@ -167,6 +169,7 @@ The print files will also be on **MakerWorld** (link coming).
 | [`coque_batterie.stl`](hardware/coque_batterie.stl) | 1 | floor down (as exported) | none (the top bridges 38 mm) |
 | [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
 | [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
+| [`cache_factice.stl`](hardware/cache_factice.stl) | 1 | peg on the bed | under the dome rim |
 | [`support_volant_test.stl`](hardware/support_volant_test.stl) | optional | flat underside | none |
 
 PETG or ASA (PLA softens in a car in the sun), 4 perimeters, 30–40 % infill for the mount, 3 perimeters for the
@@ -174,9 +177,10 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
 
 ### Hardware
 
-- M5Stack **M5Dial** (v1.1), and optionally an M5Stack **IMU Unit** on Port A (screen stays level).
+- M5Stack **M5Dial** (v1.1). Optional: **IMU Pro Mini** unit on Port A (screen stays level, pressure) and **ENV III**
+  unit on Port B (temperature, humidity, pressure), with short Grove cables.
 - LiPo **103450** (50 × 34 × 10 mm) with its protection board and a lead long enough to reach the M5Dial.
-- Per spoke: **M5 × 16 screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
+- Per spoke (bottom and right): **M5 × 14 hex screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
 
 ### Assembly
 
@@ -189,8 +193,12 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    as seen from below** until it clicks.
 5. Fit the mount behind the bottom and right spokes, one screw per spoke through the Ø 16 hole with the Ø 20
    washer, nut and screw head on either side (the hex pocket at the back of the pad holds a nut or a screw head),
-   then press a **nut cap** onto each nut on the driver side.
-6. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
+   then press a **nut cap** onto each nut on the driver side, and clip the **dummy cap** into the left spoke's
+   Ø 16 hole (nothing is fixed there; the three spokes look alike).
+6. Optional sensors: slide the **IMU Pro Mini** flat into its holder on top of the battery shell before step 4
+   (inside the tube, Grove socket towards the open side) and plug it into Port A; slide the **ENV III** into its slot on the outside
+   of the tube (rim side, from the top) and plug it into Port B. They are found at power on.
+7. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
 
 ### Design notes
 
@@ -209,9 +217,14 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   3 lugs (30° wide, 2.4 mm tall) in a groove of the tube foot, a bump under each lug clicks into a dimple. Snap-on
   lid with 2 flexible tabs; vent slots in the floor, the sides and the top (into the tube). Remove the shell to
   reach the M5Dial clamp ring. Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
-- **Nut caps**: dome Ø 24 × 10 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the washer
-  underneath. Source [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou): `NUT_AF` 8.0 if too loose, 8.2 if
-  too tight.
+- **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
+  washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
+  clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
+  [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou): `NUT_AF` 8.0 if too loose, 8.2 if too tight.
+- **Sensor holders** (`ENV_HOLDER`, `IMU_HOLDER` = 1): the IMU Pro Mini (24 × 24 × 8) lies flat in a holder on top
+  of the battery shell, inside the tube (parallel to the screen, as "always upright" needs), held by two lips; the
+  ENV III (32 × 24 × 8) slides from the top into a slot on the outside of the tube, rim side, in open air away from
+  the battery (two ribs hold it, open front and open ends for the Grove plug).
 - **Source model**: Fusion 360 script [`hardware/fusion/SupportVolant`](hardware/fusion/SupportVolant). Utilities ›
   Add-Ins › Scripts › "+" › pick the folder › Run. Dimensions are user parameters (Modify › Change Parameters);
   run the script again, then export the STLs. `TEST_FIT` = 1 builds the test part, 0 the full mount.
@@ -236,19 +249,32 @@ To do next (owner's list):
 - [ ] Publish the print files on **MakerWorld** and add the link here and on the web flasher.
 - [ ] Add photos to `docs/img/` (wheel, pages, mount).
 - [ ] Release **v1.2.0** (three firmwares) once Android and Windows are checked.
-- [ ] Later: ENV III and DLight sensors (see below), battery level (needs a voltage divider to an ADC pin).
+- [ ] Print the flatter nut caps and the dummy cap; plug the IMU Pro Mini (Port A) and the ENV III (Port B) and
+      check the Sensors page (values, ports found).
+- [ ] Later: DLight ambient light sensor, battery level (needs a voltage divider to an ADC pin).
 
 ## License
 
 [MIT](LICENSE).
 
-## Sensors (planned)
+## Sensors
 
-Ports: **A** = I2C (G13 SDA / G15 SCL), **B** = G2 / G1 (can be set up as a second I2C bus). Suggested M5Stack units:
-**IMU Pro Mini** (BMI270 + BMM150 + BMP280) on Port A for "always upright", **ENV III** (SHT30 + QMP6988:
-temperature, humidity, pressure) on Port B; their I2C addresses do not clash (avoid ENV IV with the IMU Pro Mini:
-both have a BMP280 at 0x76). Also worth a look: **DLight** (BH1750, ambient light → automatic screen brightness).
-Only the IMU is supported by the firmware today (its chip temperature is shown on the Clock page).
+Ports: **A** = I2C (G13 SDA / G15 SCL), **B** = G1 / G2. Supported M5Stack units, each one optional and found at
+power on, on Port A or Port B:
+
+| Unit | Chips | Used for |
+|---|---|---|
+| **IMU Pro Mini** (Port A) | BMI270 + BMM150, BMP280 (0x76) | always upright (accelerometer), pressure, temperature |
+| **ENV III** (Port B) | SHT30 (0x44), QMP6988 (0x70) | temperature, humidity, pressure |
+| IMU Unit (Port A) | MPU6886 | always upright, chip temperature |
+
+The ESP32-S3 has only two I2C controllers (the internal bus and Port A), so Port B is read by moving the Port A
+controller onto its pins for each reading (once a second), then back. Temperature comes from the SHT30, else the
+BMP280, else the QMP6988; pressure from the QMP6988, else the BMP280. Altitude is barometric (standard atmosphere,
+1013.25 hPa at sea level), so it drifts with the weather. The BMM150 magnetometer is not used: on a steering wheel,
+in a steel car body, a compass would not be reliable. Code: `src/sensors.cpp`, page `src/pages/sensors_page.cpp`.
+
+Also worth a look later: **DLight** (BH1750, ambient light → automatic screen brightness).
 
 ## Notes
 
@@ -257,6 +283,6 @@ Only the IMU is supported by the firmware today (its chip temperature is shown o
 - Android and Windows have no built-in BLE service for track info: Gadgetbridge (Android) and the PC app (Windows)
   fill that gap with the Bangle.js text protocol (`src/gb.cpp`).
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
-- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications), `gb` (Gadgetbridge / PC app lines),
+- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications), `gb` (Gadgetbridge / PC app lines), `sensors` (ENV III, BMP280),
   `govee`, `display` (DMA rendering), `encoder` (wheel on the PCNT hardware counter), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.
