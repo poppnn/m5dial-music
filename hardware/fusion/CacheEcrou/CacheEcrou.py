@@ -31,6 +31,7 @@ SCREW_TOP = 6.3    # 1,2 mm de plastique au sommet (vis M5 x 14 : 0,5 mm au-dess
 HOLE_D = 16.0      # grand trou de la branche (cache factice)
 SPOKE_T = 5.0      # épaisseur de la branche
 PEG_WALL, BARB = 1.2, 0.5  # téton du cache factice : paroi des 4 doigts, saillie du crochet sous la branche
+PEG_GAP, PEG_ROOT = 1.0, 3.0  # gorge autour des doigts et profondeur dans le dôme : doigts plus longs, plus souples
 
 # Arc du dôme : centre sur l'axe, passe par (R, H_SKIRT) et (0, H)
 ZC = (H * H - H_SKIRT * H_SKIRT - R * R) / (2 * (H - H_SKIRT))
@@ -46,7 +47,11 @@ def dome_x(z):
 assert dome_x(WASHER_T + NUT_T) - NUT_AF / math.sqrt(3) > 1.5
 assert dome_x(SCREW_TOP) - SCREW_D / 2 > 1.5 and H - SCREW_TOP >= 1.2
 assert R - WASHER_D / 2 >= 1.6
-assert 3 * PEG_WALL * BARB / (2 * (SPOKE_T + 1.7) ** 2) < 0.025  # déformation du doigt au clipsage < 2,5 %
+# Doigts imprimés debout : ils plient à travers les couches, le point faible du PLA -> déformation < 1 %.
+# Flèche = ce que le crochet dépasse du trou ; longueur = racine (dans le dôme) -> sommet du crochet.
+PEG_RO = HOLE_D / 2 - 0.2
+assert 3 * PEG_WALL * (PEG_RO + BARB - HOLE_D / 2) / (2 * (PEG_ROOT + SPOKE_T + 1.0) ** 2) < 0.01
+assert dome_x(PEG_ROOT) - (PEG_RO + PEG_GAP) > 1.5  # paroi du dôme au fond de la gorge
 
 
 def p3(x, y, z=0.0):
@@ -121,18 +126,23 @@ def build(comp):
 
     ox = 30.0
     fake = dome(comp, ox, "Cache factice")
-    ro, ri, zb = HOLE_D / 2 - 0.2, HOLE_D / 2 - 0.2 - PEG_WALL, -(SPOKE_T + 0.3)  # crochet 0,3 mm sous la branche
+    ro, ri, zb = PEG_RO, PEG_RO - PEG_WALL, -(SPOKE_T + 0.3)  # crochet 0,3 mm sous la branche
     revolve(comp, ox, [(ri, 0.5), (ro, 0.5), (ro, zb), (ro + BARB, zb), (ro + BARB, zb - 0.7), (ro, zb - 1.4), (ri, zb - 1.4)],
             adsk.fusion.FeatureOperations.JoinFeatureOperation, fake)
+    # Racine des doigts remontée de PEG_ROOT dans le dôme : creux au centre et gorge autour (cachés par la branche)
+    cut(comp, fake, lambda k: k.sketchCurves.sketchCircles.addByCenterRadius(p3(ox, 0), ri / 10), 0, PEG_ROOT)
+    revolve(comp, ox, [(ro, -0.1), (ro + PEG_GAP, -0.1), (ro + PEG_GAP, PEG_ROOT), (ro, PEG_ROOT)],
+            adsk.fusion.FeatureOperations.CutFeatureOperation, fake)
 
     def slots(k):  # 2 fentes en croix : 4 doigts souples
+        n = ro + PEG_GAP  # jusqu'au bord de la gorge
         for a in (0, 90):
             u, v = math.cos(math.radians(a)), math.sin(math.radians(a))
-            pts = [p3(ox + sx * 10 * u - sy * 0.8 * v, sx * 10 * v + sy * 0.8 * u) for sx, sy in ((1, 1), (-1, 1), (-1, -1), (1, -1))]
+            pts = [p3(ox + sx * n * u - sy * 0.8 * v, sx * n * v + sy * 0.8 * u) for sx, sy in ((1, 1), (-1, 1), (-1, -1), (1, -1))]
             for j in range(4):
                 k.sketchCurves.sketchLines.addByTwoPoints(pts[j], pts[(j + 1) % 4])
 
-    cut(comp, fake, slots, zb - 2, -zb + 2)
+    cut(comp, fake, slots, zb - 2, -zb + 2 + PEG_ROOT)
     return nut, fake
 
 
