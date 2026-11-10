@@ -167,11 +167,14 @@ The print files will also be on **MakerWorld** (link coming).
 |---|---|---|---|
 | [`support_volant.stl`](hardware/support_volant.stl) | 1 | flat underside (as exported) | only from the bed under the M5Dial ring |
 | [`coque_batterie.stl`](hardware/coque_batterie.stl) | 1 | floor down (as exported) | none (the top bridges 38 mm) |
+| [`support_volant_sans_capteurs.stl`](hardware/support_volant_sans_capteurs.stl) | instead | same as the mount, **without** the ENV III slot (bigger rim-side windows) | same |
+| [`coque_batterie_sans_capteurs.stl`](hardware/coque_batterie_sans_capteurs.stl) | instead | same as the shell, **without** the IMU Pro Mini holder | none |
 | [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
 | [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
 | [`cache_factice.stl`](hardware/cache_factice.stl) | 1 | peg on the bed | under the dome rim |
 | [`support_volant_test.stl`](hardware/support_volant_test.stl) | optional | flat underside | none |
 
+No sensor units? Print the two `_sans_capteurs` files instead (they fit the same lid, caps and screws).
 PETG or ASA (PLA softens in a car in the sun), 4 perimeters, 30–40 % infill for the mount, 3 perimeters for the
 other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit on the wheel before the full print.
 
