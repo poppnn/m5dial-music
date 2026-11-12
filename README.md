@@ -51,8 +51,8 @@ Through Apple's ANCS service (no app to install, pairing is enough):
 - **Incoming call**: full screen on any page, iPhone style: caller name in large type, a red button (decline)
   and a green one (answer) to tap. Or with the wheel: **press** = answer, **hold** (0.8 s) = decline. The screen
   then goes back to the previous page.
-- **Notification**: for safety while driving, the **app name**, the **sender** (contact name in messaging apps)
-  and the notification count (5 s). Settings › Notifs: **off** (none shown), **sender** (default), **full** (plus
+- **Notification**: full screen, sliding down from the top. For safety while driving, the **app name**, the
+  **sender** (contact name in messaging apps) and the notification count (5 s). Settings › Notifs: **off** (none shown), **sender** (default), **full** (plus
   the message text, 8 s). Press, tap or swipe = close (it slides away). Emojis are removed (the screen font has none; they would show as squares).
 - Simple gestures only (wheel, press): no precise swipes on these screens.
 - If the iPhone does not offer notifications for "M5Dial Music": iOS Settings › Bluetooth › (i) ›
