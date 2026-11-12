@@ -33,13 +33,19 @@ jobs:
       - run: pio run  # les 3 firmwares : m5dial (iPhone), android, windows
         env:
           PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
-      - name: Merge each firmware into one image (offset 0x0)
+      # Deux morceaux, PAS une seule image depuis 0x0 : elle remplissait de 0xFF le trou 0x9000-0xe000, c.-à-d. la NVS
+      # (réglages, appareils appairés), effacée à chaque mise à jour. Démarrage (commun aux 3) à 0x0, puis par
+      # firmware otadata + application à 0xe000 ; la NVS entre les deux n'est jamais écrite.
+      - name: Images for the web flasher (NVS 0x9000-0xe000 left untouched)
         run: |
+          B=.pio/build/m5dial
+          esptool.py --chip esp32s3 merge_bin -o docs/m5dial-boot.bin --flash_mode keep --flash_size 8MB \
+            0x0 $B/bootloader.bin 0x8000 $B/partitions.bin
+          [ $(stat -c %s docs/m5dial-boot.bin) -le $((0x9000)) ]  # ne déborde pas sur la NVS
           for E in m5dial android windows; do
             B=.pio/build/$E
             OUT=docs/m5dial-music$([ $E = m5dial ] || echo "-$E").bin
-            esptool.py --chip esp32s3 merge_bin -o "$OUT" --flash_mode keep --flash_size 8MB \
-              0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
+            esptool.py --chip esp32s3 merge_bin -o "$OUT" --target-offset 0xe000 --flash_mode keep \
               0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
               0x10000 $B/firmware.bin
           done

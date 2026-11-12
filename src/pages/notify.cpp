@@ -10,8 +10,8 @@
 
 #define TOAST_MS      5000  // app + expéditeur
 #define TOAST_TEXT_MS 8000  // avec titre et texte (option des Réglages)
-#define TOAST_IN_MS   420  // descente depuis le haut (écran entier : un peu plus long qu'un panneau, reste fluide)
-#define TOAST_OUT_MS  280
+#define TOAST_IN_MS   450  // descente depuis le haut, accélère puis freine (easeInOutSine) : pas de grand saut par image
+#define TOAST_OUT_MS  350
 
 static int wrap(const std::string& s, int maxW, std::string* lines, int maxLines);
 
@@ -114,46 +114,61 @@ bool toastShown(uint32_t now) {
 // Largeur utile d'une ligne de texte de hauteur h centrée en y, dans l'écran rond (marge de 4 px de chaque côté).
 static int room(int y, int h) { return 2 * textSpace(y, h, 118) - 8; }
 
-// Notification : prend tout l'écran le temps de son affichage. Descend du haut (easeOutCubic, sans rebond),
-// remonte à la fermeture (geste) ou à la fin de sa durée ; la page réapparaît dessous pendant le glissement.
-// true pendant ces animations (sinon 4 images/s suffisent).
+// Notification : prend tout l'écran le temps de son affichage. Descend du haut et remonte à la fermeture (geste)
+// ou à la fin de sa durée, en accélérant puis freinant (easeInOutSine : pas de grand saut au départ ni à
+// l'arrivée) ; la page réapparaît dessous pendant le glissement. true pendant ces animations (sinon 4 images/s).
 bool drawToast(uint32_t now) {
   const NotifToast& t = ancsToast();
   if (!t.since) return false;
   uint32_t age = now - t.since;
   int32_t outAge = (int32_t)(now - (t.closing ? t.closing : t.since + life(t)));  // < 0 : sortie pas commencée
   if (outAge >= TOAST_OUT_MS) return false;
-  float in = age < TOAST_IN_MS ? easeOutCubic(age / (float)TOAST_IN_MS) : 1.f;
-  float out = outAge > 0 ? easeInCubic(outAge / (float)TOAST_OUT_MS) : 0.f;
+  bool text = withText(t);
+  // Mise en page (troncatures, coupure en lignes) calculée une fois par notification : refaite à chaque image,
+  // ses dizaines de mesures de texte ralentissaient justement les images du glissement.
+  static uint32_t laidFor = 0;
+  static bool laidText = false;
+  static std::string app, title, lines[4];
+  static int nLines = 0;
+  if (laidFor != t.since || laidText != text) {
+    laidFor = t.since;
+    laidText = text;
+    std::string a = t.app.empty() ? "Notification" : t.app;
+    canvas.setFont(text ? &fonts::efontJA_16 : &fonts::efontJA_24);
+    app = fit(a, text ? room(48, 16) : room(92, 24));
+    canvas.setFont(text ? &fonts::efontJA_24 : &fonts::efontJA_16);
+    title = fit(t.title, text ? room(80, 24) : room(126, 16));
+    canvas.setFont(&fonts::efontJA_16);
+    nLines = text ? wrap(t.message, room(178, 16), lines, 4) : 0;  // largeur de la ligne la plus basse (la plus étroite)
+  }
+  float in = age < TOAST_IN_MS ? easeInOutSine(age / (float)TOAST_IN_MS) : 1.f;
+  float out = outAge > 0 ? easeInOutSine(outAge / (float)TOAST_OUT_MS) : 0.f;
   int dy = (int)lroundf(-240 * (1.f - in) - 240 * out);  // 0 = écran entier couvert
   const int c = 120;
   canvas.fillRect(0, dy, 240, 240, 0x10A2);
   canvas.fillRect(0, dy + 240, 240, 3, accent());  // bord bas : visible pendant le glissement, hors écran à l'arrêt
   canvas.setTextDatum(middle_center);
-  std::string app = t.app.empty() ? "Notification" : t.app;
-  if (withText(t)) {  // app, titre (expéditeur), puis le texte sur 4 lignes
+  if (text) {  // app, titre (expéditeur), puis le texte sur 4 lignes
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(accent());
-    canvas.drawString(fit(app, room(48, 16)).c_str(), c, 48 + dy);
+    canvas.drawString(app.c_str(), c, 48 + dy);
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(fit(t.title, room(80, 24)).c_str(), c, 80 + dy);
+    canvas.drawString(title.c_str(), c, 80 + dy);
     canvas.setFont(&fonts::efontJA_16);
-    std::string lines[4];
-    int n = wrap(t.message, room(178, 16), lines, 4);  // largeur de la ligne la plus basse (la plus étroite)
     canvas.setTextColor(0xCE79);
-    for (int i = 0; i < n; i++) canvas.drawString(lines[i].c_str(), c, 112 + i * 22 + dy);
+    for (int i = 0; i < nLines; i++) canvas.drawString(lines[i].c_str(), c, 112 + i * 22 + dy);
   } else {  // app en gros, expéditeur (nom du contact dans une messagerie), puis le compteur
     char b[32];
     int n = ancsCount();
     snprintf(b, sizeof(b), "%d notification%s", n, n > 1 ? "s" : "");
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(fit(app, room(92, 24)).c_str(), c, 92 + dy);
+    canvas.drawString(app.c_str(), c, 92 + dy);
     canvas.setFont(&fonts::efontJA_16);
-    if (!t.title.empty()) canvas.drawString(fit(t.title, room(126, 16)).c_str(), c, 126 + dy);
+    if (!title.empty()) canvas.drawString(title.c_str(), c, 126 + dy);
     canvas.setTextColor(0xAD55);
-    canvas.drawString(b, c, (t.title.empty() ? 128 : 152) + dy);
+    canvas.drawString(b, c, (title.empty() ? 128 : 152) + dy);
   }
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0x5AEB);

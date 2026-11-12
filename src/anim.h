@@ -8,6 +8,7 @@ inline float wrap180(float a) { while (a > 180) a -= 360; while (a < -180) a += 
 inline float smoothK(float dt, float tau) { return 1.f - expf(-dt / tau); }
 inline float easeOutCubic(float t) { t = 1.f - t; return 1.f - t * t * t; }
 inline float easeInCubic(float t) { return t * t * t; }
+inline float easeInOutSine(float t) { return 0.5f - 0.5f * cosf(t * (float)M_PI); }  // vitesse max 1,57x la moyenne
 inline float easeOutBack(float t) { t -= 1.f; return 1.f + 2.70158f * t * t * t + 1.70158f * t * t; }  // dépasse puis revient
 
 // Glissement : sortie (easeIn) puis entrée par le côté opposé (easeOut). Mis à jour une fois par image.
