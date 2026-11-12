@@ -183,8 +183,13 @@ void loop() {
     dirty = true;
   }
 
-  if (call) {  // appel entrant : seulement le bouton (gestes simples en conduisant)
-    if (!swallowBtn && M5Dial.BtnA.pressedFor(CALL_REJECT_MS)) { ancsAnswer(false); swallowBtn = true; dirty = true; }
+  // Position du tap ramenée dans le repère de l'interface, tournée de rot degrés
+  float tr = rot * DEG_TO_RAD, tx = t.x - 120, ty = t.y - 120;
+  int ux = 120 + cosf(tr) * tx + sinf(tr) * ty, uy = 120 - sinf(tr) * tx + cosf(tr) * ty;
+  if (call) {  // appel entrant : rond vert / rouge, ou molette (appui = décrocher, appui long = refuser)
+    int b = t.wasClicked() ? callButtonAt(ux, uy) : 0;
+    if (b) { ancsAnswer(b > 0); dirty = true; }
+    else if (!swallowBtn && M5Dial.BtnA.pressedFor(CALL_REJECT_MS)) { ancsAnswer(false); swallowBtn = true; dirty = true; }
     else if (btnClick) { ancsAnswer(true); dirty = true; }
     btnClick = btnHold = false;
   } else if (toastShown(now) && (btnClick || t.wasClicked())) {  // notification affichée : appui = la fermer
@@ -195,9 +200,8 @@ void loop() {
     PAGES[page]->click();
     dirty = true;
   } else if (!bootShown && t.wasClicked()) {
-    if (PAGES[page]->tap) {  // position ramenée dans le repère de l'interface, tournée de rot degrés
-      float r = rot * DEG_TO_RAD, x = t.x - 120, y = t.y - 120;
-      PAGES[page]->tap(120 + cosf(r) * x + sinf(r) * y, 120 - sinf(r) * x + cosf(r) * y, t.getClickCount());
+    if (PAGES[page]->tap) {
+      PAGES[page]->tap(ux, uy, t.getClickCount());
     } else {
       PAGES[page]->click();
     }

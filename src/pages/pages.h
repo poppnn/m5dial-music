@@ -25,6 +25,7 @@ void volumeWheel(int detents);              // molette = volume (pages Musique, 
 
 // Écrans iPhone (notify.cpp) : appel entrant plein écran, notification en surimpression.
 bool drawCall(uint32_t now, const std::string& caller);
+int callButtonAt(int x, int y);  // tap pendant un appel : +1 décrocher, -1 refuser, 0 ailleurs
 bool drawToast(uint32_t now);
 bool toastShown(uint32_t now);
 
