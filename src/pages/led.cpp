@@ -2,7 +2,7 @@
 // - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
 // - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran : un tour de
 //   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie ;
-// - effet : glisser choisit fixe / clignotement / respiration / arc-en-ciel, la molette règle sa vitesse ; la
+// - effet : glisser choisit l'effet (fixe, clignotements, respiration, arc-en-ciel), la molette sa vitesse ; la
 //   pastille joue l'effet.
 // Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
 // entre avec un rebond. Appui = allumer / éteindre.

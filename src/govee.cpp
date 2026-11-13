@@ -24,10 +24,13 @@ static volatile bool connecting = false;  // connexion en cours dans connectTask
 uint32_t goveeRetry = 0;
 bool ledOn = true, ledCustom = false;
 int ledWheel = WHEEL_BRI, ledFx = FX_FIXED, ledFxSpeed = FX_SPEED_DEFAULT;
-const char* const LED_FX_NAMES[FX_COUNT] = {"Fixed", "Blink", "Breathe", "Rainbow"};
+const char* const LED_FX_NAMES[FX_COUNT] = {"Fixed", "Blink", "Smooth blink", "Random blink", "Breathe", "Rainbow"};
 const float FX_SPEEDS[FX_SPEED_COUNT] = {0.25f, 0.35f, 0.5f, 0.7f, 1.f, 1.4f, 2.f, 2.8f, 4.f};  // x1,4 par cran
 #define FX_GAP_MS   100   // effets : une couleur tous les 100 ms (2 trames chacune, voir sendColor)
 #define BLINK_MS    500   // clignotement : 0,5 s allumé, 0,5 s éteint
+#define SMOOTH_MS   1000  // clignotement doux : fondu 1/4, allumé 1/4, fondu 1/4, éteint 1/4
+#define RANDOM_SLOT 400   // clignotement aléatoire : par tranche de 400 ms, un éclair de 150 ms dans 35 % des
+#define RANDOM_ON   150   // tranches, décalé au hasard : écarts de 0,3 à 4 s environ
 #define BREATHE_MS  3000  // respiration : une inspiration-expiration en 3 s
 #define RAINBOW_MS  7200  // balayage RVB : tour complet de la roue des couleurs en 7,2 s
 // Luminosité en % : le H7090 attend 0-100 (au-delà il sature : avec 0-255, seul le bas de la course agissait).
@@ -79,19 +82,35 @@ LedColor hueColor(int hue) {
 
 LedColor ledCurrent() { return ledCustom ? hueColor(ledHue) : LED_COLORS[ledColor]; }
 
+// Hachage entier (lowbias32) : hasard reproductible, la pastille et la barre clignotent ensemble.
+static uint32_t hash32(uint32_t x) {
+  x ^= x >> 16; x *= 0x7feb352dU; x ^= x >> 15; x *= 0x846ca68bU; x ^= x >> 16;
+  return x;
+}
+
+static float easeSine(float x) { return 0.5f - 0.5f * cosf(x * (float)PI); }
+
 // Couleur de l'effet au temps t de l'effet (ms, à la vitesse x1).
 static LedColor ledShownAt(uint32_t now) {
   LedColor c = ledCurrent();
-  if (ledFx == FX_BLINK && now / BLINK_MS % 2) {
-    c.r = c.g = c.b = 0;
+  float k = 1;  // intensité de la couleur choisie
+  if (ledFx == FX_BLINK) {
+    k = now / BLINK_MS % 2 ? 0 : 1;
+  } else if (ledFx == FX_SMOOTH_BLINK) {
+    float p = now % SMOOTH_MS / (float)SMOOTH_MS * 4;  // 0-1 monte, 1-2 allumé, 2-3 descend, 3-4 éteint
+    k = p < 1 ? easeSine(p) : p < 2 ? 1 : p < 3 ? 1 - easeSine(p - 2) : 0;
+  } else if (ledFx == FX_RANDOM_BLINK) {
+    uint32_t slot = now / RANDOM_SLOT, h = hash32(slot), start = (h >> 8) % (RANDOM_SLOT - RANDOM_ON);
+    uint32_t in = now % RANDOM_SLOT;
+    k = h % 100 < 35 && in >= start && in < start + RANDOM_ON ? 1 : 0;
   } else if (ledFx == FX_BREATHE) {
-    float k = 0.06f + 0.94f * (0.5f - 0.5f * cosf(now % BREATHE_MS * (2 * PI / BREATHE_MS)));  // jamais tout à fait noir
-    c.r = c.r * k;
-    c.g = c.g * k;
-    c.b = c.b * k;
+    k = 0.06f + 0.94f * (0.5f - 0.5f * cosf(now % BREATHE_MS * (2 * PI / BREATHE_MS)));  // jamais tout à fait noir
   } else if (ledFx == FX_RAINBOW) {
     c = hueColor(now % RAINBOW_MS * 360 / RAINBOW_MS);
   }
+  c.r = c.r * k;
+  c.g = c.g * k;
+  c.b = c.b * k;
   return c;
 }
 
@@ -113,6 +132,14 @@ void goveeSelfTest() {
   ledColor = 1;  // Rouge (255, 0, 0)
   ledFx = FX_BLINK;
   assert(ledShownAt(0).r == 255 && ledShownAt(BLINK_MS).r == 0 && ledShownAt(2 * BLINK_MS).r == 255);
+  ledFx = FX_SMOOTH_BLINK;  // monte, allumé, descend, éteint
+  assert(ledShownAt(0).r == 0 && ledShownAt(SMOOTH_MS / 8).r > 100 && ledShownAt(SMOOTH_MS / 8).r < 155 &&
+         ledShownAt(SMOOTH_MS * 3 / 8).r == 255 && ledShownAt(SMOOTH_MS * 7 / 8).r == 0);
+  ledFx = FX_RANDOM_BLINK;  // tranche 0 : éclair de 0 à 150 ms ; puis ~12 % du temps allumé, à intervalles irréguliers
+  assert(ledShownAt(0).r == 255 && ledShownAt(RANDOM_ON + 50).r == 0);
+  int lit = 0;
+  for (uint32_t t = 0; t < 40000; t += 50) lit += ledShownAt(t).r > 0;
+  assert(lit > 40 && lit < 200);  // sur 800 échantillons
   ledFx = FX_BREATHE;
   assert(ledShownAt(0).r < 20 && ledShownAt(BREATHE_MS / 2).r >= 250);
   ledFx = FX_RAINBOW;

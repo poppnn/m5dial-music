@@ -15,7 +15,7 @@ extern bool ledCustom;   // couleur courante = teinte ledHue (sinon le prérégl
 enum LedWheel { WHEEL_BRI, WHEEL_HUE, WHEEL_FX, WHEEL_COUNT };
 extern int ledWheel;     // ce que règle la molette de la page LED (appui long = suivant)
 // Effets joués par le M5Dial lui-même : il envoie la couleur du moment ~10 fois/s à la barre.
-enum LedFx { FX_FIXED, FX_BLINK, FX_BREATHE, FX_RAINBOW, FX_COUNT };
+enum LedFx { FX_FIXED, FX_BLINK, FX_SMOOTH_BLINK, FX_RANDOM_BLINK, FX_BREATHE, FX_RAINBOW, FX_COUNT };
 extern int ledFx;
 extern const char* const LED_FX_NAMES[FX_COUNT];
 #define FX_SPEED_COUNT   9

@@ -80,8 +80,9 @@ Swipe vertically to the LED page. The M5Dial connects to the bar over BLE (unoff
 wheel = brightness, press = on / off, swipe left / right = colour (9 presets).
 **Short hold** (0.6 s) on the wheel = **hue** mode: the ring becomes a colour wheel and the wheel scrolls the hue
 (5° per detent, one wheel turn is about one colour circle); another short hold = **effect** mode: swipe left /
-right picks **Fixed**, **Blink** (0.5 s on / off), **Breathe** (3 s fade in and out) or **Rainbow** (RGB sweep,
-7 s per colour circle) and the wheel sets its **speed** (x0.25 to x4), all played live on the colour dot; another
+right picks **Fixed**, **Blink** (0.5 s on / off), **Smooth blink** (fades in, stays, fades out, off: 1 s),
+**Random blink** (short flashes at random intervals, 0.3 to 4 s apart), **Breathe** (3 s fade in and out) or
+**Rainbow** (RGB sweep, 7 s per colour circle) and the wheel sets its **speed** (x0.25 to x4), all played live on the colour dot; another
 short hold goes back to brightness. Effects use the chosen colour
 and brightness (Rainbow sweeps every hue); the M5Dial plays them itself, so the bar keeps the last colour if the
 M5Dial disconnects or powers off. The bottom
