@@ -1,7 +1,8 @@
-// Page LED. Deux modes de molette, basculés par un appui long court (0,6 s) :
+// Page LED. Trois modes de molette, l'un après l'autre à chaque appui long court (0,6 s) :
 // - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
 // - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran : un tour de
-//   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie.
+//   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie ;
+// - effet : la molette choisit fixe / clignotement / respiration / arc-en-ciel ; la pastille le montre.
 // Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
 // entre avec un rebond. Appui = allumer / éteindre.
 #include "pages.h"
@@ -9,6 +10,7 @@
 #include "../config.h"
 #include "../display.h"
 #include "../govee.h"
+#include "../settings.h"
 
 #define HUE_STEP   5      // degrés par cran
 #define HUE_TAU_S  0.07f  // le repère rejoint la teinte choisie en douceur
@@ -93,34 +95,44 @@ static bool draw(float dt) {
   float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
   int off = (int)slideOff;
 
-  if (ledHueMode) {
+  if (ledWheel == WHEEL_HUE) {
     drawHueRing(c, hueShown, ledOn);
   } else {
     canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
     if (ledBriShown > 0.005f)
       canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
   }
+  if (ledFx != FX_FIXED) lc = ledShown(now);  // la pastille joue l'effet (au rythme des images : 4/s au repos)
   canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
-  canvas.setTextColor(TFT_WHITE);
   char name[16];
-  if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
-  else snprintf(name, sizeof(name), "%s", lc.name);
+  if (ledWheel == WHEEL_FX) snprintf(name, sizeof(name), "%s", LED_FX_NAMES[ledFx]);  // la molette choisit l'effet
+  else if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
+  else snprintf(name, sizeof(name), "%s", LED_COLORS[shownKey].name);
+  canvas.setTextColor(ledWheel == WHEEL_FX ? accent() : TFT_WHITE);
   canvas.drawString(name, c + off, 150);
   canvas.setFont(&fonts::efontJA_16);
   bool conn = goveeConnected();
   canvas.setTextColor(conn ? 0x07E8 : 0xF8A2);  // barre LED connectée : vert, sinon rouge
   canvas.drawString(conn ? "Connected" : "Disconnected", c, 180);
+  if (ledWheel == WHEEL_FX || ledFx != FX_FIXED) {  // en mode effet : le rappeler ; sinon l'effet en cours
+    canvas.setTextColor(0x8410);
+    canvas.drawString(ledWheel == WHEEL_FX ? "Effect" : LED_FX_NAMES[ledFx], c, 204);
+  }
   return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
 }
 
 static void wheel(int detents) {
   if (!detents) return;
-  if (ledHueMode) {
+  if (ledWheel == WHEEL_HUE) {
     ledHue = ((ledHue + detents * HUE_STEP) % 360 + 360) % 360;
     ledCustom = ledOn = true;
     goveeColorChanged();
+  } else if (ledWheel == WHEEL_FX) {
+    ledFx = ((ledFx + detents) % FX_COUNT + FX_COUNT) % FX_COUNT;
+    ledOn = true;
+    goveeColorChanged();  // "Fixe" : la couleur unie revient tout de suite ; mémorisé après 2 s
   } else {
     ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
     goveeChanged();
@@ -140,6 +152,6 @@ static void swipeX(int dir) {
   startSlide(dir, false);
 }
 
-static void longPress() { ledHueMode = !ledHueMode; }
+static void longPress() { ledWheel = (ledWheel + 1) % WHEEL_COUNT; }  // luminosité -> teinte -> effet -> ...
 
 extern const PageOps ledPage = {draw, wheel, click, swipeX, nullptr, longPress};

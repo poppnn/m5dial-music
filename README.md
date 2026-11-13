@@ -78,10 +78,14 @@ Or download a version's binaries from [Releases](https://github.com/poppnn/m5dia
 Swipe vertically to the LED page. The M5Dial connects to the bar over BLE (unofficial Govee protocol):
 wheel = brightness, press = on / off, swipe left / right = colour (9 presets).
 **Short hold** (0.6 s) on the wheel = **hue** mode: the ring becomes a colour wheel and the wheel scrolls the hue
-(5° per detent, one wheel turn is about one colour circle); another short hold goes back to brightness. The bottom
+(5° per detent, one wheel turn is about one colour circle); another short hold = **effect** mode: the wheel picks
+**Fixed**, **Blink** (0.5 s on / off), **Breathe** (3 s fade in and out) or **Rainbow** (RGB sweep, 7 s per colour
+circle), shown live on the colour dot; another short hold goes back to brightness. Effects use the chosen colour
+and brightness (Rainbow sweeps every hue); the M5Dial plays them itself, so the bar keeps the last colour if the
+M5Dial disconnects or powers off. The bottom
 line shows the bar connection: **Connected** in green, **Disconnected** in red (connecting runs in the background,
-the page never freezes). The last colour (preset or hue) and brightness are remembered and sent to the bar on every
-connection.
+the page never freezes). The last colour (preset or hue), brightness and effect are remembered and sent to the bar
+on every connection.
 Close the Govee Home app: the bar only accepts one connection.
 
 ## Stopwatch, Clock, System and Settings

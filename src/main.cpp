@@ -113,6 +113,7 @@ void setup() {
   sensorsSelfTest();
   cleanTextSelfTest();
   bootAnimSelfTest();
+  goveeSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
   assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 
