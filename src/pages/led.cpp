@@ -101,15 +101,18 @@ static bool draw(float dt) {
   float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
   int off = (int)slideOff;
 
+  bool fx = ledOn && shownFx != FX_FIXED;
+  if (fx) lc = ledShown(now);  // la pastille joue l'effet, à chaque image (fluide)
   if (ledWheel == WHEEL_HUE) {
     drawHueRing(c, hueShown, ledOn);
   } else {
     canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
-    if (ledBriShown > 0.005f)
-      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
+    // Anneau = luminosité, dans la couleur de la barre : celle de l'effet s'il y en a un (il clignote, respire,
+    // change de teinte avec la pastille ; éteint pendant le "noir" du clignotement), sinon la couleur en fondu.
+    uint16_t col = fx ? canvas.color565(lc.r, lc.g, lc.b) : canvas.color565(rgb[0], rgb[1], rgb[2]);
+    if (ledBriShown > 0.005f && (!fx || lc.r || lc.g || lc.b))
+      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, col);
   }
-  bool fx = ledOn && shownFx != FX_FIXED;
-  if (fx) lc = ledShown(now);  // la pastille joue l'effet, à chaque image (fluide)
   canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
