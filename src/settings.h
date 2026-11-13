@@ -29,7 +29,7 @@ bool settingsNight();         // luminosité de nuit en ce moment
 uint8_t settingsBacklight();  // luminosité de base de l'écran, 0..255 (jour ou nuit)
 
 // Dernier état des LED Govee (préréglage, teinte, luminosité).
-struct LedState { uint8_t color; uint16_t hue; bool custom; uint8_t bri; uint8_t fx; };
+struct LedState { uint8_t color; uint16_t hue; bool custom; uint8_t bri; uint8_t fx, fxSpeed; };
 LedState ledStateLoad();
 void ledStateSave(const LedState& s);
 

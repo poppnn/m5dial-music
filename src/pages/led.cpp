@@ -2,7 +2,8 @@
 // - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
 // - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran : un tour de
 //   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie ;
-// - effet : la molette choisit fixe / clignotement / respiration / arc-en-ciel ; la pastille le montre.
+// - effet : glisser choisit fixe / clignotement / respiration / arc-en-ciel, la molette règle sa vitesse ; la
+//   pastille joue l'effet.
 // Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
 // entre avec un rebond. Appui = allumer / éteindre.
 #include "pages.h"
@@ -74,10 +75,15 @@ static bool draw(float dt) {
   static uint32_t popStart = 0;
   const int c = 120;
   uint32_t now = millis();
+  static int shownFx = ledFx;  // effet affiché : change à mi-glissement, comme la couleur
   int key = ledCustom ? -1 : ledColor;
   if (!slideOutPhase && shownKey != key) {
     if (key >= 0) popStart = now;  // rebond seulement pour un préréglage (la teinte défile en continu)
     shownKey = key;
+  }
+  if (!slideOutPhase && shownFx != ledFx) {
+    popStart = now;
+    shownFx = ledFx;
   }
   static bool hueInit = false;
   if (!hueInit) { hueShown = ledHue; hueInit = true; }  // première image : pas de glissement depuis 0°
@@ -102,12 +108,13 @@ static bool draw(float dt) {
     if (ledBriShown > 0.005f)
       canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
   }
-  if (ledFx != FX_FIXED) lc = ledShown(now);  // la pastille joue l'effet (au rythme des images : 4/s au repos)
+  bool fx = ledOn && shownFx != FX_FIXED;
+  if (fx) lc = ledShown(now);  // la pastille joue l'effet, à chaque image (fluide)
   canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   char name[16];
-  if (ledWheel == WHEEL_FX) snprintf(name, sizeof(name), "%s", LED_FX_NAMES[ledFx]);  // la molette choisit l'effet
+  if (ledWheel == WHEEL_FX) snprintf(name, sizeof(name), "%s", LED_FX_NAMES[shownFx]);  // glisser = effet suivant
   else if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
   else snprintf(name, sizeof(name), "%s", LED_COLORS[shownKey].name);
   canvas.setTextColor(ledWheel == WHEEL_FX ? accent() : TFT_WHITE);
@@ -116,11 +123,14 @@ static bool draw(float dt) {
   bool conn = goveeConnected();
   canvas.setTextColor(conn ? 0x07E8 : 0xF8A2);  // barre LED connectée : vert, sinon rouge
   canvas.drawString(conn ? "Connected" : "Disconnected", c, 180);
-  if (ledWheel == WHEEL_FX || ledFx != FX_FIXED) {  // en mode effet : le rappeler ; sinon l'effet en cours
-    canvas.setTextColor(0x8410);
-    canvas.drawString(ledWheel == WHEEL_FX ? "Effect" : LED_FX_NAMES[ledFx], c, 204);
-  }
-  return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
+  char line[24] = "";
+  if (ledWheel == WHEEL_FX && ledFx == FX_FIXED) snprintf(line, sizeof(line), "Swipe: effect");
+  else if (ledWheel == WHEEL_FX) snprintf(line, sizeof(line), "Speed x%g", FX_SPEEDS[ledFxSpeed]);  // molette
+  else if (ledFx != FX_FIXED) snprintf(line, sizeof(line), "%s", LED_FX_NAMES[ledFx]);  // effet en cours
+  canvas.setTextColor(0x8410);
+  canvas.drawString(line, c, 204);
+  // Effet en cours : 60 images/s sur cette page pour une pastille fluide (4/s au repos sinon)
+  return fx || fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
 }
 
 static void wheel(int detents) {
@@ -130,9 +140,8 @@ static void wheel(int detents) {
     ledCustom = ledOn = true;
     goveeColorChanged();
   } else if (ledWheel == WHEEL_FX) {
-    ledFx = ((ledFx + detents) % FX_COUNT + FX_COUNT) % FX_COUNT;
-    ledOn = true;
-    goveeColorChanged();  // "Fixe" : la couleur unie revient tout de suite ; mémorisé après 2 s
+    ledFxSpeed = constrain(ledFxSpeed + detents, 0, FX_SPEED_COUNT - 1);  // vitesse de l'effet, x1,4 par cran
+    goveeChanged();  // mémorisée après 2 s
   } else {
     ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
     goveeChanged();
@@ -145,10 +154,14 @@ static void click() {
 }
 
 static void swipeX(int dir) {
-  ledColor = ledCustom ? (dir > 0 ? 0 : LED_COLOR_COUNT - 1) : (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
-  ledCustom = false;
+  if (ledWheel == WHEEL_FX) {  // mode effet : glisser = effet suivant / précédent
+    ledFx = (ledFx + dir + FX_COUNT) % FX_COUNT;
+  } else {
+    ledColor = ledCustom ? (dir > 0 ? 0 : LED_COLOR_COUNT - 1) : (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
+    ledCustom = false;
+  }
   ledOn = true;
-  goveeColorChanged();
+  goveeColorChanged();  // "Fixed" : la couleur unie revient tout de suite ; mémorisé après 2 s
   startSlide(dir, false);
 }
 

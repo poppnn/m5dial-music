@@ -18,6 +18,10 @@ extern int ledWheel;     // ce que règle la molette de la page LED (appui long 
 enum LedFx { FX_FIXED, FX_BLINK, FX_BREATHE, FX_RAINBOW, FX_COUNT };
 extern int ledFx;
 extern const char* const LED_FX_NAMES[FX_COUNT];
+#define FX_SPEED_COUNT   9
+#define FX_SPEED_DEFAULT 4  // x1
+extern const float FX_SPEEDS[FX_SPEED_COUNT];
+extern int ledFxSpeed;      // index dans FX_SPEEDS (la molette, en mode effet)
 extern uint32_t goveeRetry;
 
 void goveeInit();                  // callbacks du scan + dernier état mémorisé (après startBle)

@@ -61,7 +61,7 @@ void settingsSelfTest() {
 
 LedState ledStateLoad() {
   return {prefs.getUChar("ledCol", 0), prefs.getUShort("ledHue", 0), prefs.getBool("ledCus", false),
-          prefs.getUChar("ledBri", 100), prefs.getUChar("ledFx", 0)};
+          prefs.getUChar("ledBri", 100), prefs.getUChar("ledFx", 0), prefs.getUChar("ledFxSpd", 4)};
 }
 
 void ledStateSave(const LedState& s) {
@@ -70,6 +70,7 @@ void ledStateSave(const LedState& s) {
   prefs.putBool("ledCus", s.custom);
   prefs.putUChar("ledBri", s.bri);
   prefs.putUChar("ledFx", s.fx);
+  prefs.putUChar("ledFxSpd", s.fxSpeed);
 }
 
 // Clé NVS (15 caractères max) : "n" + adresse sans les ":" = 13 caractères.

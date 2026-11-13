@@ -23,8 +23,9 @@ static volatile bool goveeFound = false;
 static volatile bool connecting = false;  // connexion en cours dans connectTask
 uint32_t goveeRetry = 0;
 bool ledOn = true, ledCustom = false;
-int ledWheel = WHEEL_BRI, ledFx = FX_FIXED;
+int ledWheel = WHEEL_BRI, ledFx = FX_FIXED, ledFxSpeed = FX_SPEED_DEFAULT;
 const char* const LED_FX_NAMES[FX_COUNT] = {"Fixed", "Blink", "Breathe", "Rainbow"};
+const float FX_SPEEDS[FX_SPEED_COUNT] = {0.25f, 0.35f, 0.5f, 0.7f, 1.f, 1.4f, 2.f, 2.8f, 4.f};  // x1,4 par cran
 #define FX_GAP_MS   100   // effets : une couleur tous les 100 ms (2 trames chacune, voir sendColor)
 #define BLINK_MS    500   // clignotement : 0,5 s allumé, 0,5 s éteint
 #define BREATHE_MS  3000  // respiration : une inspiration-expiration en 3 s
@@ -57,6 +58,7 @@ void goveeInit() {
   ledCustom = s.custom;
   ledBri = constrain(s.bri, 5, 100);
   ledFx = s.fx % FX_COUNT;
+  ledFxSpeed = s.fxSpeed < FX_SPEED_COUNT ? s.fxSpeed : FX_SPEED_DEFAULT;
 }
 
 bool goveeConnected() { return goveeWr != nullptr; }
@@ -77,22 +79,8 @@ LedColor hueColor(int hue) {
 
 LedColor ledCurrent() { return ledCustom ? hueColor(ledHue) : LED_COLORS[ledColor]; }
 
-// Avant goveeInit (qui recharge l'état mémorisé) : préréglage Rouge joué par chaque effet.
-void goveeSelfTest() {
-  ledCustom = false;
-  ledColor = 1;  // Rouge (255, 0, 0)
-  ledFx = FX_BLINK;
-  assert(ledShown(0).r == 255 && ledShown(BLINK_MS).r == 0 && ledShown(2 * BLINK_MS).r == 255);
-  ledFx = FX_BREATHE;
-  assert(ledShown(0).r < 20 && ledShown(BREATHE_MS / 2).r >= 250);
-  ledFx = FX_RAINBOW;
-  LedColor a = ledShown(0), b = ledShown(RAINBOW_MS / 3);  // 0° rouge, 120° vert
-  assert(a.r == 255 && !a.g && b.g == 255 && !b.r);
-  ledFx = FX_FIXED;
-  ledColor = 0;
-}
-
-LedColor ledShown(uint32_t now) {
+// Couleur de l'effet au temps t de l'effet (ms, à la vitesse x1).
+static LedColor ledShownAt(uint32_t now) {
   LedColor c = ledCurrent();
   if (ledFx == FX_BLINK && now / BLINK_MS % 2) {
     c.r = c.g = c.b = 0;
@@ -105,6 +93,33 @@ LedColor ledShown(uint32_t now) {
     c = hueColor(now % RAINBOW_MS * 360 / RAINBOW_MS);
   }
   return c;
+}
+
+// Temps de l'effet : avance de (temps écoulé x vitesse), si bien qu'un changement de vitesse ne fait pas sauter
+// l'effet (il accélère ou ralentit à partir de là où il en est).
+LedColor ledShown(uint32_t now) {
+  static uint32_t last = now;
+  static double t = 0;
+  if ((int32_t)(now - last) > 0) {  // appelé par goveeService et par la page LED : instants croissants
+    t += (double)(now - last) * FX_SPEEDS[ledFxSpeed];
+    last = now;
+  }
+  return ledShownAt((uint32_t)fmod(t, 4294967296.0));
+}
+
+// Avant goveeInit (qui recharge l'état mémorisé) : préréglage Rouge joué par chaque effet.
+void goveeSelfTest() {
+  ledCustom = false;
+  ledColor = 1;  // Rouge (255, 0, 0)
+  ledFx = FX_BLINK;
+  assert(ledShownAt(0).r == 255 && ledShownAt(BLINK_MS).r == 0 && ledShownAt(2 * BLINK_MS).r == 255);
+  ledFx = FX_BREATHE;
+  assert(ledShownAt(0).r < 20 && ledShownAt(BREATHE_MS / 2).r >= 250);
+  ledFx = FX_RAINBOW;
+  LedColor a = ledShownAt(0), b = ledShownAt(RAINBOW_MS / 3);  // 0° rouge, 120° vert
+  assert(a.r == 255 && !a.g && b.g == 255 && !b.r);
+  ledFx = FX_FIXED;
+  ledColor = 0;
 }
 
 void goveeSend(std::initializer_list<uint8_t> payload) {
@@ -155,7 +170,7 @@ void goveeService(bool ledPage) {
   uint32_t now = millis();
   if (changedAt && now - changedAt > SAVE_AFTER_MS) {
     changedAt = 0;
-    ledStateSave({(uint8_t)ledColor, (uint16_t)ledHue, ledCustom, (uint8_t)ledBri, (uint8_t)ledFx});
+    ledStateSave({(uint8_t)ledColor, (uint16_t)ledHue, ledCustom, (uint8_t)ledBri, (uint8_t)ledFx, (uint8_t)ledFxSpeed});
   }
   if (goveeWr && goveeClient && goveeClient->isConnected()) {
     static LedColor fxSent = {nullptr, 0, 0, 0};
