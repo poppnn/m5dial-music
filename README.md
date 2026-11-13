@@ -10,7 +10,8 @@ Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, And
   Python app on the PC ([`tools/windows`](tools/windows/m5dial_pc.py)).
 
 **One firmware per platform**, picked in the [web flasher](https://poppnn.github.io/m5dial-music/) (iPhone by
-default): each one only runs what its platform needs.
+default): each one only runs what its platform needs. When updating, leave **"Erase device"** unchecked in the
+web flasher: settings, paired phones and the boot image are kept (ticked, the whole M5Dial is wiped).
 
 | Firmware | Bluetooth name | Track info, notifications | Build |
 |---|---|---|---|
