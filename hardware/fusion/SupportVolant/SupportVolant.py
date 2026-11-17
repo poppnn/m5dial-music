@@ -322,8 +322,10 @@ RECESS = 17.5                # cartouche abaissée sur ses 17,5 premiers mm : le
 LANE = (3.6, 5.2)            # couloir du fil du bout intérieur de la pile, à côté des embouts (y)
 CAP_T, PLUG_L = 1.6, 3.0     # bouchon : plaque, bouchon dans l'alésage (collé)
 CART_OUT = 6.0               # la cartouche dépasse du support : les bouts des bras s'y pincent
-ARM_T, ARM_GAP, ARM_L = 1.4, 2.0, 26.0  # bras du clip le long des flancs : épaisseur, jeu, longueur
-BUMP_P = 1.0                 # cran des bras : accroche 0,7 mm dans les fenêtres du support (0,3 de jeu)
+ARM_T, ARM_GAP, ARM_L = 1.5, 2.4, 26.0  # bras du clip le long des flancs : épaisseur, jeu (course pour les pincer), longueur
+BUMP_P = 1.2                 # cran des bras : accroche 0,9 mm dans les logements du support (0,3 de jeu)
+CLIP_IN = 2.5                # face d'accroche du cran, en retrait du bout ouvert du support (bord plein de 2,5 mm)
+CLIP_D = 1.0                 # profondeur des logements borgnes des crans dans les flancs (peau de 0,6 dehors)
 KEY_W, KEY_Y = 2.0, 5.0      # détrompeur : nervure sous la cartouche, décalée de 5 mm, rainure dans le fond du support
 X_S = -18.0                  # bout intérieur de la cartouche, depuis le centre du M5Dial : les embouts mâles et leurs
                              # fils tombent sous la couronne, droit sous le M5Dial
@@ -504,10 +506,11 @@ def holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc):
     # Rainure du détrompeur dans le fond
     b.extrude(b.rect(*loc((x_stop - 0.5 + x1 + 1) / 2, KEY_Y), x1 + 1.5 - x_stop, KEY_W + 0.6, ang),
               z_cb - wall - 0.5, wall + 0.6, CUT, [shell])
-    # Fenêtres des crans : bord d'accroche exactement sur la face d'accroche du cran (x1 - 1,4) ; le cran est en
-    # légère dépouille, le ressort du bras plaque la cartouche contre sa butée : pas de jeu en longueur
+    # Logements des crans : borgnes (la paroi reste fermée dehors, le cran accroche un bord plein de CLIP_IN mm et non
+    # plus un fin barreau), bord d'accroche exactement sur la face d'accroche du cran ; le cran est en légère dépouille,
+    # le ressort du bras plaque la cartouche contre sa butée : pas de jeu en longueur
     for sy in (1, -1):
-        b.extrude(b.rect(*loc(x1 - 3.6, sy * (W / 2 + wall / 2)), 4.4, wall + 1, ang), zw - 4, 8, CUT, [shell])
+        b.extrude(b.rect(*loc(x1 - CLIP_IN - 2.2, sy * (W / 2 + (CLIP_D - 0.1) / 2)), 4.4, CLIP_D + 0.1, ang), zw - 4, 8, CUT, [shell])
     # Aérations du fond (face aux fentes de la cartouche) et des flancs
     for vx, vy, vl in VENTS_BOTTOM:
         b.extrude(b.poly(rrect(*loc(x_stop + vx + vl / 2, vy), vl, VENT_W, ang, VENT_W / 2 - 0.01)),
@@ -562,7 +565,7 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
         # Pont d'abord, puis le bras qui le touche : joint à part, un bras isolé resterait un corps séparé
         b.combine(cart, b.solid(b.rect(*loc(xa + 1.25, sy * (wb / 2 + ARM_GAP / 2)), 2.5, ARM_GAP + 0.6, ang), z0 + 1, tc - 2), JOIN)
         b.combine(cart, b.solid(b.rect(*loc((xa + xe) / 2, ya), ARM_L, ARM_T, ang), z0 + 1, tc - 2), JOIN)
-        yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - 1.4  # face extérieure du bras, face d'accroche du cran
+        yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - CLIP_IN  # face extérieure du bras, face d'accroche du cran
         bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.9, yo + sy * BUMP_P), loc(xh - 0.3, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
         b.combine(cart, b.solid(b.poly(bump), zw - 3, 6), JOIN)
     # Abaissement sous le bloc du support, puis gouttière ouverte sur toute la largeur intérieure
@@ -610,10 +613,12 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
 # clip, embouts mâles), et au-dessus un compartiment pour un module TP4056 (carte 28 x 17,5, USB-C ou micro-USB) :
 # les 2 embouts mâles remontent dans le compartiment, leurs fils vont aux pastilles B+ / B- du module.
 DOCK_AT = (0.0, -150.0)      # place du chargeur dans le document Fusion (à l'écart du support du volant)
-BAY_IN_W = 19.5              # compartiment : largeur intérieure (carte 17,5 + jeu)
+BAY_IN_W = 17.6              # compartiment : largeur intérieure (TP4056 26 x 17 + jeu)
 BAY_POST = 3.0               # rails sous la carte : les fils des embouts passent dessous
 BAY_H = 10.5                 # hauteur des parois du compartiment au-dessus du bac
-USB_W = 12.5                 # encoche de la prise USB (passe la fiche USB-C surmoulée), ouverte vers le haut
+USB_W, USB_H = 9.2, 3.3      # prise USB-C du TP4056 : encoche à sa taille, à ras de la face arrière
+USB_OVH = 0.6                # la prise dépasse du bord de la carte de 0,6 : la paroi arrière n'a que 0,6 là où la
+                             # carte s'appuie (ajuster si la prise affleure mal)
 LID_T, LIP_H, LIP_T = 1.6, 2.5, 1.2  # couvercle : plaque, rebord emboîté (0,2 de jeu), épaisseur du rebord
 FRAMES = {}                  # repères (cx, cy, angle, dessus du bac) du support et du chargeur, pour les contrôles
 
@@ -651,9 +656,12 @@ def dock(b, P):
     b.extrude(b.rrect_arcs(ox, oy, l_tray - 2 * wall, BAY_IN_W, 0, 1.5), z_tt, BAY_H + 1, CUT, [body])
     for sy in (1, -1):
         b.combine(body, b.solid(b.rect(*loc(0, sy * (BAY_IN_W / 2 - 0.6)), l_tray - 2 * wall, 1.2, 0), z_tt - 0.1, BAY_POST + 0.1), JOIN)
-    # Encoche USB dans la paroi arrière (côté butée) : la carte se pousse contre elle, la prise en face
-    z_usb = z_tt + BAY_POST + 1.6 + 1.6
-    b.extrude(b.rect(*loc(x0 + wall / 2, 0), wall + 1, USB_W, 0), z_usb - 3.5, z_tt + BAY_H - z_usb + 4.5, CUT, [body])
+    # Paroi arrière amincie de l'intérieur à USB_OVH là où la carte s'appuie : son bord y entre, et sa prise USB-C
+    # arrive à ras de la face extérieure par une encoche à sa taille (ouverte en haut : la carte se pose d'en haut)
+    z_pcb = z_tt + BAY_POST + 1.6        # dessus de la carte
+    b.extrude(b.rect(*loc(x0 + USB_OVH + (wall - USB_OVH) / 2 + 0.05, 0), wall - USB_OVH + 0.1, 17.4, 0), z_tt + BAY_POST - 0.2,
+              BAY_H + 1, CUT, [body])
+    b.extrude(b.rect(*loc(x0 + USB_OVH / 2, 0), USB_OVH + 0.4, USB_W, 0), z_pcb - 0.1, z_tt + BAY_H - z_pcb + 1, CUT, [body])
     # Logement de la cartouche (mêmes découpes que le support du volant) : le bloc des embouts s'ouvre dans le
     # compartiment ; le dessus du bac sert de fond au compartiment
     holder_cuts(b, body, loc, 0.0, z_tt, W, T, wall, x_stop, x1, d["wb"], d["tc"])
@@ -665,7 +673,9 @@ def dock(b, P):
     li, wi = l_tray - 2 * wall - 0.4, BAY_IN_W - 0.4
     b.combine(lid, b.solid(b.rrect_arcs(ox, oy, li, wi, 0, 1.3), zt - LIP_H, LIP_H + 0.1), JOIN)
     b.extrude(b.rrect_arcs(ox, oy, li - 2 * LIP_T, wi - 2 * LIP_T, 0, 0.6), zt - LIP_H - 0.1, LIP_H + 0.1, CUT, [lid])
-    b.extrude(b.rect(*loc(x0 + wall + 1, 0), 4, USB_W + 1, 0), zt - LIP_H - 0.2, LIP_H + 0.1, CUT, [lid])
+    b.extrude(b.rect(*loc(x0 + wall + 1, 0), 4, 17.6, 0), zt - LIP_H - 0.2, LIP_H + 0.1, CUT, [lid])
+    # Languette qui comble l'encoche au-dessus de la prise (face arrière lisse) et appuie sur elle : la carte est tenue
+    b.combine(lid, b.solid(b.rect(*loc(x0 + wall / 2, 0), wall, USB_W - 0.3, 0), z_pcb + USB_H + 0.1, zt - z_pcb - USB_H), JOIN)
     b.extrude(b.poly(rrect(*loc(x0 + wall + 10, 0), 12, 5, 0, 2.49)), zt - 0.1, LID_T + 0.2, CUT, [lid])
     return body, lid
 

@@ -198,7 +198,7 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   with solder tabs) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
   **2 male Dupont jumper ends** (6 mm pins), their wires going to the M5Dial battery plug. Vape cells have **no protection circuit**:
   check they read above 3.0 V before use, and a small protection board (DW01) on the cell is safer.
-  Charging dock: a **TP4056 module** (28 × 17.5 mm board, USB-C or micro-USB) and 2 more male Dupont jumper ends.
+  Charging dock: a **TP4056 module** (26 × 17 mm board, USB-C) and 2 more male Dupont jumper ends.
   The TP4056 charges at **1 A** out of the box, too much for an 850 mAh cell: replace its programming resistor
   (R3, 1.2 kΩ, next to the chip) with **2.4 kΩ** (about 500 mA).
 - Per spoke (bottom and right): **M5 × 14 hex screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
@@ -265,13 +265,17 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   cartridge (sockets recessed behind a 0.6 mm lip: no exposed live contact in a pocket). Holder 42.8 × 30.3 ×
   27.0 mm; cartridge 47.2 + 1.6 mm cap, 26.5 mm wide with its arms, cell in a Ø 16.9 bore, its first 17.5 mm
   lowered under the holder block, 4 mm rounds underneath and 1 mm on top (cap to match). Two flexible side arms
-  (1.4 mm, 26 mm long) click bumps into windows of the holder walls; the window edge sits exactly on the bump's
-  slightly undercut hook face, so the arm's spring pulls the cartridge against its stop (no end play). Vents:
+  (1.5 mm, 26 mm long) click 0.9 mm hooks into **blind pockets** of the holder walls (the wall stays closed outside,
+  the hook bears on a solid 2.5 mm edge); the pocket edge sits exactly on the hook's slightly undercut face, so the
+  arm's spring pulls the cartridge against its stop (no end play). Pinching the arm ends over their 2.4 mm gap moves
+  the hooks back about 1.15 mm, enough to release them (0.9 % bending on insertion: PETG or ASA rather than PLA). Vents:
   4 slots under the cell and 2 on each front flank, matched by slots in the holder floor and walls. Keying rib
   (2 mm, 5 mm off centre) under the cartridge in a floor groove.
 - **Charging dock**: the same pocket, keying, clip and male jumper block as the car holder on a wider base plate,
-  with a 19.5 × 39.6 × 10.5 mm bay on top for a TP4056 (board on 3 mm rails so the wires pass under it, USB
-  notch in the back wall, push-on lid with a 0.2 mm gap lip and an LED window).
+  with a 17.6 × 39.6 × 10.5 mm bay on top for a **26 × 17 mm TP4056** (board on 3 mm rails so the wires pass under
+  it). The back wall is thinned to 0.6 mm where the board's edge rests, so its **USB-C socket is flush** with the
+  outside through a 9.2 mm notch (`USB_OVH` if your socket sticks out more or less); the push-on lid (0.2 mm gap lip,
+  LED window) has a tab that fills the notch above the socket and holds the board down.
 - **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
   washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
