@@ -145,6 +145,24 @@ class Builder:
         return self.poly([(cx + sa * a * u[0] + sb * b * n[0], cy + sa * a * u[1] + sb * b * n[1])
                           for sa, sb in ((1, 1), (-1, 1), (-1, -1), (1, -1))], sk)
 
+    def rrect_arcs(self, cx, cy, length, width, ang, r):
+        """Rectangle centré à coins en vrais arcs (tangents) : ses arêtes se congèlent ensuite d'un seul tenant."""
+        sk = self.sketch()
+        u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
+        n = (-u[1], u[0])
+        P_ = lambda px, py: self._pt(cx + px * u[0] + py * n[0], cy + px * u[1] + py * n[1])
+        a, c = length / 2 - r, width / 2 - r
+        arcs = sk.sketchCurves.sketchArcs
+        corners = [((a, c), 0), ((-a, c), 90), ((-a, -c), 180), ((a, -c), 270)]
+        made = []
+        for (px, py), a0 in corners:
+            st = (px + r * math.cos(math.radians(a0)), py + r * math.sin(math.radians(a0)))
+            made.append(arcs.addByCenterStartSweep(P_(px, py), P_(*st), math.pi / 2))
+        lines = sk.sketchCurves.sketchLines
+        for i in range(4):
+            lines.addByTwoPoints(made[i].endSketchPoint, made[(i + 1) % 4].startSketchPoint)
+        return sk
+
     def extrude(self, sk, z0, h, op, bodies=None):
         """Extrude tous les profils de l'esquisse de z0 à z0 + h (mm)."""
         profs = adsk.core.ObjectCollection.create()
@@ -393,7 +411,9 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out, z_mount):
     loc = lambda px, py: (cx + px * u[0] + py * v[0], cy + px * u[1] + py * v[1])
     z_mid = z_tt - wall - T / 2
     if cart:
-        cartridge(b, shell, loc, ang, z_tt, z_mid, W, T, wall, x0, x_stop, x1, wb, tc, l_b)
+        FRAMES["holder"] = (cx, cy, ang, z_tt)
+        holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc)
+        cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b)
         # Encoche au pied du tube : le bout de la cartouche (et ses bras à pincer) sort du tube côté jante
         top = z_tt - wall + 0.4
         b.extrude(b.rect(*loc(x1 + 6, 0), 14, W + 2, ang), z_mount - 1, top - z_mount + 1, CUT, [cup])
@@ -444,53 +464,98 @@ def cyl_x(b, loc, ang, px0, py, z, r, length):
     return c
 
 
-def cartridge(b, shell, loc, ang, z_b, z_c, W, T, wall, x0, x_stop, x1, wb, tc, l_b):
-    """Support de la cartouche 16350 (dans `shell`) et cartouche posée dedans (corps "Cartouche 16350" et
-    "Bouchon cartouche"). La cartouche entre par le bout ouvert (côté jante) ; ses deux bras à cran cliquent dans les
-    fenêtres des flancs ; on les pince (leurs bouts dépassent) pour la ressortir. En fin de course, les broches des
-    2 embouts Dupont mâles (dans le bloc du support) entrent dans les 2 embouts femelles (berceau de la cartouche).
-    Détrompeur : la nervure décalée sous la cartouche passe dans la rainure du fond ; retournée ou bout pour bout,
-    elle bute dès l'entrée (le + et le - ne peuvent pas s'inverser)."""
-    z_ct = z_b - wall                    # plafond du logement
+def cart_levels(z_tt, T, wall, tc):
+    """Hauteurs de la cartouche posée dans un logement dont le dessus du bac est à z_tt."""
+    z_ct = z_tt - wall                   # plafond du logement
     z_cb = z_ct - T                      # fond du logement
     z0 = z_cb + 0.3                      # dessous de la cartouche
-    z_ax = z0 + CART_WALL + CELL_D / 2   # axe de la pile
     z_mt = z0 + CART_WALL + CELL_D + MID_WALL  # dessus du plancher au-dessus de la pile
     z_pf = z_mt + DUP_PAD                # fond des logements d'embouts (mâles et femelles à la même hauteur)
-    z_pin = z_pf + 1.27                  # axe des broches
-    z_top = z0 + tc
-    xr = x_stop + RECESS                 # fin de l'abaissement de la cartouche = face avant du berceau femelle
-    hw = DUP_W / 2
+    return dict(z_ct=z_ct, z_cb=z_cb, z0=z0, z_ax=z0 + CART_WALL + CELL_D / 2, z_mt=z_mt, z_pf=z_pf,
+                z_pin=z_pf + 1.27, z_top=z0 + tc, zw=z0 + tc / 2)
 
-    # --- Support ---
+
+# Aérations : fentes alignées sous la cartouche et dans le fond du support, et dans les flancs sur la partie
+# avant (là où il n'y a pas les bras) : l'air passe autour de la pile. (x depuis la butée, y, longueur)
+VENTS_BOTTOM = [(x, y, 13.0) for x in (8.0, 25.0) for y in (-3.6, 0.0)]
+VENTS_SIDE = [(3.5, 13.0)]           # (x depuis la butée, longueur) ; 2 fentes de 1,6 mm de haut par flanc
+VENT_W = 1.6
+
+
+def holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc):
+    """Logement d'une cartouche 16350 dans `shell` (support du volant ou chargeur) : bloc des embouts mâles,
+    rainure du détrompeur, fenêtres des crans, aérations. Dessus du bac à z_tt, butée à x_stop, bout ouvert à x1."""
+    L_ = cart_levels(z_tt, T, wall, tc)
+    z_cb, z_ct, z_mt, z_pf, z_pin, zw = L_["z_cb"], L_["z_ct"], L_["z_mt"], L_["z_pf"], L_["z_pin"], L_["zw"]
+    xr = x_stop + RECESS                 # fin de l'abaissement de la cartouche = face avant du berceau femelle
     # Logement : pleine hauteur à partir du berceau ; au-dessus de l'abaissement de la cartouche, le bloc des mâles
     # (prolongé au-delà du bout ouvert : la cartouche qui dépasse traverse la couronne et la collerette, montées
     # à sa hauteur quand le support remonte dans le tube)
     b.extrude(b.rect(*loc((x_stop + x1 + 12) / 2, 0), x1 + 12 - x_stop, W, ang), z_cb, z_mt + 0.3 - z_cb, CUT, [shell])
     b.extrude(b.rect(*loc((xr - 0.2 + x1 + 12) / 2, 0), x1 + 12.2 - xr, W, ang), z_mt + 0.3, z_ct - z_mt - 0.3, CUT, [shell])
-    # Bloc : 2 embouts mâles côte à côte, posés par le dessus (sous le M5Dial, avant de monter le support) dans un
-    # logement serré (clipsés, un point de colle au besoin) ; broches à travers un rebord de 0,6 vers la cartouche ;
-    # derrière eux une marche de 0,6 encaisse la poussée et les fils remontent droit dans le tube.
+    # Bloc : 2 embouts mâles côte à côte, posés par le dessus dans un logement serré (clipsés, un point de colle au
+    # besoin) ; broches à travers un rebord de 0,6 vers la cartouche ; derrière eux une marche de 0,6 encaisse la
+    # poussée et les fils remontent droit (vers le M5Dial, ou le TP4056 du chargeur).
     xm1 = xr - 0.8                       # face avant des embouts mâles (contre le rebord)
     xm0 = xm1 - DUP_L
-    b.extrude(b.rect(*loc((xm0 + xm1) / 2, 0), DUP_L, DUP_W, ang), z_pf, z_b + 1 - z_pf, CUT, [shell])
-    b.extrude(b.rect(*loc(xm0 - 1.5, 0), 3.0, DUP_W, ang), z_pf + 0.6, z_b + 1 - z_pf - 0.6, CUT, [shell])
+    b.extrude(b.rect(*loc((xm0 + xm1) / 2, 0), DUP_L, DUP_W, ang), z_pf, z_tt + 1 - z_pf, CUT, [shell])
+    b.extrude(b.rect(*loc(xm0 - 1.5, 0), 3.0, DUP_W, ang), z_pf + 0.6, z_tt + 1 - z_pf - 0.6, CUT, [shell])
     b.extrude(b.rect(*loc(xr - 0.5, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [shell])
-    # Rainure du détrompeur dans le fond, fenêtres des crans dans les flancs
+    # Rainure du détrompeur dans le fond
     b.extrude(b.rect(*loc((x_stop - 0.5 + x1 + 1) / 2, KEY_Y), x1 + 1.5 - x_stop, KEY_W + 0.6, ang),
               z_cb - wall - 0.5, wall + 0.6, CUT, [shell])
-    zw = z0 + tc / 2
+    # Fenêtres des crans : bord d'accroche exactement sur la face d'accroche du cran (x1 - 1,4) ; le cran est en
+    # légère dépouille, le ressort du bras plaque la cartouche contre sa butée : pas de jeu en longueur
     for sy in (1, -1):
-        b.extrude(b.rect(*loc(x1 - 3.2, sy * (W / 2 + wall / 2)), 4.8, wall + 1, ang), zw - 4, 8, CUT, [shell])
+        b.extrude(b.rect(*loc(x1 - 3.6, sy * (W / 2 + wall / 2)), 4.4, wall + 1, ang), zw - 4, 8, CUT, [shell])
+    # Aérations du fond (face aux fentes de la cartouche) et des flancs
+    for vx, vy, vl in VENTS_BOTTOM:
+        b.extrude(b.poly(rrect(*loc(x_stop + vx + vl / 2, vy), vl, VENT_W, ang, VENT_W / 2 - 0.01)),
+                  z_cb - wall - 0.5, wall + 1, CUT, [shell])
+    for vx, vl in VENTS_SIDE:
+        for sy in (1, -1):
+            for dz in (-3.0, 3.0):
+                b.extrude(b.rect(*loc(x_stop + vx + vl / 2, sy * (W / 2 + wall / 2)), vl, wall + 1, ang),
+                          L_["z_ax"] + dz - VENT_W / 2, VENT_W, CUT, [shell])
 
-    # --- Cartouche (posée : bout intérieur contre le fond, centrée dans le logement) ---
+
+def edges_along(body, u, zsel):
+    """Arêtes rectilignes du corps parallèles à u (horizontales), dont la hauteur (mm) vérifie zsel(z)."""
+    out = []
+    for e in body.edges:
+        g = e.geometry
+        if not isinstance(g, adsk.core.Line3D):
+            continue
+        p, q = g.startPoint, g.endPoint
+        d = (q.x - p.x, q.y - p.y, q.z - p.z)
+        ln = math.sqrt(sum(c * c for c in d))
+        if ln > 1e-6 and abs(d[0] * u[0] + d[1] * u[1]) / ln > 0.999 and abs(d[2]) < 1e-6 and zsel(p.z * 10):
+            out.append(e)
+    return out
+
+
+def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
+    """Cartouche 16350 posée dans son logement (corps "Cartouche 16350") et son bouchon ("Bouchon cartouche").
+    La cartouche entre par le bout ouvert ; ses deux bras à cran cliquent dans les fenêtres des flancs ; on les
+    pince (leurs bouts dépassent) pour la ressortir. En fin de course, les broches des 2 embouts Dupont mâles (bloc
+    du support) entrent dans les 2 embouts femelles (berceau de la cartouche).
+    Détrompeur : la nervure décalée sous la cartouche passe dans la rainure du fond ; retournée ou bout pour bout,
+    elle bute dès l'entrée (le + et le - ne peuvent pas s'inverser).
+    Arrondis : grands rayons dessous (4 mm), dessus adouci (1 mm), bouchon assorti."""
+    L_ = cart_levels(z_tt, T, wall, tc)
+    z_cb, z0, z_ax, z_mt, z_pf, z_pin, z_top, zw = (L_[k] for k in ("z_cb", "z0", "z_ax", "z_mt", "z_pf", "z_pin", "z_top", "zw"))
+    u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
+    xr = x_stop + RECESS
     xe = x_stop + l_b                    # bout extérieur de la cartouche (sans bouchon)
     cart = b.solid(b.rect(*loc((x_stop + xe) / 2, 0), l_b, wb, ang), z0, tc)
     cart.name = "Cartouche 16350"
+    b.fillet(edges_along(cart, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
+    b.fillet(edges_along(cart, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
     # Détrompeur : nervure sous la cartouche, affleurant le dessous du support
-    b.combine(cart, b.solid(b.rect(*loc((x_stop + xe) / 2, KEY_Y), l_b, KEY_W, ang), z_cb - wall, z0 - z_cb + wall + 0.5), JOIN)
+    b.combine(cart, b.solid(b.rect(*loc((x_stop + xe) / 2, KEY_Y), l_b, KEY_W, ang), z_cb - wall, z0 - z_cb + wall + 1.0), JOIN)
     # Bras du clip : attachés côté intérieur par un pont, libres vers l'extérieur ; cran à rampe (côté entrée) juste
-    # avant le bout ouvert du support ; leurs 6 derniers mm dépassent du support : on les pince pour sortir.
+    # avant le bout ouvert du support, face d'accroche en légère dépouille ; leurs 6 derniers mm dépassent : on les
+    # pince pour sortir la cartouche.
     xa = xe - ARM_L
     for sy in (1, -1):
         ya = sy * (wb / 2 + ARM_GAP + ARM_T / 2)
@@ -498,7 +563,7 @@ def cartridge(b, shell, loc, ang, z_b, z_c, W, T, wall, x0, x_stop, x1, wb, tc, 
         b.combine(cart, b.solid(b.rect(*loc(xa + 1.25, sy * (wb / 2 + ARM_GAP / 2)), 2.5, ARM_GAP + 0.6, ang), z0 + 1, tc - 2), JOIN)
         b.combine(cart, b.solid(b.rect(*loc((xa + xe) / 2, ya), ARM_L, ARM_T, ang), z0 + 1, tc - 2), JOIN)
         yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - 1.4  # face extérieure du bras, face d'accroche du cran
-        bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.6, yo + sy * BUMP_P), loc(xh, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
+        bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.9, yo + sy * BUMP_P), loc(xh - 0.3, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
         b.combine(cart, b.solid(b.poly(bump), zw - 3, 6), JOIN)
     # Abaissement sous le bloc du support, puis gouttière ouverte sur toute la largeur intérieure
     b.extrude(b.rect(*loc((x_stop - 0.5 + xr) / 2, 0), xr - x_stop + 0.5, wb + 1, ang), z_mt, tc, CUT, [cart])
@@ -522,11 +587,87 @@ def cartridge(b, shell, loc, ang, z_b, z_c, W, T, wall, x0, x_stop, x1, wb, tc, 
                      LANE[1] - LANE[0], ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
     xfar = x_stop + END_WALL + 2 + 39    # bout éloigné de la pile
     b.extrude(b.rect(*loc(xfar + 1.0, 0), 1.6, 6, ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
+    # Aérations : fentes sous la pile (face à celles du support) et dans les flancs avant
+    for vx, vy, vl in VENTS_BOTTOM:
+        b.extrude(b.poly(rrect(*loc(x_stop + vx + vl / 2, vy), vl, VENT_W, ang, VENT_W / 2 - 0.01)),
+                  z0 - 0.5, CART_WALL + 1.0, CUT, [cart])
+    for vx, vl in VENTS_SIDE:
+        for sy in (1, -1):
+            for dz in (-3.0, 3.0):
+                b.extrude(b.rect(*loc(x_stop + vx + vl / 2, sy * wb / 2), vl, CART_WALL * 2 + 1, ang),
+                          z_ax + dz - VENT_W / 2, VENT_W, CUT, [cart])
 
-    # --- Bouchon : plaque au bout de la cartouche, bouchon dans l'alésage (collé, une fois la pile câblée) ---
+    # --- Bouchon : plaque au bout de la cartouche (mêmes arrondis), bouchon dans l'alésage (collé) ---
     cap = b.solid(b.rect(*loc(xe + CAP_T / 2, 0), CAP_T, wb, ang), z0, tc)
     cap.name = "Bouchon cartouche"
+    b.fillet(edges_along(cap, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
+    b.fillet(edges_along(cap, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
     b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, 0, z_ax, CELL_D / 2 - 0.15, PLUG_L + 0.1), JOIN)
+    return cart, cap
+
+
+# Chargeur de cartouche (BAT_TYPE 1) : socle posé sur la table, même logement que le support du volant (détrompeur,
+# clip, embouts mâles), et au-dessus un compartiment pour un module TP4056 (carte 28 x 17,5, USB-C ou micro-USB) :
+# les 2 embouts mâles remontent dans le compartiment, leurs fils vont aux pastilles B+ / B- du module.
+DOCK_AT = (0.0, -150.0)      # place du chargeur dans le document Fusion (à l'écart du support du volant)
+BAY_IN_W = 19.5              # compartiment : largeur intérieure (carte 17,5 + jeu)
+BAY_POST = 3.0               # rails sous la carte : les fils des embouts passent dessous
+BAY_H = 10.5                 # hauteur des parois du compartiment au-dessus du bac
+USB_W = 12.5                 # encoche de la prise USB (passe la fiche USB-C surmoulée), ouverte vers le haut
+LID_T, LIP_H, LIP_T = 1.6, 2.5, 1.2  # couvercle : plaque, rebord emboîté (0,2 de jeu), épaisseur du rebord
+FRAMES = {}                  # repères (cx, cy, angle, dessus du bac) du support et du chargeur, pour les contrôles
+
+
+def cart_dims(P):
+    """Cotes communes cartouche / logement : corps, logement, longueurs, positions (repère du bac centré)."""
+    wall = P["SHELL_WALL"]
+    wb = CELL_D + 2 * CART_WALL
+    tc = CART_WALL + CELL_D + MID_WALL + DUP_PAD + DUP_H
+    W, T = wb + 2 * (ARM_GAP + ARM_T) + 0.6, tc + 0.6
+    l_b = END_WALL + BORE_L
+    l_tray = l_b - CART_OUT + wall
+    x0 = -l_tray / 2
+    x_stop = x0 + wall
+    x1 = x_stop + l_b - CART_OUT
+    return dict(wall=wall, wb=wb, tc=tc, W=W, T=T, l_b=l_b, l_tray=l_tray, x0=x0, x_stop=x_stop, x1=x1)
+
+
+def dock(b, P):
+    """Chargeur ("Chargeur cartouche" + "Couvercle chargeur"), posé à DOCK_AT, fond à z = 0."""
+    d = cart_dims(P)
+    wall, W, T, l_tray, x0, x_stop, x1 = d["wall"], d["W"], d["T"], d["l_tray"], d["x0"], d["x_stop"], d["x1"]
+    ox, oy = DOCK_AT
+    loc = lambda px, py: (ox + px, oy + py)
+    h_tray = T + 2 * wall
+    z_tt = h_tray
+    FRAMES["dock"] = (ox, oy, 0.0, z_tt)
+    body = b.solid(b.rrect_arcs(ox, oy, l_tray, W + 2 * wall, 0, 3.0), 0, h_tray)
+    body.name = "Chargeur cartouche"
+    # Semelle : plus large (stable), arrêtée au bout ouvert (la nervure de la cartouche passe dessous)
+    b.combine(body, b.solid(b.rrect_arcs(*loc((x0 - 8 + x1) / 2, 0), x1 - x0 + 8, W + 2 * wall + 16, 0, 6.0), 0, wall), JOIN)
+    # Compartiment du TP4056 sur le dessus (parois arrondies), rails sous la carte
+    bw = BAY_IN_W + 2 * wall
+    b.combine(body, b.solid(b.rrect_arcs(ox, oy, l_tray, bw, 0, 3.0), z_tt - 0.1, BAY_H + 0.1), JOIN)
+    b.extrude(b.rrect_arcs(ox, oy, l_tray - 2 * wall, BAY_IN_W, 0, 1.5), z_tt, BAY_H + 1, CUT, [body])
+    for sy in (1, -1):
+        b.combine(body, b.solid(b.rect(*loc(0, sy * (BAY_IN_W / 2 - 0.6)), l_tray - 2 * wall, 1.2, 0), z_tt - 0.1, BAY_POST + 0.1), JOIN)
+    # Encoche USB dans la paroi arrière (côté butée) : la carte se pousse contre elle, la prise en face
+    z_usb = z_tt + BAY_POST + 1.6 + 1.6
+    b.extrude(b.rect(*loc(x0 + wall / 2, 0), wall + 1, USB_W, 0), z_usb - 3.5, z_tt + BAY_H - z_usb + 4.5, CUT, [body])
+    # Logement de la cartouche (mêmes découpes que le support du volant) : le bloc des embouts s'ouvre dans le
+    # compartiment ; le dessus du bac sert de fond au compartiment
+    holder_cuts(b, body, loc, 0.0, z_tt, W, T, wall, x_stop, x1, d["wb"], d["tc"])
+
+    # Couvercle : plaque arrondie, rebord emboîté (0,2 de jeu, sauf face à l'USB), fenêtre des LED de charge
+    zt = z_tt + BAY_H
+    lid = b.solid(b.rrect_arcs(ox, oy, l_tray, bw, 0, 3.0), zt, LID_T)
+    lid.name = "Couvercle chargeur"
+    li, wi = l_tray - 2 * wall - 0.4, BAY_IN_W - 0.4
+    b.combine(lid, b.solid(b.rrect_arcs(ox, oy, li, wi, 0, 1.3), zt - LIP_H, LIP_H + 0.1), JOIN)
+    b.extrude(b.rrect_arcs(ox, oy, li - 2 * LIP_T, wi - 2 * LIP_T, 0, 0.6), zt - LIP_H - 0.1, LIP_H + 0.1, CUT, [lid])
+    b.extrude(b.rect(*loc(x0 + wall + 1, 0), 4, USB_W + 1, 0), zt - LIP_H - 0.2, LIP_H + 0.1, CUT, [lid])
+    b.extrude(b.poly(rrect(*loc(x0 + wall + 10, 0), 12, 5, 0, 2.49)), zt - 0.1, LID_T + 0.2, CUT, [lid])
+    return body, lid
 
 
 def imu_holder(b, P, shell, loc, ang, z_b, r_b):
@@ -745,6 +886,8 @@ def build(comp, P):
             b.combine(cup, t, CUT)
     if raised and not test:
         battery(b, P, cup, cx, cy, z_cr, r_clr, a_out, z_b)
+        if up:
+            dock(b, P)
     return cup
 
 
