@@ -8,5 +8,6 @@
 void bootAnimInit();             // au démarrage : trouve la partition et lit l'animation enregistrée
 void bootAnimService();          // dans loop() : commandes "BOOTANIM ..." reçues sur le port USB
 bool bootAnimDraw(uint32_t now); // dessine l'image courante dans canvas ; false s'il n'y a pas d'animation
+uint32_t bootAnimSplashMs();     // temps minimal d'affichage au démarrage (0 sans image)
 bool bootAnimParse(const uint8_t* d, size_t n, uint16_t& count, uint32_t& totalMs);  // en-tête valide ?
 void bootAnimSelfTest();

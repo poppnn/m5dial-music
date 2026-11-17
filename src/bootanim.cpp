@@ -64,6 +64,10 @@ void bootAnimInit() {
   else unmap();
 }
 
+// Durée minimale d'affichage au démarrage (ms depuis la mise sous tension) : un tour de l'animation, de 2,5 à 5 s.
+// Sans elle, le téléphone qui se reconnecte en moins d'une seconde la remplaçait avant qu'on la voie. 0 sans image.
+uint32_t bootAnimSplashMs() { return frames ? constrain(animMs, 2500u, 5000u) : 0; }
+
 bool bootAnimDraw(uint32_t now) {
   if (!frames) return false;
   uint32_t t = now % animMs;
