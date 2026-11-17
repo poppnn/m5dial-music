@@ -76,8 +76,8 @@ PARAMS = [
     ("SHELL_WALL", 1.6, "mm", "Coque batterie : épaisseur des parois et du fond"),
     ("BAT_ROT", 0.0, "deg", "Coque batterie : orientation sous le M5Dial (0 = grand côté dans l'axe moyeu -> M5Dial)"),
     ("BAT_TWIST", 35.0, "deg", "Coque batterie : quart de tour de la baïonnette (vissage vu de dessous)"),
-    ("ENV_HOLDER", 1, "", "1 = logement de l'Unit ENV III (32 x 24 x 8) contre le tube, côté jante, glissée par le haut"),
-    ("IMU_HOLDER", 1, "", "1 = logement de l'Unit IMU Pro Mini (24 x 24 x 8) sur la coque, dans le tube, à plat"),
+    ("ENV_HOLDER", 0, "", "1 = logement de l'Unit ENV III (32 x 24 x 8) contre le tube, côté jante, glissée par le haut"),
+    ("IMU_HOLDER", 0, "", "1 = logement de l'Unit IMU Pro Mini (24 x 24 x 8) sur la coque, dans le tube, à plat"),
     ("TEST_FIT", 0, "", "1 = pièce d'essai rapide : les deux pattes reliées par la plaque, sans tube ni anneau du M5Dial"),
 ]
 OBSOLETE = ["WALL", "FLOOR", "CUP_H", "NOTCH_W", "NOTCH_ANGLE", "RIBS", "RIB", "PAD_T",  # ancienne coupelle
@@ -286,22 +286,27 @@ HOLDER_WALL = 2.4             # parois des logements des Units
 WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de la coque, depuis le bout ouvert
 
 # Cartouche 16350 (BAT_TYPE 1) : pile de puff (Li-ion 16350, + et - aux deux bouts, languettes soudées) prisonnière
-# d'une cartouche à connecteur femelle 2 x 2,54 (contacts en retrait : pas de court-circuit en poche) ; le support,
-# même baïonnette que la coque, porte les picots mâles. Cotes le long de la cartouche, du bout intérieur :
-# connecteur femelle 8,5 | rebords 0,8 | alésage 46 (soudures 4 + pile et languettes 39 + bouchon 3).
-# Polarité : la broche du côté de la nervure du détrompeur (+y) est le +, sur la cartouche comme sur le support.
+# d'une cartouche. La connexion passe AU-DESSUS de la pile (plus épais, bien plus court) par 2 embouts Dupont de
+# jumper wires, côte à côte au pas de 2,54 : femelles clipsées dans un berceau sur la cartouche (douilles en retrait :
+# pas de court-circuit en poche), mâles clipsés dans le support, fils remontant droit vers le M5Dial.
+# Le support garde la baïonnette de la coque. Le long de la cartouche, du bout intérieur : fond 1,2 | alésage 46
+# (soudures 2 + pile et languettes 39 + soudures 2 + bouchon 3) ; au-dessus, sur les 17,5 premiers mm, le bloc du
+# support (embouts mâles), puis le berceau des embouts femelles et la gouttière des fils (couverte vers le bout).
+# Polarité : l'embout du côté de la nervure du détrompeur (+y) est le +, sur la cartouche comme sur le support.
 CELL_D = 16.9                # alésage : pile Ø16 + gaine + jeu
-CART_WALL = 1.4              # parois de la cartouche
-CH_W = 1.8                   # rainure du fil du bout éloigné de la pile, le long de l'alésage (côté +y)
-HDR_LIP, HDR_L, HDR_W, HDR_T = 0.8, 8.5, 5.4, 2.9  # connecteur femelle 2 broches : rebord, logement
+CART_WALL, END_WALL, MID_WALL = 1.4, 1.2, 1.4  # parois ; fond intérieur ; plancher entre la pile et les embouts
 BORE_L = 46.0
+DUP_L, DUP_W, DUP_H = 14.0, 5.2, 2.6  # 2 embouts Dupont côte à côte (2,54 x 2,54 x 14) : logement serré, clipsé
+DUP_PAD = 0.9                # surélévation du berceau : les embouts mâle et femelle à la même hauteur
+RECESS = 17.5                # cartouche abaissée sur ses 17,5 premiers mm : le bloc des embouts mâles s'y loge
+LANE = (3.6, 5.2)            # couloir du fil du bout intérieur de la pile, à côté des embouts (y)
 CAP_T, PLUG_L = 1.6, 3.0     # bouchon : plaque, bouchon dans l'alésage (collé)
 CART_OUT = 6.0               # la cartouche dépasse du support : les bouts des bras s'y pincent
 ARM_T, ARM_GAP, ARM_L = 1.4, 2.0, 26.0  # bras du clip le long des flancs : épaisseur, jeu, longueur
 BUMP_P = 1.0                 # cran des bras : accroche 0,7 mm dans les fenêtres du support (0,3 de jeu)
 KEY_W, KEY_Y = 2.0, 5.0      # détrompeur : nervure sous la cartouche, décalée de 5 mm, rainure dans le fond du support
-CHAMBER, BLOCK = 6.0, 3.0    # support : chambre des soudures du connecteur mâle, bloc qui tient son embase
-WIRE_HOLE = (-19.5, 5.0, 2.5)  # fils vers le M5Dial : trou dans la couronne (x, y, rayon), à côté de la nervure arrière
+X_S = -18.0                  # bout intérieur de la cartouche, depuis le centre du M5Dial : les embouts mâles et leurs
+                             # fils tombent sous la couronne, droit sous le M5Dial
 
 
 def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
@@ -327,14 +332,13 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     wall, L, W, T = P["SHELL_WALL"], P["BAT_L"], P["BAT_W"], P["BAT_T"]
     cart = P["BAT_TYPE"] >= 0.5
     x_tray, l_tray = 0.0, L + 2 * wall  # coque : centrée sous le M5Dial
-    if cart:  # support de cartouche : plus étroit, plus épais, décalé vers la jante (la chambre des soudures doit
-        # tomber sous la couronne pour que les fils y remontent)
-        wb = CELL_D + 2 * CART_WALL + CH_W                      # corps de la cartouche
-        tc = CELL_D + 2 * CART_WALL
+    if cart:  # support de cartouche : plus étroit, plus épais (embouts au-dessus de la pile), plus court
+        wb = CELL_D + 2 * CART_WALL                             # corps de la cartouche
+        tc = CART_WALL + CELL_D + MID_WALL + DUP_PAD + DUP_H    # pile, plancher, berceau des embouts
         W, T = wb + 2 * (ARM_GAP + ARM_T) + 0.6, tc + 0.6       # logement : bras compris, 0,3 de jeu par côté
-        l_b = HDR_LIP + HDR_L + BORE_L                          # longueur de la cartouche (sans bouchon)
-        x0 = WIRE_HOLE[0] - WIRE_HOLE[2] - 0.5 - wall           # face extérieure du bout intérieur
-        x_stop = x0 + wall + CHAMBER + BLOCK                    # butée : bout intérieur de la cartouche
+        l_b = END_WALL + BORE_L                                 # longueur de la cartouche (sans bouchon)
+        x_stop = X_S                                            # butée : bout intérieur de la cartouche
+        x0 = x_stop - wall                                      # face extérieure du bout intérieur
         x1 = x_stop + l_b - CART_OUT                            # bout ouvert
         x_tray, l_tray = (x0 + x1) / 2, x1 - x0
     h_tray = T + 2 * wall        # fond, logement, dessus plein
@@ -410,63 +414,85 @@ def cyl_x(b, loc, ang, px0, py, z, r, length):
 
 def cartridge(b, shell, loc, ang, z_b, z_c, W, T, wall, x0, x_stop, x1, wb, tc, l_b):
     """Support de la cartouche 16350 (dans `shell`) et cartouche posée dedans (corps "Cartouche 16350" et
-    "Bouchon cartouche"). La cartouche entre par le bout ouvert (côté jante), connecteur femelle devant ; ses deux bras
-    à cran cliquent dans les fenêtres des flancs ; on les pince (leurs bouts dépassent) pour la ressortir.
+    "Bouchon cartouche"). La cartouche entre par le bout ouvert (côté jante) ; ses deux bras à cran cliquent dans les
+    fenêtres des flancs ; on les pince (leurs bouts dépassent) pour la ressortir. En fin de course, les broches des
+    2 embouts Dupont mâles (dans le bloc du support) entrent dans les 2 embouts femelles (berceau de la cartouche).
     Détrompeur : la nervure décalée sous la cartouche passe dans la rainure du fond ; retournée ou bout pour bout,
     elle bute dès l'entrée (le + et le - ne peuvent pas s'inverser)."""
     z_ct = z_b - wall                    # plafond du logement
     z_cb = z_ct - T                      # fond du logement
-    y_b = -wb / 2 + CART_WALL + CELL_D / 2  # axe de la pile et des connecteurs (la rainure du fil est côté +y)
+    z0 = z_cb + 0.3                      # dessous de la cartouche
+    z_ax = z0 + CART_WALL + CELL_D / 2   # axe de la pile
+    z_mt = z0 + CART_WALL + CELL_D + MID_WALL  # dessus du plancher au-dessus de la pile
+    z_pf = z_mt + DUP_PAD                # fond des logements d'embouts (mâles et femelles à la même hauteur)
+    z_pin = z_pf + 1.27                  # axe des broches
+    z_top = z0 + tc
+    xr = x_stop + RECESS                 # fin de l'abaissement de la cartouche = face avant du berceau femelle
+    hw = DUP_W / 2
+
     # --- Support ---
-    b.extrude(b.rect(*loc((x_stop + x1 + 1) / 2, 0), x1 + 1 - x_stop, W, ang), z_cb, T, CUT, [shell])  # logement
-    # Chambre des soudures du connecteur mâle, ouverte dessous (on y soude), sous le trou des fils vers le M5Dial
-    xc0 = x0 + wall
-    b.extrude(b.rect(*loc(xc0 + CHAMBER / 2, 0), CHAMBER, 16, ang), z_cb - wall - 0.5, T + wall + 0.5, CUT, [shell])
-    hx, hy, hr = WIRE_HOLE
-    b.extrude(b.circles([loc(hx, hy)], hr), z_ct - 0.5, wall + 1.5, CUT, [shell])
-    # Bloc : embase du connecteur mâle (2,5 mm) enfoncée depuis le logement contre un rebord de 0,5 (il encaisse la
-    # poussée de la cartouche) ; ses pattes passent dans la chambre, soudées par dessous ; un point de colle
-    b.extrude(b.rect(*loc(x_stop - 1.2, y_b), 2.6, HDR_W, ang), z_c - HDR_T / 2, HDR_T, CUT, [shell])
-    b.extrude(b.rect(*loc(x_stop - 2.75, y_b), 0.7, 4.4, ang), z_c - 0.6, 1.2, CUT, [shell])
+    # Logement : pleine hauteur à partir du berceau ; au-dessus de l'abaissement de la cartouche, le bloc des mâles
+    b.extrude(b.rect(*loc((x_stop + x1 + 1) / 2, 0), x1 + 1 - x_stop, W, ang), z_cb, z_mt + 0.3 - z_cb, CUT, [shell])
+    b.extrude(b.rect(*loc((xr - 0.2 + x1 + 1) / 2, 0), x1 + 1.2 - xr, W, ang), z_mt + 0.3, z_ct - z_mt - 0.3, CUT, [shell])
+    # Bloc : 2 embouts mâles côte à côte, posés par le dessus (sous le M5Dial, avant de monter le support) dans un
+    # logement serré (clipsés, un point de colle au besoin) ; broches à travers un rebord de 0,6 vers la cartouche ;
+    # derrière eux une marche de 0,6 encaisse la poussée et les fils remontent droit dans le tube.
+    xm1 = xr - 0.8                       # face avant des embouts mâles (contre le rebord)
+    xm0 = xm1 - DUP_L
+    b.extrude(b.rect(*loc((xm0 + xm1) / 2, 0), DUP_L, DUP_W, ang), z_pf, z_b + 1 - z_pf, CUT, [shell])
+    b.extrude(b.rect(*loc(xm0 - 1.5, 0), 3.0, DUP_W, ang), z_pf + 0.6, z_b + 1 - z_pf - 0.6, CUT, [shell])
+    b.extrude(b.rect(*loc(xr - 0.5, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [shell])
     # Rainure du détrompeur dans le fond, fenêtres des crans dans les flancs
     b.extrude(b.rect(*loc((x_stop - 0.5 + x1 + 1) / 2, KEY_Y), x1 + 1.5 - x_stop, KEY_W + 0.6, ang),
               z_cb - wall - 0.5, wall + 0.6, CUT, [shell])
+    zw = z0 + tc / 2
     for sy in (1, -1):
-        b.extrude(b.rect(*loc(x1 - 3.2, sy * (W / 2 + wall / 2)), 4.8, wall + 1, ang), z_c - 4, 8, CUT, [shell])
+        b.extrude(b.rect(*loc(x1 - 3.2, sy * (W / 2 + wall / 2)), 4.8, wall + 1, ang), zw - 4, 8, CUT, [shell])
 
-    # --- Cartouche (posée : bout intérieur contre la butée, centrée dans le logement) ---
+    # --- Cartouche (posée : bout intérieur contre le fond, centrée dans le logement) ---
     xe = x_stop + l_b                    # bout extérieur de la cartouche (sans bouchon)
-    cart = b.solid(b.rect(*loc((x_stop + xe) / 2, 0), l_b, wb, ang), z_c - tc / 2, tc)
+    cart = b.solid(b.rect(*loc((x_stop + xe) / 2, 0), l_b, wb, ang), z0, tc)
     cart.name = "Cartouche 16350"
     # Détrompeur : nervure sous la cartouche, affleurant le dessous du support
-    b.combine(cart, b.solid(b.rect(*loc((x_stop + xe) / 2, KEY_Y), l_b, KEY_W, ang), z_cb - wall, z_c - tc / 2 - z_cb + wall + 0.5), JOIN)
+    b.combine(cart, b.solid(b.rect(*loc((x_stop + xe) / 2, KEY_Y), l_b, KEY_W, ang), z_cb - wall, z0 - z_cb + wall + 0.5), JOIN)
     # Bras du clip : attachés côté intérieur par un pont, libres vers l'extérieur ; cran à rampe (côté entrée) juste
     # avant le bout ouvert du support ; leurs 6 derniers mm dépassent du support : on les pince pour sortir.
     xa = xe - ARM_L
     for sy in (1, -1):
         ya = sy * (wb / 2 + ARM_GAP + ARM_T / 2)
         # Pont d'abord, puis le bras qui le touche : joint à part, un bras isolé resterait un corps séparé
-        b.combine(cart, b.solid(b.rect(*loc(xa + 1.25, sy * (wb / 2 + ARM_GAP / 2)), 2.5, ARM_GAP + 0.6, ang),
-                                z_c - tc / 2 + 1, tc - 2), JOIN)
-        b.combine(cart, b.solid(b.rect(*loc((xa + xe) / 2, ya), ARM_L, ARM_T, ang), z_c - tc / 2 + 1, tc - 2), JOIN)
+        b.combine(cart, b.solid(b.rect(*loc(xa + 1.25, sy * (wb / 2 + ARM_GAP / 2)), 2.5, ARM_GAP + 0.6, ang), z0 + 1, tc - 2), JOIN)
+        b.combine(cart, b.solid(b.rect(*loc((xa + xe) / 2, ya), ARM_L, ARM_T, ang), z0 + 1, tc - 2), JOIN)
         yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - 1.4  # face extérieure du bras, face d'accroche du cran
         bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.6, yo + sy * BUMP_P), loc(xh, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
-        b.combine(cart, b.solid(b.poly(bump), z_c - 3, 6), JOIN)
-    # Logement du connecteur femelle ouvert sur la face intérieure : il s'y enfonce par devant (fils déjà soudés)
-    # jusqu'à 2 rebords de 0,5 mm aux bouts de son embase (ils encaissent la poussée des picots) ; ses pattes et leurs
-    # soudures passent entre eux. Un point de colle (époxy) le retient quand on retire la cartouche.
-    b.extrude(b.rect(*loc(x_stop + HDR_L / 2 - 0.2, y_b), HDR_L + 0.4, HDR_W, ang), z_c - HDR_T / 2, HDR_T, CUT, [cart])
-    xs = x_stop + HDR_L                  # rebords, puis l'alésage
-    b.extrude(b.rect(*loc(xs + HDR_LIP / 2, y_b), HDR_LIP + 0.2, 4.0, ang), z_c - HDR_T / 2, HDR_T, CUT, [cart])
-    # Alésage de la pile et rainure du fil de son bout éloigné (il revient le long de la pile vers le connecteur)
-    b.combine(cart, cyl_x(b, loc, ang, xs + HDR_LIP, y_b, z_c, CELL_D / 2, BORE_L + 1), CUT)
-    b.extrude(b.rect(*loc((xs + xe + 1) / 2, y_b + CELL_D / 2 + CH_W / 2 - 0.5), xe + 1 - xs, CH_W + 0.5, ang),
-              z_c - 1.3, 2.6, CUT, [cart])
+        b.combine(cart, b.solid(b.poly(bump), zw - 3, 6), JOIN)
+    # Abaissement sous le bloc du support, puis gouttière ouverte sur toute la largeur intérieure
+    b.extrude(b.rect(*loc((x_stop - 0.5 + xr) / 2, 0), xr - x_stop + 0.5, wb + 1, ang), z_mt, tc, CUT, [cart])
+    b.extrude(b.rect(*loc((xr + xe + 1) / 2, 0), xe + 1 - xr, wb - 2 * CART_WALL, ang), z_mt, tc, CUT, [cart])
+    # Berceau des 2 embouts femelles : rebord avant de 0,6 (fenêtre des douilles), logement serré, marche arrière de
+    # 0,6 (les fils passent dessus) ; posés par le dessus, le plafond du support les tient en place
+    xf0 = xr + 0.6                       # face avant des embouts femelles
+    xf1 = xf0 + DUP_L
+    cr = b.solid(b.rect(*loc((xr + xf1 + 0.8) / 2, 0), xf1 + 0.8 - xr, DUP_W + 1.2, ang), z_mt - 0.1, z_top - z_mt + 0.1)
+    b.combine(cart, cr, JOIN)
+    b.extrude(b.rect(*loc((xf0 + xf1) / 2, 0), DUP_L, DUP_W, ang), z_pf, tc, CUT, [cart])
+    b.extrude(b.rect(*loc(xf1 + 0.45, 0), 0.9, DUP_W, ang), z_pf + 0.6, tc, CUT, [cart])
+    b.extrude(b.rect(*loc(xr + 0.25, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [cart])
+    # Gouttière couverte de la fin du berceau (+3 mm pour le virage des fils) jusqu'au bout
+    xcv = xf1 + 0.8 + 3
+    b.combine(cart, b.solid(b.rect(*loc((xcv + xe) / 2, 0), xe - xcv, wb - 2 * CART_WALL + 0.2, ang), z_top - 1.0, 1.0), JOIN)
+    # Alésage de la pile ; passages des fils dans le plancher : au bout intérieur par le couloir qui longe les embouts
+    # (fente dans le plancher sous le bloc du support), au bout éloigné par une fente sous la gouttière couverte
+    b.combine(cart, cyl_x(b, loc, ang, x_stop + END_WALL, 0, z_ax, CELL_D / 2, BORE_L + 1), CUT)
+    b.extrude(b.rect(*loc((x_stop + END_WALL + 0.2 + xr + 0.5) / 2, (LANE[0] + LANE[1]) / 2), xr + 0.5 - x_stop - END_WALL - 0.2,
+                     LANE[1] - LANE[0], ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
+    xfar = x_stop + END_WALL + 2 + 39    # bout éloigné de la pile
+    b.extrude(b.rect(*loc(xfar + 1.0, 0), 1.6, 6, ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
 
     # --- Bouchon : plaque au bout de la cartouche, bouchon dans l'alésage (collé, une fois la pile câblée) ---
-    cap = b.solid(b.rect(*loc(xe + CAP_T / 2, 0), CAP_T, wb, ang), z_c - tc / 2, tc)
+    cap = b.solid(b.rect(*loc(xe + CAP_T / 2, 0), CAP_T, wb, ang), z0, tc)
     cap.name = "Bouchon cartouche"
-    b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, y_b, z_c, CELL_D / 2 - 0.15, PLUG_L + 0.1), JOIN)
+    b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, 0, z_ax, CELL_D / 2 - 0.15, PLUG_L + 0.1), JOIN)
 
 
 def imu_holder(b, P, shell, loc, ang, z_b, r_b):

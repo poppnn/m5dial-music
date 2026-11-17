@@ -174,19 +174,15 @@ The print files will also be on **MakerWorld** (link coming).
 |---|---|---|---|
 | [`support_volant.stl`](hardware/support_volant.stl) | 1 | flat underside (as exported) | only from the bed under the M5Dial ring |
 | [`coque_batterie.stl`](hardware/coque_batterie.stl) | 1 | floor down (as exported) | none (the top bridges 38 mm) |
-| [`support_volant_sans_capteurs.stl`](hardware/support_volant_sans_capteurs.stl) | instead | same as the mount, **without** the ENV III slot (bigger rim-side windows) | same |
-| [`coque_batterie_sans_capteurs.stl`](hardware/coque_batterie_sans_capteurs.stl) | instead | same as the shell, **without** the IMU Pro Mini holder | none |
 | [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
 | **Or, removable 16350 battery:** | | | |
-| [`support_cartouche_16350.stl`](hardware/support_cartouche_16350.stl) | 1 | floor down (as exported), **instead of the shell and lid** | none (the top bridges 29 mm) |
-| [`support_cartouche_16350_sans_capteurs.stl`](hardware/support_cartouche_16350_sans_capteurs.stl) | instead | same, **without** the IMU Pro Mini holder | none |
-| [`cartouche_16350.stl`](hardware/cartouche_16350.stl) | 1 per battery | **upside down** (rib on top) | none (the Ø 17 bore bridges) |
+| [`support_cartouche_16350.stl`](hardware/support_cartouche_16350.stl) | 1 | floor down (as exported), **instead of the shell and lid** | none (the top bridges 27 mm) |
+| [`cartouche_16350.stl`](hardware/cartouche_16350.stl) | 1 per battery | bottom down (as exported), standing on the keying rib | under the floor only (1.9 mm, flat interface) |
 | [`bouchon_cartouche_16350.stl`](hardware/bouchon_cartouche_16350.stl) | 1 per battery | flat plate on the bed | none |
 | [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
 | [`cache_factice.stl`](hardware/cache_factice.stl) | 1 | peg on the bed | under the dome rim |
 | [`support_volant_test.stl`](hardware/support_volant_test.stl) | optional | flat underside | none |
 
-No sensor units? Print the two `_sans_capteurs` files instead (they fit the same lid, caps and screws).
 PETG or ASA (PLA softens in a car in the sun), 4 perimeters, 30–40 % infill for the mount, 3 perimeters for the
 other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit on the wheel before the full print.
 
@@ -196,8 +192,8 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   unit on Port B (temperature, humidity, pressure), with short Grove cables.
 - LiPo **103450** (50 × 34 × 10 mm) with its protection board and a lead long enough to reach the M5Dial.
   **Or** the removable cartridge: per battery one **16350** Li-ion cell (Ø 16 × 35 mm, e.g. from a disposable vape,
-  with solder tabs) and a **2-pin female 2.54 mm header** (8.5 mm tall); for the holder one **2-pin male 2.54 mm
-  header** (6 mm pins) and two thin wires to the M5Dial battery plug. Vape cells have **no protection circuit**:
+  with solder tabs) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
+  **2 male Dupont jumper ends** (6 mm pins), their wires going to the M5Dial battery plug. Vape cells have **no protection circuit**:
   check they read above 3.0 V before use, and a small protection board (DW01) on the cell is safer.
 - Per spoke (bottom and right): **M5 × 14 hex screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
 
@@ -208,14 +204,15 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    (the 3 large windows leave room for the fingers).
 3. Plug the battery into the M5Dial (check the polarity), slide it into the shell through the open end, its lead
    going up through the slot in the top, then **clip the lid** on (to open it: press the 2 bumps through the side holes).
-   **Removable 16350 cartridge instead** (polarity rule: **the pin on the side of the keying rib is +**, on the
-   cartridge and on the holder):
-   - Holder: push the male header into its pocket at the back of the holder from the inside (pins towards the open
-     end), tails into the chamber; solder two wires to the tails through the opening under the chamber, + on the
-     rib side; run them up through the hole into the tube to the M5Dial battery plug; a drop of glue on the header.
-   - Cartridge: slide the cell in through the open end, its far-end wire running back along the groove; bring both
-     wires out of the front window, solder them to the female header (+ on the rib side), push the header back into
-     its window until it stops (epoxy), then glue the cap on.
+   **Removable 16350 cartridge instead** (polarity rule: **the jumper on the side of the keying rib is +**, on the
+   cartridge and on the holder). The connection sits on top of the cell, so the cartridge is short:
+   - Holder: drop the 2 male jumper ends side by side into the pocket at the back of the holder, from above (inside
+     the collar), pins towards the open end through the front lip; their wires go straight up to the M5Dial battery
+     plug. Tight fit; a drop of glue if they move.
+   - Cartridge: solder one female jumper wire to each end of the cell (+ on the rib side), slide the cell in
+     through the open end, the near-end wire in the groove beside the cradle, the far-end wire under the covered
+     channel and down through its slot; drop the 2 female ends into the cradle (sockets towards the inner end,
+     wires over the back step), then glue the cap on.
    - Swap: slide the cartridge in, rib down, until both side arms click; to remove, **pinch the two arm ends** that
      stick out and pull. Upside down or the wrong way round, the rib stops it at the entrance.
 4. Push the shell's (or holder's) round collar into the tube from underneath (3 lugs into 3 notches) and **turn it
@@ -224,9 +221,8 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    washer, nut and screw head on either side (the hex pocket at the back of the pad holds a nut or a screw head),
    then press a **nut cap** onto each nut on the driver side, and clip the **dummy cap** into the left spoke's
    Ø 16 hole (nothing is fixed there; the three spokes look alike).
-6. Optional sensors: slide the **IMU Pro Mini** flat into its holder on top of the battery shell before step 4
-   (inside the tube, Grove socket towards the open side) and plug it into Port A; slide the **ENV III** into its slot on the outside
-   of the tube (rim side, from the top) and plug it into Port B. They are found at power on.
+6. Optional sensors: plug the **IMU Pro Mini** into Port A and the **ENV III** into Port B and fix them where you
+   like (double-sided tape, jumper wires); the printed holders are off by default. They are found at power on.
 7. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
 
 ### Design notes
@@ -246,17 +242,20 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   3 lugs (30° wide, 2.4 mm tall) in a groove of the tube foot, a bump under each lug clicks into a dimple. Snap-on
   lid with 2 flexible tabs; vent slots in the floor, the sides and the top (into the tube). Remove the shell to
   reach the M5Dial clamp ring. Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
-- **16350 cartridge** (`BAT_TYPE` = 1; 0 = LiPo shell): same collar and bayonet as the shell. The holder is
-  59.9 × 32.3 × 23.5 mm (the shell: 57.2 × 41.7 × 14.2), so it hangs **9 mm lower** behind the wheel and its open
-  end reaches 36 mm from the M5Dial centre (the shell: 29); the cartridge sticks out 7.6 mm more. The cartridge
-  (55.3 + 1.6 mm cap, 28.5 mm wide with its arms) holds the cell in a Ø 16.9 bore, the female header recessed
-  at its inner end (no exposed live pins in a pocket). Two flexible side arms (1.4 mm, 26 mm long) click 0.7 mm
-  bumps into windows of the holder walls. Keying rib (2 mm, 5 mm off centre) under the cartridge in a floor groove.
+- **16350 cartridge** (`BAT_TYPE` = 1; 0 = LiPo shell): same collar and bayonet as the shell. The connection
+  rides **on top of the cell**: 2 Dupont jumper ends side by side (2.54 mm pitch, 14 mm housings), male ones in a
+  block of the holder right under the M5Dial (wires straight up), female ones in a cradle on the cartridge (sockets
+  recessed behind a 0.6 mm lip: no exposed live contact in a pocket). Thicker but much shorter: the holder is
+  42.8 × 30.3 × 27.0 mm (the shell: 57.2 × 41.7 × 14.2), so it hangs **13 mm lower** behind the wheel, its open
+  end 23 mm from the M5Dial centre (the shell: 29). The cartridge (47.2 + 1.6 mm cap, 26.5 mm wide with its arms)
+  holds the cell in a Ø 16.9 bore; its first 17.5 mm are lowered under the holder block. Two flexible side arms
+  (1.4 mm, 26 mm long) click 0.7 mm bumps into windows of the holder walls. Keying rib (2 mm, 5 mm off centre)
+  under the cartridge in a floor groove.
 - **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
   washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
   [`hardware/fusion/CacheEcrou`](hardware/fusion/CacheEcrou): `NUT_AF` 8.0 if too loose, 8.2 if too tight.
-- **Sensor holders** (`ENV_HOLDER`, `IMU_HOLDER` = 1): the IMU Pro Mini (24 × 24 × 8) lies flat in a holder on top
+- **Sensor holders** (off by default; `ENV_HOLDER`, `IMU_HOLDER` = 1 to bring them back): the IMU Pro Mini (24 × 24 × 8) lies flat in a holder on top
   of the battery shell, inside the tube (parallel to the screen, as "always upright" needs), held by two 2 mm lips
   and tied to the shell collar by 5 ribs; the
   ENV III (32 × 24 × 8) slides from the top into a slot on the outside of the tube, rim side, in open air away from
