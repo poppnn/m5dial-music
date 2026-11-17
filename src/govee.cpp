@@ -90,10 +90,9 @@ static uint32_t hash32(uint32_t x) {
 
 static float easeSine(float x) { return 0.5f - 0.5f * cosf(x * (float)PI); }
 
-// Couleur de l'effet au temps t de l'effet (ms, à la vitesse x1).
-static LedColor ledShownAt(uint32_t now) {
-  LedColor c = ledCurrent();
-  float k = 1;  // intensité de la couleur choisie
+// Intensité de l'effet (0 = éteint, 1 = pleine luminosité choisie) au temps t de l'effet (ms, à la vitesse x1).
+static float fxLevel(uint32_t now) {
+  float k = 1;
   if (ledFx == FX_BLINK) {
     k = now / BLINK_MS % 2 ? 0 : 1;
   } else if (ledFx == FX_SMOOTH_BLINK) {
@@ -105,9 +104,19 @@ static LedColor ledShownAt(uint32_t now) {
     k = h % 100 < 35 && in >= start && in < start + RANDOM_ON ? 1 : 0;
   } else if (ledFx == FX_BREATHE) {
     k = 0.06f + 0.94f * (0.5f - 0.5f * cosf(now % BREATHE_MS * (2 * PI / BREATHE_MS)));  // jamais tout à fait noir
-  } else if (ledFx == FX_RAINBOW) {
-    c = hueColor(now % RAINBOW_MS * 360 / RAINBOW_MS);
   }
+  return k;
+}
+
+// Teinte de l'effet (pleine intensité) : la couleur choisie, ou la roue des couleurs pour l'arc-en-ciel.
+static LedColor fxColor(uint32_t now) {
+  return ledFx == FX_RAINBOW ? hueColor(now % RAINBOW_MS * 360 / RAINBOW_MS) : ledCurrent();
+}
+
+// Couleur affichée (pastille, anneau) : la teinte assombrie par l'intensité.
+static LedColor ledShownAt(uint32_t now) {
+  LedColor c = fxColor(now);
+  float k = fxLevel(now);
   c.r = c.r * k;
   c.g = c.g * k;
   c.b = c.b * k;
@@ -116,15 +125,17 @@ static LedColor ledShownAt(uint32_t now) {
 
 // Temps de l'effet : avance de (temps écoulé x vitesse), si bien qu'un changement de vitesse ne fait pas sauter
 // l'effet (il accélère ou ralentit à partir de là où il en est).
-LedColor ledShown(uint32_t now) {
+static uint32_t fxTime(uint32_t now) {
   static uint32_t last = now;
   static double t = 0;
   if ((int32_t)(now - last) > 0) {  // appelé par goveeService et par la page LED : instants croissants
     t += (double)(now - last) * FX_SPEEDS[ledFxSpeed];
     last = now;
   }
-  return ledShownAt((uint32_t)fmod(t, 4294967296.0));
+  return (uint32_t)fmod(t, 4294967296.0);
 }
+
+LedColor ledShown(uint32_t now) { return ledShownAt(fxTime(now)); }
 
 // Avant goveeInit (qui recharge l'état mémorisé) : préréglage Rouge joué par chaque effet.
 void goveeSelfTest() {
@@ -200,22 +211,42 @@ void goveeService(bool ledPage) {
     ledStateSave({(uint8_t)ledColor, (uint16_t)ledHue, ledCustom, (uint8_t)ledBri, (uint8_t)ledFx, (uint8_t)ledFxSpeed});
   }
   if (goveeWr && goveeClient && goveeClient->isConnected()) {
+    // Effets : la barre ignore l'intensité d'une couleur RVB (un rouge sombre = son rouge, le noir est ignoré) ;
+    // l'intensité passe donc par sa commande de luminosité, l'extinction par marche / arrêt, et la couleur n'est
+    // envoyée que quand la teinte change (arc-en-ciel). fxLvl : dernière luminosité d'effet envoyée, -1 = aucune.
     static LedColor fxSent = {nullptr, 0, 0, 0};
+    static int fxLvl = -1;
     if (now - lastSend < GOVEE_MIN_GAP_MS) return;
+    uint32_t t = fxTime(now);
     if (colorPending) {
       colorPending = false;
-      sendColor(fxSent = ledShown(now));
+      sendColor(fxSent = fxColor(t));
       lastSend = now;
-    } else if (ledBri != ledBriSent) {
+    } else if (ledFx == FX_FIXED && fxLvl >= 0) {  // effet arrêté : la barre reprend allumage et luminosité choisis
+      if (fxLvl == 0 && ledOn) goveeSend({0x33, 0x01, 1});
+      fxLvl = -1;
+      ledBriSent = -1;
+      lastSend = now;
+    } else if (ledBri != ledBriSent && (ledFx == FX_FIXED || !ledOn)) {
       goveeSend({0x33, 0x04, (uint8_t)(ledBri * GOVEE_BRI_MAX / 100)});
       ledBriSent = ledBri;
       lastSend = now;
     } else if (ledFx != FX_FIXED && ledOn && now - lastSend >= FX_GAP_MS) {
-      // shortcut: l'effet est joué par le M5Dial ; éteint, hors de portée ou en veille, la barre garde la dernière
-      // couleur envoyée. Scènes intégrées de la barre (autonomes) si un jour leurs codes H7090 sont connus.
-      LedColor c = ledShown(now);
-      if (c.r != fxSent.r || c.g != fxSent.g || c.b != fxSent.b) {  // clignotement : seulement aux changements
+      // shortcut: l'effet est joué par le M5Dial ; éteint, hors de portée ou en veille, la barre garde son dernier
+      // état. Scènes intégrées de la barre (autonomes) si un jour leurs codes H7090 sont connus.
+      LedColor c = fxColor(t);
+      float k = fxLevel(t);
+      int lvl = k < 0.03f ? 0 : max(1, (int)lroundf(ledBri * GOVEE_BRI_MAX / 100 * k));
+      if (c.r != fxSent.r || c.g != fxSent.g || c.b != fxSent.b) {  // teinte changée (arc-en-ciel)
         sendColor(fxSent = c);
+        lastSend = now;
+      } else if (lvl != fxLvl) {
+        if (lvl == 0) goveeSend({0x33, 0x01, 0});                   // éteinte (clignotements)
+        else {
+          if (fxLvl <= 0) goveeSend({0x33, 0x01, 1});               // rallumée
+          goveeSend({0x33, 0x04, (uint8_t)lvl});
+        }
+        fxLvl = lvl;
         lastSend = now;
       }
     }
