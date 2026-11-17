@@ -174,9 +174,10 @@ The print files will also be on **MakerWorld** (link coming).
 |---|---|---|---|
 | [`support_volant.stl`](hardware/support_volant.stl) | 1 | flat underside (as exported) | only from the bed under the M5Dial ring |
 | [`coque_batterie.stl`](hardware/coque_batterie.stl) | 1 | floor down (as exported) | none (the top bridges 38 mm) |
+| [`support_volant_lipo.stl`](hardware/support_volant_lipo.stl) | **with the LiPo shell** | instead of `support_volant.stl` (bayonet at the tube foot) | same as the mount |
 | [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
 | **Or, removable 16350 battery:** | | | |
-| [`support_cartouche_16350.stl`](hardware/support_cartouche_16350.stl) | 1 | floor down (as exported), **instead of the shell and lid** | none (the top bridges 27 mm) |
+| [`support_cartouche_16350.stl`](hardware/support_cartouche_16350.stl) | 1 | floor down (as exported), **instead of the shell and lid**, with `support_volant.stl` | none (the top bridges 27 mm) |
 | [`cartouche_16350.stl`](hardware/cartouche_16350.stl) | 1 per battery | bottom down (as exported), standing on the keying rib | under the floor only (1.9 mm, flat interface) |
 | [`bouchon_cartouche_16350.stl`](hardware/bouchon_cartouche_16350.stl) | 1 per battery | flat plate on the bed | none |
 | [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
@@ -242,15 +243,20 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   3 lugs (30° wide, 2.4 mm tall) in a groove of the tube foot, a bump under each lug clicks into a dimple. Snap-on
   lid with 2 flexible tabs; vent slots in the floor, the sides and the top (into the tube). Remove the shell to
   reach the M5Dial clamp ring. Parameters `BAT_L`, `BAT_W`, `BAT_T`, `SHELL_WALL`, `BAT_ROT`, `BAT_TWIST`.
-- **16350 cartridge** (`BAT_TYPE` = 1; 0 = LiPo shell): same collar and bayonet as the shell. The connection
-  rides **on top of the cell**: 2 Dupont jumper ends side by side (2.54 mm pitch, 14 mm housings), male ones in a
-  block of the holder right under the M5Dial (wires straight up), female ones in a cradle on the cartridge (sockets
-  recessed behind a 0.6 mm lip: no exposed live contact in a pocket). Thicker but much shorter: the holder is
-  42.8 × 30.3 × 27.0 mm (the shell: 57.2 × 41.7 × 14.2), so it hangs **13 mm lower** behind the wheel, its open
-  end 23 mm from the M5Dial centre (the shell: 29). The cartridge (47.2 + 1.6 mm cap, 26.5 mm wide with its arms)
-  holds the cell in a Ø 16.9 bore; its first 17.5 mm are lowered under the holder block. Two flexible side arms
-  (1.4 mm, 26 mm long) click 0.7 mm bumps into windows of the holder walls. Keying rib (2 mm, 5 mm off centre)
-  under the cartridge in a floor groove.
+- **16350 cartridge** (`BAT_TYPE` = 1; 0 = LiPo shell): same bayonet as the shell, but the holder rises **inside
+  the tube**, up to `BAT_GAP` (5 mm) under the M5Dial's lowest point, its clamp ring (bottom 14.6 mm above the
+  mount's underside, from the official [Dial.stl](https://github.com/m5stack/M5_Hardware/tree/master/Products/K130_Dial/Structures)
+  model and `CLAMP_H` 12.6). It hangs only **17.4 mm** below the mount (the LiPo shell: 14.2, the first cartridge:
+  27). For that the holder is centred with rounded corners (it turns inside the Ø 52.8 bore for the quarter turn),
+  the bayonet crown is level with its top, the lug entry notches start at the tube foot, and a notch in the tube
+  foot lets the end of the cartridge out on the rim side (pinch the arms below the mount). So this mount
+  (`support_volant.stl`) only takes the cartridge holder; the LiPo shell goes with `support_volant_lipo.stl`.
+  The connection rides **on top of the cell**: 2 Dupont jumper ends side by side (2.54 mm pitch, 14 mm housings),
+  male ones in a block of the holder right under the M5Dial (wires straight up), female ones in a cradle on the
+  cartridge (sockets recessed behind a 0.6 mm lip: no exposed live contact in a pocket). Holder 42.8 × 30.3 ×
+  27.0 mm; cartridge 47.2 + 1.6 mm cap, 26.5 mm wide with its arms, cell in a Ø 16.9 bore, its first 17.5 mm
+  lowered under the holder block. Two flexible side arms (1.4 mm, 26 mm long) click 0.7 mm bumps into windows of
+  the holder walls. Keying rib (2 mm, 5 mm off centre) under the cartridge in a floor groove.
 - **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
   washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source

@@ -67,6 +67,8 @@ PARAMS = [
     ("DIAL_RISE", 27.2, "mm", "Rehausse du M5Dial au-dessus du dessous du support (27,2 : même hauteur sur le volant qu'avec PAD_MIN 6)"),
     ("CLAMP_D", 49.8, "mm", "Ø extérieur du collier de serrage du M5Dial (STL Dial_v1.1 : 49,8, 12,6 de haut)"),
     ("CLAMP_GAP", 1.5, "mm", "Jeu radial autour du collier (il doit tourner librement sous l'anneau)"),
+    ("CLAMP_H", 12.6, "mm", "Hauteur du collier de serrage du M5Dial (modèle officiel Dial.stl : 12,57) : point le plus bas du M5Dial"),
+    ("BAT_GAP", 5.0, "mm", "Cartouche : espace entre le haut du support de batterie (remonté dans le tube) et le collier du M5Dial"),
     ("TUBE_WALL", 3.5, "mm", "Épaisseur du tube qui porte l'anneau rehaussé (et la gorge de la baïonnette de la batterie)"),
     ("LEG_ANG", 36.0, "deg", "Largeur angulaire des 3 piliers du tube (entre eux : grandes fenêtres pour serrer le collier)"),
     ("BAT_TYPE", 1, "", "Batterie : 0 = LiPo 103450 dans la coque à couvercle, 1 = cartouche 16350 amovible à clip"),
@@ -309,10 +311,26 @@ X_S = -18.0                  # bout intérieur de la cartouche, depuis le centre
                              # fils tombent sous la couronne, droit sous le M5Dial
 
 
-def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
+def rrect(cx, cy, length, width, ang, r):
+    """Contour d'un rectangle centré à coins arrondis (rayon r), côté `length` orienté selon `ang` (deg)."""
+    u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
+    n = (-u[1], u[0])
+    a, c = length / 2 - r, width / 2 - r
+    pts = []
+    for (sa, sc), a0 in (((1, 1), 0), ((-1, 1), 90), ((-1, -1), 180), ((1, -1), 270)):
+        for t in range(0, 91, 15):
+            ca, sb = math.cos(math.radians(a0 + t)), math.sin(math.radians(a0 + t))
+            px, py = sa * a + r * ca, sc * c + r * sb
+            pts.append((cx + px * u[0] + py * n[0], cy + px * u[1] + py * n[1]))
+    return pts
+
+
+def battery(b, P, cup, cx, cy, z_b, r_clr, a_out, z_mount):
     """Coque de la LiPo sous le tube du M5Dial (corps séparé "Coque batterie", imprimé fond sur le plateau) et,
     dans le pied du tube : encoches d'entrée, gorge et creux de verrouillage. La batterie se glisse par le bout
-    ouvert de la coque (côté jante), son câble remonte par la fente jusqu'au M5Dial."""
+    ouvert de la coque (côté jante), son câble remonte par la fente jusqu'au M5Dial.
+    z_b : bas de la couronne de la baïonnette (= dessous du support du volant z_mount pour la coque ; plus haut dans
+    le tube pour la cartouche, dont le support remonte et tourne dans le tube)."""
     ang = a_out + P["BAT_ROT"]   # grand côté de la coque, bout ouvert vers l'extérieur du volant
     u = (math.cos(math.radians(ang)), math.sin(math.radians(ang)))
     at = lambda d: (cx + d * u[0], cy + d * u[1])  # point sur le grand axe, à d mm du centre
@@ -324,7 +342,9 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     for k in LUGS:
         af = ang + k
         ae = af - P["BAT_TWIST"]
-        b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, ae + half)), z_b - 1, 1 + GROOVE_Z1, CUT, [cup])
+        # Encoche d'entrée depuis le bas du tube (z_mount) : quand la couronne est remontée, les tenons y montent
+        b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, ae + half)), z_mount - 1,
+                  z_b - z_mount + 1 + GROOVE_Z1, CUT, [cup])
         b.extrude(b.poly(sector(cx, cy, r_clr - 0.5, r_g, ae - half, af + half)), z_b + GROOVE_Z0,
                   GROOVE_Z1 - GROOVE_Z0, CUT, [cup])
         b.extrude(b.circles([bump(af)], BUMP_D / 2 + 0.4), z_b + GROOVE_Z0 - 0.6, 0.7, CUT, [cup])
@@ -332,17 +352,24 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
     wall, L, W, T = P["SHELL_WALL"], P["BAT_L"], P["BAT_W"], P["BAT_T"]
     cart = P["BAT_TYPE"] >= 0.5
     x_tray, l_tray = 0.0, L + 2 * wall  # coque : centrée sous le M5Dial
+    z_tt = z_b                   # dessus du bac : sous la couronne (coque)
     if cart:  # support de cartouche : plus étroit, plus épais (embouts au-dessus de la pile), plus court
         wb = CELL_D + 2 * CART_WALL                             # corps de la cartouche
         tc = CART_WALL + CELL_D + MID_WALL + DUP_PAD + DUP_H    # pile, plancher, berceau des embouts
         W, T = wb + 2 * (ARM_GAP + ARM_T) + 0.6, tc + 0.6       # logement : bras compris, 0,3 de jeu par côté
         l_b = END_WALL + BORE_L                                 # longueur de la cartouche (sans bouchon)
-        x_stop = X_S                                            # butée : bout intérieur de la cartouche
-        x0 = x_stop - wall                                      # face extérieure du bout intérieur
+        l_tray = l_b - CART_OUT + wall
+        x0 = -l_tray / 2         # centré : il tourne dans l'alésage du tube (quart de tour de la baïonnette)
+        x_stop = x0 + wall                                      # butée : bout intérieur de la cartouche
         x1 = x_stop + l_b - CART_OUT                            # bout ouvert
-        x_tray, l_tray = (x0 + x1) / 2, x1 - x0
+        x_tray = 0.0
+        z_tt = z_b + BOSS_H      # dessus du bac au niveau du haut de la couronne : tout remonte de BOSS_H
     h_tray = T + 2 * wall        # fond, logement, dessus plein
-    shell = b.solid(b.rect(*at(x_tray), l_tray, W + 2 * wall, ang), z_b - h_tray, h_tray)
+    if cart:  # coins arrondis : le bac tourne dans l'alésage du tube (Ø 2 x r_clr)
+        shell = b.solid(b.poly(rrect(*at(x_tray), l_tray, W + 2 * wall, ang, 3.0)), z_tt - h_tray, h_tray)
+        assert math.hypot(l_tray / 2 - 3, W / 2 + wall - 3) + 3 < r_b - 0.2, "le bac ne tourne pas dans le tube"
+    else:
+        shell = b.solid(b.rect(*at(x_tray), l_tray, W + 2 * wall, ang), z_tt - h_tray, h_tray)
     shell.name = "Support cartouche" if cart else "Coque batterie"
     # Collerette à 45° du bord de la coque jusqu'à la couronne : imprimable sans support
     w2 = W / 2 + wall
@@ -353,7 +380,10 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
                              adsk.fusion.ExtentDirections.PositiveExtentDirection, adsk.core.ValueInput.createByString("45 deg"))
         inp.startExtent = adsk.fusion.OffsetStartDefinition.create(adsk.core.ValueInput.createByReal((z_b - (r_b - w2)) / 10))
         b.combine(shell, ext.add(inp).bodies.item(0), JOIN)
-    b.combine(shell, b.solid(b.circles([(cx, cy)], r_b), z_b, BOSS_H), JOIN)  # couronne
+    # Couronne : anneau (évidé avant d'être joint, pour ne pas entamer le bac de la cartouche, qui monte dedans)
+    crown = b.solid(b.circles([(cx, cy)], r_b), z_b, BOSS_H)
+    b.extrude(b.circles([(cx, cy)], r_b - BOSS_T), z_b - 0.1, BOSS_H + 0.2, CUT, [crown])
+    b.combine(shell, crown, JOIN)
     for k in LUGS:
         af = ang + k
         b.combine(shell, b.solid(b.poly(sector(cx, cy, r_b - 0.2, r_b + LUG_P, af - LUG_ANG / 2, af + LUG_ANG / 2)),
@@ -361,13 +391,15 @@ def battery(b, P, cup, cx, cy, z_b, r_clr, a_out):
         b.combine(shell, b.solid(b.circles([bump(af)], BUMP_D / 2), z_b + LUG_Z0 - BUMP_H, BUMP_H), JOIN)
     v = (-u[1], u[0])
     loc = lambda px, py: (cx + px * u[0] + py * v[0], cy + px * u[1] + py * v[1])
-    z_mid = z_b - wall - T / 2
-    b.extrude(b.circles([(cx, cy)], r_b - BOSS_T), z_b, BOSS_H + 1, CUT, [shell])  # couronne évidée
+    z_mid = z_tt - wall - T / 2
     if cart:
-        cartridge(b, shell, loc, ang, z_b, z_mid, W, T, wall, x0, x_stop, x1, wb, tc, l_b)
+        cartridge(b, shell, loc, ang, z_tt, z_mid, W, T, wall, x0, x_stop, x1, wb, tc, l_b)
+        # Encoche au pied du tube : le bout de la cartouche (et ses bras à pincer) sort du tube côté jante
+        top = z_tt - wall + 0.4
+        b.extrude(b.rect(*loc(x1 + 6, 0), 14, W + 2, ang), z_mount - 1, top - z_mount + 1, CUT, [cup])
     else:
         lipo_tray(b, shell, at, loc, ang, z_b, z_mid, L, W, T, wall, r_b, h_tray)
-    imu_holder(b, P, shell, loc, ang, z_b, r_b)
+    imu_holder(b, P, shell, loc, ang, z_tt, r_b)
     return shell
 
 
@@ -432,8 +464,10 @@ def cartridge(b, shell, loc, ang, z_b, z_c, W, T, wall, x0, x_stop, x1, wb, tc, 
 
     # --- Support ---
     # Logement : pleine hauteur à partir du berceau ; au-dessus de l'abaissement de la cartouche, le bloc des mâles
-    b.extrude(b.rect(*loc((x_stop + x1 + 1) / 2, 0), x1 + 1 - x_stop, W, ang), z_cb, z_mt + 0.3 - z_cb, CUT, [shell])
-    b.extrude(b.rect(*loc((xr - 0.2 + x1 + 1) / 2, 0), x1 + 1.2 - xr, W, ang), z_mt + 0.3, z_ct - z_mt - 0.3, CUT, [shell])
+    # (prolongé au-delà du bout ouvert : la cartouche qui dépasse traverse la couronne et la collerette, montées
+    # à sa hauteur quand le support remonte dans le tube)
+    b.extrude(b.rect(*loc((x_stop + x1 + 12) / 2, 0), x1 + 12 - x_stop, W, ang), z_cb, z_mt + 0.3 - z_cb, CUT, [shell])
+    b.extrude(b.rect(*loc((xr - 0.2 + x1 + 12) / 2, 0), x1 + 12.2 - xr, W, ang), z_mt + 0.3, z_ct - z_mt - 0.3, CUT, [shell])
     # Bloc : 2 embouts mâles côte à côte, posés par le dessus (sous le M5Dial, avant de monter le support) dans un
     # logement serré (clipsés, un point de colle au besoin) ; broches à travers un rebord de 0,6 vers la cartouche ;
     # derrière eux une marche de 0,6 encaisse la poussée et les fils remontent droit dans le tube.
@@ -569,7 +603,11 @@ def build(comp, P):
     raised = P["DIAL_RISE"] > 9
     r_clr = P["CLAMP_D"] / 2 + P["CLAMP_GAP"]  # vide sous l'anneau rehaussé : le collier s'y visse
     r_base = r_clr + P["TUBE_WALL"] if raised else r_out
-    z_win = z_b + GROOVE_Z1 + 1.2  # bas des fenêtres du tube, au-dessus de la gorge de la baïonnette
+    # Baïonnette : au pied du tube pour la coque LiPo ; pour la cartouche, le support remonte dans le tube jusqu'à
+    # BAT_GAP sous le collier du M5Dial (son point le plus bas, CLAMP_H sous l'anneau) : il pend d'autant moins.
+    up = P["BAT_TYPE"] >= 0.5 and raised and not test
+    z_cr = max(z_b, z_ring - P["CLAMP_H"] - P["BAT_GAP"] - BOSS_H) if up else z_b  # bas de la couronne
+    z_win = z_cr + GROOVE_Z1 + 1.2  # bas des fenêtres du tube, au-dessus de la gorge de la baïonnette
 
     # Pièce d'essai : plaque d'un seul contour convexe entre les côtés intérieurs des deux pattes. Support complet :
     # les pattes prolongées rejoignent le tube, plus de plaque (elle laissait des languettes au pied du tube) ;
@@ -706,7 +744,7 @@ def build(comp, P):
             b.tilt(t, x, y, rad, til, dz)
             b.combine(cup, t, CUT)
     if raised and not test:
-        battery(b, P, cup, cx, cy, z_b, r_clr, a_out)
+        battery(b, P, cup, cx, cy, z_cr, r_clr, a_out, z_b)
     return cup
 
 
