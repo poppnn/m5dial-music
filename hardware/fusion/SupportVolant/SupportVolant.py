@@ -312,21 +312,25 @@ WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de 
 # Le support garde la baïonnette de la coque. Le long de la cartouche, du bout intérieur : fond 1,2 | alésage 46
 # (soudures 2 + pile et languettes 39 + soudures 2 + bouchon 3) ; au-dessus, sur les 17,5 premiers mm, le bloc du
 # support (embouts mâles), puis le berceau des embouts femelles et la gouttière des fils (couverte vers le bout).
-# Polarité : l'embout du côté de la nervure du détrompeur (+y) est le +, sur la cartouche comme sur le support.
+# Polarité : l'embout côté +y (du côté de la fente des fils et des « + » gravés) est le +, sur la cartouche comme sur
+# le support. Sans détrompeur : retournée ou bout pour bout, la cartouche bute sur la pointe des broches avant tout
+# contact (ses douilles sont alors en bas ou à l'arrière) : ne pas forcer.
 CELL_D = 16.9                # alésage : pile Ø16 + gaine + jeu
 CART_WALL, END_WALL, MID_WALL = 1.4, 1.2, 1.4  # parois ; fond intérieur ; plancher entre la pile et les embouts
 BORE_L = 46.0
 DUP_L, DUP_W, DUP_H = 14.0, 5.2, 2.6  # 2 embouts Dupont côte à côte (2,54 x 2,54 x 14) : logement serré, clipsé
 DUP_PAD = 0.9                # surélévation du berceau : les embouts mâle et femelle à la même hauteur
 RECESS = 17.5                # cartouche abaissée sur ses 17,5 premiers mm : le bloc des embouts mâles s'y loge
-LANE = (3.6, 5.2)            # couloir du fil du bout intérieur de la pile, à côté des embouts (y)
-CAP_T, PLUG_L = 1.6, 3.0     # bouchon : plaque, bouchon dans l'alésage (collé)
+LANE = (3.6, 7.6)            # fente des fils, sur toute la longueur : la pile y passe ses deux fils vers la gouttière (y)
+CAP_T, PLUG_L = 1.6, 3.0     # bouchon : plaque, bouchon dans l'alésage
+CAP_GROOVE = 0.6             # rainures des flancs de la gouttière où coulisse le couvercle du bouchon (profondeur)
+CAP_DETENT = 0.35            # bossages de clic du couvercle : 0,2 de serrage au fond des rainures, puis un creux
 CART_OUT = 6.0               # la cartouche dépasse du support : les bouts des bras s'y pincent
 ARM_T, ARM_GAP, ARM_L = 1.5, 2.4, 26.0  # bras du clip le long des flancs : épaisseur, jeu (course pour les pincer), longueur
 BUMP_P = 1.2                 # cran des bras : accroche 0,9 mm dans les logements du support (0,3 de jeu)
 CLIP_IN = 2.5                # face d'accroche du cran, en retrait du bout ouvert du support (bord plein de 2,5 mm)
 CLIP_D = 1.0                 # profondeur des logements borgnes des crans dans les flancs (peau de 0,6 dehors)
-KEY_W, KEY_Y = 2.0, 5.0      # détrompeur : nervure sous la cartouche, décalée de 5 mm, rainure dans le fond du support
+SPRING_D, SPRING_L = 5.4, 9.0  # logement du ressort d'éjection (ressort de stylo Ø 5 max, 14 mm et plus)
 X_S = -18.0                  # bout intérieur de la cartouche, depuis le centre du M5Dial : les embouts mâles et leurs
                              # fils tombent sous la couronne, droit sous le M5Dial
 
@@ -503,9 +507,17 @@ def holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc):
     b.extrude(b.rect(*loc((xm0 + xm1) / 2, 0), DUP_L, DUP_W, ang), z_pf, z_tt + 1 - z_pf, CUT, [shell])
     b.extrude(b.rect(*loc(xm0 - 1.5, 0), 3.0, DUP_W, ang), z_pf + 0.6, z_tt + 1 - z_pf - 0.6, CUT, [shell])
     b.extrude(b.rect(*loc(xr - 0.5, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [shell])
-    # Rainure du détrompeur dans le fond
-    b.extrude(b.rect(*loc((x_stop - 0.5 + x1 + 1) / 2, KEY_Y), x1 + 1.5 - x_stop, KEY_W + 0.6, ang),
-              z_cb - wall - 0.5, wall + 0.6, CUT, [shell])
+    # « + » gravé à côté de l'embout + (côté +y), sur le dessus du bac
+    for lx, ly in ((3.0, 0.7), (0.7, 3.0)):
+        b.extrude(b.rect(*loc(xm0 + 5, 5.5), lx, ly, ang), z_tt - 0.4, 1.4, CUT, [shell])
+    # Ressort d'éjection : logement dans un bossage derrière le fond, au centre du bout intérieur de la cartouche ;
+    # comprimé quand elle est clipsée (il la plaque contre les crans), il la repousse quand on pince les bras.
+    # Le bossage descend jusqu'au fond (imprimable sans support) ; sur le volant il reste sous le support.
+    z_ax = L_["z_ax"]
+    xbk = x_stop - wall
+    b.combine(shell, b.solid(b.rect(*loc(xbk - (SPRING_L - wall + 1) / 2 + 0.5, 0), SPRING_L - wall + 2, SPRING_D + 3.6, ang),
+                             z_cb - wall, z_ax + SPRING_D / 2 + 1.8 - (z_cb - wall)), JOIN)
+    b.combine(shell, cyl_x(b, loc, ang, x_stop - SPRING_L, 0, z_ax, SPRING_D / 2, SPRING_L + 0.2), CUT)
     # Logements des crans : borgnes (la paroi reste fermée dehors, le cran accroche un bord plein de CLIP_IN mm et non
     # plus un fin barreau), bord d'accroche exactement sur la face d'accroche du cran ; le cran est en légère dépouille,
     # le ressort du bras plaque la cartouche contre sa butée : pas de jeu en longueur
@@ -542,8 +554,8 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     La cartouche entre par le bout ouvert ; ses deux bras à cran cliquent dans les fenêtres des flancs ; on les
     pince (leurs bouts dépassent) pour la ressortir. En fin de course, les broches des 2 embouts Dupont mâles (bloc
     du support) entrent dans les 2 embouts femelles (berceau de la cartouche).
-    Détrompeur : la nervure décalée sous la cartouche passe dans la rainure du fond ; retournée ou bout pour bout,
-    elle bute dès l'entrée (le + et le - ne peuvent pas s'inverser).
+    Fils : une fente ouverte sur toute la longueur relie l'alésage à la gouttière du dessus ; les deux fils de la pile y
+    montent sans trou à enfiler et suivent la gouttière jusqu'aux embouts ; le couvercle du bouchon les cache.
     Arrondis : grands rayons dessous (4 mm), dessus adouci (1 mm), bouchon assorti."""
     L_ = cart_levels(z_tt, T, wall, tc)
     z_cb, z0, z_ax, z_mt, z_pf, z_pin, z_top, zw = (L_[k] for k in ("z_cb", "z0", "z_ax", "z_mt", "z_pf", "z_pin", "z_top", "zw"))
@@ -554,8 +566,6 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     cart.name = "Cartouche 16350"
     b.fillet(edges_along(cart, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
     b.fillet(edges_along(cart, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
-    # Détrompeur : nervure sous la cartouche, affleurant le dessous du support
-    b.combine(cart, b.solid(b.rect(*loc((x_stop + xe) / 2, KEY_Y), l_b, KEY_W, ang), z_cb - wall, z0 - z_cb + wall + 1.0), JOIN)
     # Bras du clip : attachés côté intérieur par un pont, libres vers l'extérieur ; cran à rampe (côté entrée) juste
     # avant le bout ouvert du support, face d'accroche en légère dépouille ; leurs 6 derniers mm dépassent : on les
     # pince pour sortir la cartouche.
@@ -580,16 +590,15 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     b.extrude(b.rect(*loc((xf0 + xf1) / 2, 0), DUP_L, DUP_W, ang), z_pf, tc, CUT, [cart])
     b.extrude(b.rect(*loc(xf1 + 0.45, 0), 0.9, DUP_W, ang), z_pf + 0.6, tc, CUT, [cart])
     b.extrude(b.rect(*loc(xr + 0.25, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [cart])
-    # Gouttière couverte de la fin du berceau (+3 mm pour le virage des fils) jusqu'au bout
-    xcv = xf1 + 0.8 + 3
-    b.combine(cart, b.solid(b.rect(*loc((xcv + xe) / 2, 0), xe - xcv, wb - 2 * CART_WALL + 0.2, ang), z_top - 1.0, 1.0), JOIN)
-    # Alésage de la pile ; passages des fils dans le plancher : au bout intérieur par le couloir qui longe les embouts
-    # (fente dans le plancher sous le bloc du support), au bout éloigné par une fente sous la gouttière couverte
+    # Alésage de la pile, fente des fils sur toute la longueur (plancher ouvert côté +y), et rainures des flancs de la
+    # gouttière (du virage des fils au bout) où coulisse le couvercle du bouchon, avec les creux de son clic
     b.combine(cart, cyl_x(b, loc, ang, x_stop + END_WALL, 0, z_ax, CELL_D / 2, BORE_L + 1), CUT)
-    b.extrude(b.rect(*loc((x_stop + END_WALL + 0.2 + xr + 0.5) / 2, (LANE[0] + LANE[1]) / 2), xr + 0.5 - x_stop - END_WALL - 0.2,
+    b.extrude(b.rect(*loc((x_stop + END_WALL + 0.2 + xe + 1) / 2, (LANE[0] + LANE[1]) / 2), xe + 1 - x_stop - END_WALL - 0.2,
                      LANE[1] - LANE[0], ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
-    xfar = x_stop + END_WALL + 2 + 39    # bout éloigné de la pile
-    b.extrude(b.rect(*loc(xfar + 1.0, 0), 1.6, 6, ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
+    xcv = xf1 + 0.8 + 3                  # début du couvercle : fin du berceau + 3 mm pour le virage des fils
+    yi = wb / 2 - CART_WALL              # flanc intérieur de la gouttière
+    b.extrude(b.rect(*loc((xcv - 0.5 + xe + 1) / 2, 0), xe + 1.5 - xcv, 2 * (yi + CAP_GROOVE), ang), z_top - 1.7, 1.2, CUT, [cart])
+    b.extrude(b.rect(*loc(xe - 3.75, 0), 2.1, 2 * (yi + CAP_GROOVE - 0.15 + CAP_DETENT + 0.05), ang), z_top - 1.7, 1.2, CUT, [cart])
     # Aérations : fentes sous la pile (face à celles du support) et dans les flancs avant
     for vx, vy, vl in VENTS_BOTTOM:
         b.extrude(b.poly(rrect(*loc(x_stop + vx + vl / 2, vy), vl, VENT_W, ang, VENT_W / 2 - 0.01)),
@@ -600,12 +609,21 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
                 b.extrude(b.rect(*loc(x_stop + vx + vl / 2, sy * wb / 2), vl, CART_WALL * 2 + 1, ang),
                           z_ax + dz - VENT_W / 2, VENT_W, CUT, [cart])
 
-    # --- Bouchon : plaque au bout de la cartouche (mêmes arrondis), bouchon dans l'alésage (collé) ---
+    # --- Bouchon : plaque au bout (mêmes arrondis), bouchon serré dans l'alésage, et couvercle qui coulisse dans les
+    # rainures de la gouttière jusqu'aux embouts : il cache les fils, et ses 2 bossages cliquent dans les creux ---
     cap = b.solid(b.rect(*loc(xe + CAP_T / 2, 0), CAP_T, wb, ang), z0, tc)
     cap.name = "Bouchon cartouche"
     b.fillet(edges_along(cap, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
     b.fillet(edges_along(cap, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
-    b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, 0, z_ax, CELL_D / 2 - 0.15, PLUG_L + 0.1), JOIN)
+    b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, 0, z_ax, CELL_D / 2 - 0.05, PLUG_L + 0.1), JOIN)
+    yt = yi + CAP_GROOVE - 0.15          # bord des languettes (0,15 de jeu au fond des rainures)
+    b.combine(cap, b.solid(b.rect(*loc((xcv + 0.3 + xe + 0.1) / 2, 0), xe + 0.1 - xcv - 0.3, 2 * yt, ang), z_top - 1.6, 1.0), JOIN)
+    for sy in (1, -1):
+        b.combine(cap, b.solid(b.rect(*loc(xe - 3.75, sy * (yt + CAP_DETENT / 2 - 0.05)), 1.5, CAP_DETENT + 0.1, ang),
+                               z_top - 1.4, 0.6), JOIN)
+    # « + » gravé sur le couvercle, côté +y
+    for lx, ly in ((3.0, 0.7), (0.7, 3.0)):
+        b.extrude(b.rect(*loc(xe - 6, 5.5), lx, ly, ang), z_top - 0.9, 0.5, CUT, [cap])
     return cart, cap
 
 

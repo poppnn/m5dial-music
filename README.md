@@ -178,8 +178,8 @@ The print files will also be on **MakerWorld** (link coming).
 | [`couvercle_batterie.stl`](hardware/couvercle_batterie.stl) | 1 | **lay it on its flat plate** | none |
 | **Or, removable 16350 battery:** | | | |
 | [`support_cartouche_16350.stl`](hardware/support_cartouche_16350.stl) | 1 | floor down (as exported), **instead of the shell and lid**, with `support_volant.stl` | none (the top bridges 27 mm) |
-| [`cartouche_16350.stl`](hardware/cartouche_16350.stl) | 1 per battery | bottom down (as exported), standing on the keying rib | under the floor only (1.9 mm, flat interface) |
-| [`bouchon_cartouche_16350.stl`](hardware/bouchon_cartouche_16350.stl) | 1 per battery | flat plate on the bed | none |
+| [`cartouche_16350.stl`](hardware/cartouche_16350.stl) | 1 per battery | bottom down (as exported) | none |
+| [`bouchon_cartouche_16350.stl`](hardware/bouchon_cartouche_16350.stl) | 1 per battery | end plate on the bed (plug and cover up) | none |
 | [`chargeur_cartouche_16350.stl`](hardware/chargeur_cartouche_16350.stl) | optional | charging dock, base plate down (as exported) | none |
 | [`couvercle_chargeur_16350.stl`](hardware/couvercle_chargeur_16350.stl) | with the dock | **upside down** (plate on the bed, lip up) | none |
 | [`cache_ecrou.stl`](hardware/cache_ecrou.stl) | 2 | flat base | none |
@@ -210,21 +210,25 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    (the 3 large windows leave room for the fingers).
 3. Plug the battery into the M5Dial (check the polarity), slide it into the shell through the open end, its lead
    going up through the slot in the top, then **clip the lid** on (to open it: press the 2 bumps through the side holes).
-   **Removable 16350 cartridge instead** (polarity rule: **the jumper on the side of the keying rib is +**, on the
-   cartridge and on the holder). The connection sits on top of the cell, so the cartridge is short:
+   **Removable 16350 cartridge instead** (polarity rule: **the jumper on the "+" side is +**: engraved "+" next to the
+   holder pocket and on the cartridge cap, on the same side as the cartridge's wire slot). The connection sits on top
+   of the cell, so the cartridge is short:
    - Holder: drop the 2 male jumper ends side by side into the pocket at the back of the holder, from above (inside
      the collar), pins towards the open end through the front lip; their wires go straight up to the M5Dial battery
-     plug. Tight fit; a drop of glue if they move.
-   - Cartridge: solder one female jumper wire to each end of the cell (+ on the rib side), slide the cell in
-     through the open end, the near-end wire in the groove beside the cradle, the far-end wire under the covered
-     channel and down through its slot; drop the 2 female ends into the cradle (sockets towards the inner end,
-     wires over the back step), then glue the cap on.
-   - Swap: slide the cartridge in, rib down, until both side arms click; to remove, **pinch the two arm ends** that
-     stick out and pull. Upside down or the wrong way round, the rib stops it at the entrance.
-   - Charging dock: drop 2 male jumper ends into the dock's pocket (inside the TP4056 bay, + on the rib side), solder
-     their wires to the module's **B+ / B-** pads (they run under the board, which sits on the two rails), push the
-     board against the back wall with its USB socket in the notch, press the lid on (the LEDs show through its
-     window). Slide the cartridge in like in the car; red LED = charging, blue/green = full.
+     plug. Tight fit; a drop of glue if they move. Put a small **compression spring** (ballpoint pen spring, Ø 5 mm
+     max, 14 mm or longer) into the round hole at the back of the holder.
+   - Cartridge: solder one female jumper wire to each end of the cell, slide the cell in through the open end; both
+     wires come up through the **long open slot** beside the cradle (no hole to thread), the far-end one runs back
+     along the top channel; drop the 2 female ends into the cradle (sockets towards the inner end, + on the "+"
+     side, wires over the back step). Then **slide the cap on**: its cover goes into the channel's side grooves and
+     hides the wires, its plug enters the cell bore, and it clicks into place.
+   - Swap: slide the cartridge in, cradle up and connector end first, until both side arms click (the spring pushes
+     it against the hooks: no play); to remove, **pinch the two arm ends** that stick out and the spring pushes it
+     out. Upside down or the wrong way round it stops against the pin tips long before any contact: don't force it.
+   - Charging dock: drop 2 male jumper ends into the dock's pocket (inside the TP4056 bay, + on the "+" side), put a
+     spring in its back hole, solder the wires to the module's **B+ / B-** pads (they run under the board, which
+     sits on the two rails), push the board against the back wall with its USB socket in the notch, press the lid on
+     (the LEDs show through its window). Slide the cartridge in like in the car; red LED = charging, blue/green = full.
 4. Push the shell's (or holder's) round collar into the tube from underneath (3 lugs into 3 notches) and **turn it
    35° clockwise as seen from below** until it clicks.
 5. Fit the mount behind the bottom and right spokes, one screw per spoke through the Ø 16 hole with the Ø 20
@@ -269,9 +273,13 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   the hook bears on a solid 2.5 mm edge); the pocket edge sits exactly on the hook's slightly undercut face, so the
   arm's spring pulls the cartridge against its stop (no end play). Pinching the arm ends over their 2.4 mm gap moves
   the hooks back about 1.15 mm, enough to release them (0.9 % bending on insertion: PETG or ASA rather than PLA). Vents:
-  4 slots under the cell and 2 on each front flank, matched by slots in the holder floor and walls. Keying rib
-  (2 mm, 5 mm off centre) under the cartridge in a floor groove.
-- **Charging dock**: the same pocket, keying, clip and male jumper block as the car holder on a wider base plate,
+  4 slots under the cell and 2 on each front flank, matched by slots in the holder floor and walls. Wires: a 4 mm
+  slot opens the cell bore into the top channel over the whole length. Cap: end plate, plug in the bore (0.05 mm
+  clearance), and an 11 mm cover sliding in 0.6 mm grooves of the channel walls with two 0.2 mm click bumps.
+  Ejection: Ø 5.4 × 9 mm spring pocket behind the holder's back wall, centred on the cartridge's inner end (on the
+  car mount it stays below the mount). No keying rib: the cradle-up, connector-first shape is the only way the
+  sockets can meet the pins.
+- **Charging dock**: the same pocket, clip, spring and male jumper block as the car holder on a wider base plate,
   with a 17.6 × 39.6 × 10.5 mm bay on top for a **26 × 17 mm TP4056** (board on 3 mm rails so the wires pass under
   it). The back wall is thinned to 0.6 mm where the board's edge rests, so its **USB-C socket is flush** with the
   outside through a 9.2 mm notch (`USB_OVH` if your socket sticks out more or less); the push-on lid (0.2 mm gap lip,
