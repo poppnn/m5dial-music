@@ -595,9 +595,10 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     b.combine(cart, cyl_x(b, loc, ang, x_stop + END_WALL, 0, z_ax, CELL_D / 2, BORE_L + 1), CUT)
     b.extrude(b.rect(*loc((x_stop + END_WALL + 0.2 + xe + 1) / 2, (LANE[0] + LANE[1]) / 2), xe + 1 - x_stop - END_WALL - 0.2,
                      LANE[1] - LANE[0], ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
-    # Au bout éloigné, la fente s'élargit sur 7 mm : le fil du bout de la pile y remonte vers la gouttière facilement
-    b.extrude(b.rect(*loc(xe - 3.0, (1.5 + LANE[1] + 0.4) / 2), 8.0, LANE[1] + 0.4 - 1.5, ang), z_mt - MID_WALL - 0.3,
-              MID_WALL + 0.4, CUT, [cart])
+    # Au bout éloigné, la fente s'élargit sur 7,2 mm et descend 2,5 mm plus bas, le long de la pile : le fil du bout de
+    # la pile y remonte vers la gouttière facilement
+    b.extrude(b.rect(*loc(xe - 3.1, (1.5 + LANE[1] + 0.4) / 2), 8.2, LANE[1] + 0.4 - 1.5, ang), z_mt - MID_WALL - 2.8,
+              MID_WALL + 2.9, CUT, [cart])
     xcv = xf1 + 0.8 + 3                  # début du couvercle : fin du berceau + 3 mm pour le virage des fils
     yi = wb / 2 - CART_WALL              # flanc intérieur de la gouttière
     b.extrude(b.rect(*loc((xcv - 0.5 + xe + 1) / 2, 0), xe + 1.5 - xcv, 2 * (yi + CAP_GROOVE), ang), z_top - 1.7, 1.2, CUT, [cart])
