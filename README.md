@@ -273,8 +273,9 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   the hook bears on a solid 2.5 mm edge); the pocket edge sits exactly on the hook's slightly undercut face, so the
   arm's spring pulls the cartridge against its stop (no end play). Pinching the arm ends over their 2.4 mm gap moves
   the hooks back about 1.15 mm, enough to release them (0.9 % bending on insertion: PETG or ASA rather than PLA). Vents:
-  4 slots under the cell and 2 on each front flank, matched by slots in the holder floor and walls. Wires: a 4 mm
-  slot opens the cell bore into the top channel over the whole length. Cap: end plate, plug in the bore (0.05 mm
+  4 slots centred under the cell and 2 on each front flank, matched by slots in the holder floor and walls. Wires: a 4 mm
+  slot opens the cell bore into the top channel over the whole length, 6.5 mm wide over the last 7 mm, and the
+  cap plug is notched on that side, so the far-end wire comes up past the plug. Cap: end plate, plug in the bore (0.05 mm
   clearance), and an 11 mm cover sliding in 0.6 mm grooves of the channel walls with two 0.2 mm click bumps.
   Ejection: Ø 5.4 × 9 mm spring pocket behind the holder's back wall, centred on the cartridge's inner end (on the
   car mount it stays below the mount). No keying rib: the cradle-up, connector-first shape is the only way the

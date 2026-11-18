@@ -483,7 +483,7 @@ def cart_levels(z_tt, T, wall, tc):
 
 # Aérations : fentes alignées sous la cartouche et dans le fond du support, et dans les flancs sur la partie
 # avant (là où il n'y a pas les bras) : l'air passe autour de la pile. (x depuis la butée, y, longueur)
-VENTS_BOTTOM = [(x, y, 13.0) for x in (8.0, 25.0) for y in (-3.6, 0.0)]
+VENTS_BOTTOM = [(x, y, 13.0) for x in (8.0, 25.0) for y in (-1.8, 1.8)]  # centrées sous la pile
 VENTS_SIDE = [(3.5, 13.0)]           # (x depuis la butée, longueur) ; 2 fentes de 1,6 mm de haut par flanc
 VENT_W = 1.6
 
@@ -595,6 +595,9 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     b.combine(cart, cyl_x(b, loc, ang, x_stop + END_WALL, 0, z_ax, CELL_D / 2, BORE_L + 1), CUT)
     b.extrude(b.rect(*loc((x_stop + END_WALL + 0.2 + xe + 1) / 2, (LANE[0] + LANE[1]) / 2), xe + 1 - x_stop - END_WALL - 0.2,
                      LANE[1] - LANE[0], ang), z_mt - MID_WALL - 0.3, MID_WALL + 0.4, CUT, [cart])
+    # Au bout éloigné, la fente s'élargit sur 7 mm : le fil du bout de la pile y remonte vers la gouttière facilement
+    b.extrude(b.rect(*loc(xe - 3.0, (1.5 + LANE[1] + 0.4) / 2), 8.0, LANE[1] + 0.4 - 1.5, ang), z_mt - MID_WALL - 0.3,
+              MID_WALL + 0.4, CUT, [cart])
     xcv = xf1 + 0.8 + 3                  # début du couvercle : fin du berceau + 3 mm pour le virage des fils
     yi = wb / 2 - CART_WALL              # flanc intérieur de la gouttière
     b.extrude(b.rect(*loc((xcv - 0.5 + xe + 1) / 2, 0), xe + 1.5 - xcv, 2 * (yi + CAP_GROOVE), ang), z_top - 1.7, 1.2, CUT, [cart])
@@ -616,6 +619,9 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     b.fillet(edges_along(cap, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
     b.fillet(edges_along(cap, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
     b.combine(cap, cyl_x(b, loc, ang, xe - PLUG_L, 0, z_ax, CELL_D / 2 - 0.05, PLUG_L + 0.1), JOIN)
+    # Encoche du bouchon côté +y, sous la fente : le fil du bout de la pile passe le long du bouchon pour remonter
+    b.extrude(b.rect(*loc(xe - PLUG_L / 2 - 0.2, (1.5 + CELL_D / 2 + 0.5) / 2), PLUG_L + 0.5, CELL_D / 2 + 0.5 - 1.5, ang),
+              z_ax + 2.0, CELL_D / 2 + 1.0, CUT, [cap])
     yt = yi + CAP_GROOVE - 0.15          # bord des languettes (0,15 de jeu au fond des rainures)
     b.combine(cap, b.solid(b.rect(*loc((xcv + 0.3 + xe + 0.1) / 2, 0), xe + 0.1 - xcv - 0.3, 2 * yt, ang), z_top - 1.6, 1.0), JOIN)
     for sy in (1, -1):
