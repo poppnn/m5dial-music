@@ -582,11 +582,11 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     # Abaissement sous le bloc du support, puis gouttière ouverte sur toute la largeur intérieure
     b.extrude(b.rect(*loc((x_stop - 0.5 + xr) / 2, 0), xr - x_stop + 0.5, wb + 1, ang), z_mt, tc, CUT, [cart])
     b.extrude(b.rect(*loc((xr + xe + 1) / 2, 0), xe + 1 - xr, wb - 2 * CART_WALL, ang), z_mt, tc, CUT, [cart])
-    # Berceau des 2 embouts femelles : rebord avant de 0,6 (fenêtre des douilles), logement serré, marche arrière de
-    # 0,6 (les fils passent dessus) ; posés par le dessus, le plafond du support les tient en place
+    # Berceau des 2 embouts femelles : flancs de 1,5, rebord avant de 0,6 (fenêtre des douilles), logement serré,
+    # marche arrière de 0,6 (les fils passent dessus) ; posés par le dessus, le plafond du support les tient en place
     xf0 = xr + 0.6                       # face avant des embouts femelles
     xf1 = xf0 + DUP_L
-    cr = b.solid(b.rect(*loc((xr + xf1 + 0.8) / 2, 0), xf1 + 0.8 - xr, DUP_WF + 1.2, ang), z_mt - 0.1, z_top - z_mt + 0.1)
+    cr = b.solid(b.rect(*loc((xr + xf1 + 0.8) / 2, 0), xf1 + 0.8 - xr, DUP_WF + 3.0, ang), z_mt - 0.1, z_top - z_mt + 0.1)
     b.combine(cart, cr, JOIN)
     b.extrude(b.rect(*loc((xf0 + xf1) / 2, 0), DUP_L, DUP_WF, ang), z_pf, tc, CUT, [cart])
     b.extrude(b.rect(*loc(xf1 + 0.45, 0), 0.9, DUP_WF, ang), z_pf + 0.6, tc, CUT, [cart])
