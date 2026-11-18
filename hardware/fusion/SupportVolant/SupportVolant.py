@@ -316,9 +316,10 @@ WIRE_W = 8.0                 # fente du câble de la batterie dans le dessus de 
 # le support. Sans détrompeur : retournée ou bout pour bout, la cartouche bute sur la pointe des broches avant tout
 # contact (ses douilles sont alors en bas ou à l'arrière) : ne pas forcer.
 CELL_D = 16.9                # alésage : pile Ø16 + gaine + jeu
-CART_WALL, END_WALL, MID_WALL = 1.4, 1.2, 1.4  # parois ; fond intérieur ; plancher entre la pile et les embouts
+CART_WALL, END_WALL, MID_WALL = 2.0, 1.2, 1.4  # parois (flancs et dessous) ; fond intérieur ; plancher entre la pile et les embouts
 BORE_L = 46.0
 DUP_L, DUP_W, DUP_H = 14.0, 5.2, 2.6  # 2 embouts Dupont côte à côte (2,54 x 2,54 x 14) : logement serré, clipsé
+DUP_WF = DUP_W + 0.5          # logement des embouts femelles de la cartouche : 0,5 de plus pour les fils Dupont
 DUP_PAD = 0.9                # surélévation du berceau : les embouts mâle et femelle à la même hauteur
 RECESS = 17.5                # cartouche abaissée sur ses 17,5 premiers mm : le bloc des embouts mâles s'y loge
 LANE = (3.6, 7.6)            # fente des fils, sur toute la longueur : la pile y passe ses deux fils vers la gouttière (y)
@@ -585,10 +586,10 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     # 0,6 (les fils passent dessus) ; posés par le dessus, le plafond du support les tient en place
     xf0 = xr + 0.6                       # face avant des embouts femelles
     xf1 = xf0 + DUP_L
-    cr = b.solid(b.rect(*loc((xr + xf1 + 0.8) / 2, 0), xf1 + 0.8 - xr, DUP_W + 1.2, ang), z_mt - 0.1, z_top - z_mt + 0.1)
+    cr = b.solid(b.rect(*loc((xr + xf1 + 0.8) / 2, 0), xf1 + 0.8 - xr, DUP_WF + 1.2, ang), z_mt - 0.1, z_top - z_mt + 0.1)
     b.combine(cart, cr, JOIN)
-    b.extrude(b.rect(*loc((xf0 + xf1) / 2, 0), DUP_L, DUP_W, ang), z_pf, tc, CUT, [cart])
-    b.extrude(b.rect(*loc(xf1 + 0.45, 0), 0.9, DUP_W, ang), z_pf + 0.6, tc, CUT, [cart])
+    b.extrude(b.rect(*loc((xf0 + xf1) / 2, 0), DUP_L, DUP_WF, ang), z_pf, tc, CUT, [cart])
+    b.extrude(b.rect(*loc(xf1 + 0.45, 0), 0.9, DUP_WF, ang), z_pf + 0.6, tc, CUT, [cart])
     b.extrude(b.rect(*loc(xr + 0.25, 0), 0.9, 4.4, ang), z_pin - 0.6, 1.2, CUT, [cart])
     # Alésage de la pile, fente des fils sur toute la longueur (plancher ouvert côté +y), et rainures des flancs de la
     # gouttière (du virage des fils au bout) où coulisse le couvercle du bouchon, avec les creux de son clic

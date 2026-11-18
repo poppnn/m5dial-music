@@ -259,7 +259,7 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
 - **16350 cartridge** (`BAT_TYPE` = 1; 0 = LiPo shell): same bayonet as the shell, but the holder rises **inside
   the tube**, up to `BAT_GAP` (5 mm) under the M5Dial's lowest point, its clamp ring (bottom 14.6 mm above the
   mount's underside, from the official [Dial.stl](https://github.com/m5stack/M5_Hardware/tree/master/Products/K130_Dial/Structures)
-  model and `CLAMP_H` 12.6). It hangs only **17.4 mm** below the mount (the LiPo shell: 14.2, the first cartridge:
+  model and `CLAMP_H` 12.6). It hangs only **18 mm** below the mount (the LiPo shell: 14.2, the first cartridge:
   27). For that the holder is centred with rounded corners (it turns inside the Ø 52.8 bore for the quarter turn),
   the bayonet crown is level with its top, the lug entry notches start at the tube foot, and a notch in the tube
   foot lets the end of the cartridge out on the rim side (pinch the arms below the mount). So this mount
