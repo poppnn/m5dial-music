@@ -330,6 +330,8 @@ CART_OUT = 6.0               # la cartouche dépasse du support : les bouts des 
 ARM_T, ARM_GAP, ARM_L = 1.5, 2.4, 26.0  # bras du clip le long des flancs : épaisseur, jeu (course pour les pincer), longueur
 BUMP_P = 1.2                 # cran des bras : accroche 0,9 mm dans les logements du support (0,3 de jeu)
 CLIP_IN = 2.5                # face d'accroche du cran, en retrait du bout ouvert du support (bord plein de 2,5 mm)
+CLIP_PLAY = 0.4              # course du cran au-delà du bord d'accroche : il tombe dans son logement malgré les
+                             # écarts d'impression ; le ressort ramène la cartouche contre ce bord
 CLIP_D = 1.0                 # profondeur des logements borgnes des crans dans les flancs (peau de 0,6 dehors)
 SPRING_D, SPRING_L = 5.4, 9.0  # logement du ressort d'éjection (ressort de stylo Ø 5 max, 14 mm et plus)
 X_S = -18.0                  # bout intérieur de la cartouche, depuis le centre du M5Dial : les embouts mâles et leurs
@@ -520,10 +522,11 @@ def holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc):
                              z_cb - wall, z_ax + SPRING_D / 2 + 1.8 - (z_cb - wall)), JOIN)
     b.combine(shell, cyl_x(b, loc, ang, x_stop - SPRING_L, 0, z_ax, SPRING_D / 2, SPRING_L + 0.2), CUT)
     # Logements des crans : borgnes (la paroi reste fermée dehors, le cran accroche un bord plein de CLIP_IN mm et non
-    # plus un fin barreau), bord d'accroche exactement sur la face d'accroche du cran ; le cran est en légère dépouille,
-    # le ressort du bras plaque la cartouche contre sa butée : pas de jeu en longueur
+    # plus un fin barreau) ; cartouche en butée, la face droite du cran est CLIP_PLAY en deçà du bord d'accroche : il
+    # tombe dedans à coup sûr, et le ressort d'éjection le plaque ensuite contre ce bord
     for sy in (1, -1):
-        b.extrude(b.rect(*loc(x1 - CLIP_IN - 2.2, sy * (W / 2 + (CLIP_D - 0.1) / 2)), 4.4, CLIP_D + 0.1, ang), zw - 4, 8, CUT, [shell])
+        b.extrude(b.rect(*loc(x1 - CLIP_IN - 2.2 - CLIP_PLAY / 2, sy * (W / 2 + (CLIP_D - 0.1) / 2)), 4.4 + CLIP_PLAY, CLIP_D + 0.1, ang),
+                  zw - 4, 8, CUT, [shell])
     # Aérations du fond (face aux fentes de la cartouche) et des flancs
     for vx, vy, vl in VENTS_BOTTOM:
         b.extrude(b.poly(rrect(*loc(x_stop + vx + vl / 2, vy), vl, VENT_W, ang, VENT_W / 2 - 0.01)),
@@ -568,16 +571,16 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     b.fillet(edges_along(cart, u, lambda z: abs(z - z0) < 1e-3), 4.0, False)
     b.fillet(edges_along(cart, u, lambda z: abs(z - z_top) < 1e-3), 1.0, False)
     # Bras du clip : attachés côté intérieur par un pont, libres vers l'extérieur ; cran à rampe (côté entrée) juste
-    # avant le bout ouvert du support, face d'accroche en légère dépouille ; leurs 6 derniers mm dépassent : on les
-    # pince pour sortir la cartouche.
+    # avant le bout ouvert du support, face d'accroche droite (une dépouille laissait le ressort le faire ressortir) ;
+    # leurs 6 derniers mm dépassent : on les pince pour sortir la cartouche.
     xa = xe - ARM_L
     for sy in (1, -1):
         ya = sy * (wb / 2 + ARM_GAP + ARM_T / 2)
         # Pont d'abord, puis le bras qui le touche : joint à part, un bras isolé resterait un corps séparé
         b.combine(cart, b.solid(b.rect(*loc(xa + 1.25, sy * (wb / 2 + ARM_GAP / 2)), 2.5, ARM_GAP + 0.6, ang), z0 + 1, tc - 2), JOIN)
         b.combine(cart, b.solid(b.rect(*loc((xa + xe) / 2, ya), ARM_L, ARM_T, ang), z0 + 1, tc - 2), JOIN)
-        yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - CLIP_IN  # face extérieure du bras, face d'accroche du cran
-        bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.9, yo + sy * BUMP_P), loc(xh - 0.3, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
+        yo, xh = sy * (wb / 2 + ARM_GAP + ARM_T), x1 - CLIP_IN - CLIP_PLAY  # face extérieure du bras, face d'accroche du cran
+        bump = [loc(xh - 3.6, yo - sy * 0.1), loc(xh - 0.6, yo + sy * BUMP_P), loc(xh, yo + sy * BUMP_P), loc(xh, yo - sy * 0.1)]
         b.combine(cart, b.solid(b.poly(bump), zw - 3, 6), JOIN)
     # Abaissement sous le bloc du support, puis gouttière ouverte sur toute la largeur intérieure
     b.extrude(b.rect(*loc((x_stop - 0.5 + xr) / 2, 0), xr - x_stop + 0.5, wb + 1, ang), z_mt, tc, CUT, [cart])
