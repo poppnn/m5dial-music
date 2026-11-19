@@ -35,6 +35,10 @@ const float FX_SPEEDS[FX_SPEED_COUNT] = {0.25f, 0.35f, 0.5f, 0.7f, 1.f, 1.4f, 2.
 #define RAINBOW_MS  7200  // balayage RVB : tour complet de la roue des couleurs en 7,2 s
 // Luminosité en % : le H7090 attend 0-100 (au-delà il sature : avec 0-255, seul le bas de la course agissait).
 #define GOVEE_BRI_MAX 100
+// La barre écrase le bas de sa plage (de 1 à ~65 la différence se voit à peine) : la luminosité choisie passe par
+// une courbe x^0,4, si bien que chaque cran de la molette change la barre de façon visible sur toute la course.
+// shortcut: exposant choisi d'après le ressenti (« seul le dernier tiers change ») ; à ajuster après essai.
+#define GOVEE_BRI_GAMMA 0.4f
 #define GOVEE_MIN_GAP_MS 60   // ~16 trames/s au plus quand on tourne la molette
 #define SAVE_AFTER_MS    2000 // mémorisation NVS 2 s après le dernier changement (pas une écriture par cran)
 int ledColor = 0, ledBri = 100, ledHue = 0;
@@ -88,6 +92,11 @@ static uint32_t hash32(uint32_t x) {
   return x;
 }
 
+// Luminosité à envoyer (0-GOVEE_BRI_MAX) pour une intensité 0-1 : 0 seulement à 0, sinon au moins 1.
+static int barLevel(float x) {
+  return x <= 0 ? 0 : max(1, (int)lroundf(GOVEE_BRI_MAX * powf(min(x, 1.f), GOVEE_BRI_GAMMA)));
+}
+
 static float easeSine(float x) { return 0.5f - 0.5f * cosf(x * (float)PI); }
 
 // Intensité de l'effet (0 = éteint, 1 = pleine luminosité choisie) au temps t de l'effet (ms, à la vitesse x1).
@@ -139,6 +148,7 @@ LedColor ledShown(uint32_t now) { return ledShownAt(fxTime(now)); }
 
 // Avant goveeInit (qui recharge l'état mémorisé) : préréglage Rouge joué par chaque effet.
 void goveeSelfTest() {
+  assert(barLevel(0) == 0 && barLevel(1e-6f) == 1 && barLevel(1) == 100 && barLevel(0.5f) > 70 && barLevel(0.5f) < 80);
   ledCustom = false;
   ledColor = 1;  // Rouge (255, 0, 0)
   ledFx = FX_BLINK;
@@ -228,7 +238,7 @@ void goveeService(bool ledPage) {
       ledBriSent = -1;
       lastSend = now;
     } else if (ledBri != ledBriSent && (ledFx == FX_FIXED || !ledOn)) {
-      goveeSend({0x33, 0x04, (uint8_t)(ledBri * GOVEE_BRI_MAX / 100)});
+      goveeSend({0x33, 0x04, (uint8_t)barLevel(ledBri / 100.f)});
       ledBriSent = ledBri;
       lastSend = now;
     } else if (ledFx != FX_FIXED && ledOn && now - lastSend >= FX_GAP_MS) {
@@ -236,7 +246,7 @@ void goveeService(bool ledPage) {
       // état. Scènes intégrées de la barre (autonomes) si un jour leurs codes H7090 sont connus.
       LedColor c = fxColor(t);
       float k = fxLevel(t);
-      int lvl = k < 0.03f ? 0 : max(1, (int)lroundf(ledBri * GOVEE_BRI_MAX / 100 * k));
+      int lvl = k < 0.03f ? 0 : barLevel(ledBri / 100.f * k);
       if (c.r != fxSent.r || c.g != fxSent.g || c.b != fxSent.b) {  // teinte changée (arc-en-ciel)
         sendColor(fxSent = c);
         lastSend = now;
