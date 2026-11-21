@@ -13,6 +13,7 @@ struct Settings {
   uint8_t nightFrom, nightTo;  // heures
   uint8_t notifMode;       // notifications iPhone : 0 aucune, 1 app + expéditeur, 2 app + expéditeur + texte
   uint8_t accent;          // couleur d'accent de l'interface (index de ACCENT_COLORS)
+  uint8_t haptic;          // clic du buzzer à chaque cran et appui (0 = non)
 };
 extern Settings settings;
 
@@ -29,9 +30,13 @@ bool settingsNight();         // luminosité de nuit en ce moment
 uint8_t settingsBacklight();  // luminosité de base de l'écran, 0..255 (jour ou nuit)
 
 // Dernier état des LED Govee (préréglage, teinte, luminosité).
-struct LedState { uint8_t color; uint16_t hue; bool custom; uint8_t bri; uint8_t fx, fxSpeed; };
+struct LedState { uint8_t color; uint16_t hue; bool custom; uint8_t bri; };
 LedState ledStateLoad();
 void ledStateSave(const LedState& s);
+
+// Partage de connexion pour la mise à jour OTA (envoyé depuis le web flasher). false si aucun.
+bool wifiLoad(std::string& ssid, std::string& pass);
+void wifiSave(const char* ssid, const char* pass);
 
 // Nom des appareils appairés (NimBLE ne garde que leur adresse) : mémorisé à la connexion.
 void bondNameSave(const std::string& addr, const std::string& name);

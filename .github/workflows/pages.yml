@@ -49,6 +49,12 @@ jobs:
               0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
               0x10000 $B/firmware.bin
           done
+      # Mise à jour OTA (Réglages > Update) : le M5Dial lit ota/version.txt et télécharge ota/<plateforme>.bin
+      - name: OTA files
+        run: |
+          mkdir -p docs/ota
+          echo "$VERSION" > docs/ota/version.txt
+          for E in m5dial android windows; do cp .pio/build/$E/firmware.bin docs/ota/$E.bin; done
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

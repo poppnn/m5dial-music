@@ -1,12 +1,14 @@
 // Page Réglages : molette = choisir une ligne ; appui = modifier (molette = valeur, enregistrée aussitôt),
-// appui = terminer. Lignes "Oublier" / "Tout effacer" : premier appui = confirmation, second = action.
+// appui = terminer. Lignes "Mise à jour", "Oublier" / "Tout effacer" : premier appui = confirmation, second = action.
 #include "pages.h"
 #include "../ble_phone.h"
 #include "../display.h"
 #include "../imu.h"
+#include "../ota.h"
 #include "../settings.h"
 
-enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_VALUES };  // puis les appareils
+enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_HAPTIC, IT_VALUES,
+       IT_UPDATE = IT_VALUES, IT_DEV0 };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
 static const uint16_t SLEEP_OPTS[] = {0, 5, 10, 20, 30, 60};   // min
@@ -26,7 +28,7 @@ static int nearest(const T* opts, int n, int v) {  // index de l'option la plus 
 
 static int optCount(int it) {
   switch (it) {
-    case IT_IMU: return 2;
+    case IT_IMU: case IT_HAPTIC: return 2;
     case IT_MODE: case IT_NOTIF: return 3;
     case IT_ACCENT: return ACCENT_COUNT;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: return 24;
@@ -41,6 +43,7 @@ static int optCount(int it) {
 static int optIndex(int it) {
   switch (it) {
     case IT_IMU: return settings.imuDir < 0;
+    case IT_HAPTIC: return settings.haptic;
     case IT_NOTIF: return settings.notifMode;
     case IT_ACCENT: return settings.accent;
     case IT_MODE: return settings.briMode;
@@ -61,6 +64,7 @@ static void setOpt(int it, int i) {
       if (dir != settings.imuDir) { settings.imuDir = dir; imuFlipped(); }
       break;
     }
+    case IT_HAPTIC: settings.haptic = i; break;
     case IT_MODE: settings.briMode = i; break;
     case IT_NOTIF: settings.notifMode = i; break;
     case IT_ACCENT: settings.accent = i; break;
@@ -79,6 +83,7 @@ static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
     case IT_IMU: snprintf(b, n, "%s", i ? "reversed" : "normal"); break;
+    case IT_HAPTIC: snprintf(b, n, "%s", i ? "on" : "off"); break;
     case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "full" : i == NOTIF_SENDER ? "sender" : "off"); break;
     case IT_ACCENT: snprintf(b, n, "%s", ACCENT_NAMES[i]); break;
     case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (night)" : "auto (day)") : i ? "night" : "day"); break;
@@ -92,12 +97,13 @@ static void valueText(int it, char* b, size_t n) {
 }
 
 static const char* LABELS[IT_VALUES] = {"IMU dir", "Wheel", "Dim after", "Power off", "Day level",
-                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent"};
+                                        "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent",
+                                        "Click"};
 
-// Lignes : réglages, puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
+// Lignes : réglages, "Mise à jour", puis un "Oublier" par appareil appairé, puis "Tout effacer" (s'il y en a).
 static int itemCount() {
   int bonds = NimBLEDevice::getNumBonds();
-  return IT_VALUES + (bonds ? bonds + 1 : 1);
+  return IT_DEV0 + (bonds ? bonds + 1 : 1);
 }
 
 static bool draw(float) {
@@ -120,11 +126,15 @@ static bool draw(float) {
     if (i < IT_VALUES) {
       label = LABELS[i];
       valueText(i, val, sizeof(val));
+    } else if (i == IT_UPDATE) {  // partage de connexion du téléphone, enregistré depuis le web flasher
+      std::string ssid, pass;
+      label = "Update";
+      snprintf(val, sizeof(val), "%s", wifiLoad(ssid, pass) ? ssid.c_str() : "no Wi-Fi");
     } else if (!bonds) {
       label = "Devices";
       snprintf(val, sizeof(val), "none");
-    } else if (i - IT_VALUES < bonds) {  // un appareil appairé
-      std::string a = NimBLEDevice::getBondedAddress(i - IT_VALUES).toString(), name = bondName(a);
+    } else if (i - IT_DEV0 < bonds) {  // un appareil appairé
+      std::string a = NimBLEDevice::getBondedAddress(i - IT_DEV0).toString(), name = bondName(a);
       label = "Forget";
       live = a == peer;  // appareil connecté : nom en vert
       snprintf(val, sizeof(val), "%s", (name.empty() ? a.substr(9) : name).c_str());
@@ -156,10 +166,12 @@ static void wheel(int detents) {
 static void click() {
   int bonds = NimBLEDevice::getNumBonds();
   if (sel < IT_VALUES) { editing = !editing; return; }
-  if (!bonds) return;
+  std::string ssid, pass;
+  if (sel == IT_UPDATE ? !wifiLoad(ssid, pass) : !bonds) return;
   if (!confirming) { confirming = true; return; }
   confirming = false;
-  if (sel - IT_VALUES < bonds) forgetBond(NimBLEDevice::getBondedAddress(sel - IT_VALUES));
+  if (sel == IT_UPDATE) otaRun();  // ne revient pas : redémarre à la fin
+  else if (sel - IT_DEV0 < bonds) forgetBond(NimBLEDevice::getBondedAddress(sel - IT_DEV0));
   else forgetAllBonds();
 }
 

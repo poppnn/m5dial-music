@@ -1,9 +1,7 @@
-// Page LED. Trois modes de molette, l'un après l'autre à chaque appui long court (0,6 s) :
+// Page LED. Deux modes de molette, l'un après l'autre à chaque appui long court (0,6 s) :
 // - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
 // - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran : un tour de
-//   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie ;
-// - effet : glisser choisit l'effet (fixe, clignotements, respiration, arc-en-ciel), la molette sa vitesse ; la
-//   pastille joue l'effet.
+//   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie.
 // Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
 // entre avec un rebond. Appui = allumer / éteindre.
 #include "pages.h"
@@ -75,15 +73,10 @@ static bool draw(float dt) {
   static uint32_t popStart = 0;
   const int c = 120;
   uint32_t now = millis();
-  static int shownFx = ledFx;  // effet affiché : change à mi-glissement, comme la couleur
   int key = ledCustom ? -1 : ledColor;
   if (!slideOutPhase && shownKey != key) {
     if (key >= 0) popStart = now;  // rebond seulement pour un préréglage (la teinte défile en continu)
     shownKey = key;
-  }
-  if (!slideOutPhase && shownFx != ledFx) {
-    popStart = now;
-    shownFx = ledFx;
   }
   static bool hueInit = false;
   if (!hueInit) { hueShown = ledHue; hueInit = true; }  // première image : pas de glissement depuis 0°
@@ -101,39 +94,27 @@ static bool draw(float dt) {
   float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
   int off = (int)slideOff;
 
-  bool fx = ledOn && shownFx != FX_FIXED;
-  if (fx) lc = ledShown(now);  // la pastille joue l'effet, à chaque image (fluide)
   if (ledWheel == WHEEL_HUE) {
     drawHueRing(c, hueShown, ledOn);
   } else {
     canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
-    // Anneau = luminosité, dans la couleur de la barre : celle de l'effet s'il y en a un (il clignote, respire,
-    // change de teinte avec la pastille ; éteint pendant le "noir" du clignotement), sinon la couleur en fondu.
-    uint16_t col = fx ? canvas.color565(lc.r, lc.g, lc.b) : canvas.color565(rgb[0], rgb[1], rgb[2]);
-    if (ledBriShown > 0.005f && (!fx || lc.r || lc.g || lc.b))
-      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, col);
+    // Anneau = luminosité, dans la couleur de la barre (en fondu)
+    if (ledBriShown > 0.005f)
+      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
   }
   canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   char name[16];
-  if (ledWheel == WHEEL_FX) snprintf(name, sizeof(name), "%s", LED_FX_NAMES[shownFx]);  // glisser = effet suivant
-  else if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
+  if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
   else snprintf(name, sizeof(name), "%s", LED_COLORS[shownKey].name);
-  canvas.setTextColor(ledWheel == WHEEL_FX ? accent() : TFT_WHITE);
+  canvas.setTextColor(TFT_WHITE);
   canvas.drawString(name, c + off, 150);
   canvas.setFont(&fonts::efontJA_16);
   bool conn = goveeConnected();
   canvas.setTextColor(conn ? 0x07E8 : 0xF8A2);  // barre LED connectée : vert, sinon rouge
   canvas.drawString(conn ? "Connected" : "Disconnected", c, 180);
-  char line[24] = "";
-  if (ledWheel == WHEEL_FX && ledFx == FX_FIXED) snprintf(line, sizeof(line), "Swipe: effect");
-  else if (ledWheel == WHEEL_FX) snprintf(line, sizeof(line), "Speed x%g", FX_SPEEDS[ledFxSpeed]);  // molette
-  else if (ledFx != FX_FIXED) snprintf(line, sizeof(line), "%s", LED_FX_NAMES[ledFx]);  // effet en cours
-  canvas.setTextColor(0x8410);
-  canvas.drawString(line, c, 204);
-  // Effet en cours : 60 images/s sur cette page pour une pastille fluide (4/s au repos sinon)
-  return fx || fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
+  return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
 }
 
 static void wheel(int detents) {
@@ -142,9 +123,6 @@ static void wheel(int detents) {
     ledHue = ((ledHue + detents * HUE_STEP) % 360 + 360) % 360;
     ledCustom = ledOn = true;
     goveeColorChanged();
-  } else if (ledWheel == WHEEL_FX) {
-    ledFxSpeed = constrain(ledFxSpeed + detents, 0, FX_SPEED_COUNT - 1);  // vitesse de l'effet, x1,4 par cran
-    goveeChanged();  // mémorisée après 2 s
   } else {
     ledBri = constrain(ledBri + detents * 5, 5, 100);  // 5 % par cran
     goveeChanged();
@@ -157,17 +135,13 @@ static void click() {
 }
 
 static void swipeX(int dir) {
-  if (ledWheel == WHEEL_FX) {  // mode effet : glisser = effet suivant / précédent
-    ledFx = (ledFx + dir + FX_COUNT) % FX_COUNT;
-  } else {
-    ledColor = ledCustom ? (dir > 0 ? 0 : LED_COLOR_COUNT - 1) : (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
-    ledCustom = false;
-  }
+  ledColor = ledCustom ? (dir > 0 ? 0 : LED_COLOR_COUNT - 1) : (ledColor + dir + LED_COLOR_COUNT) % LED_COLOR_COUNT;
+  ledCustom = false;
   ledOn = true;
-  goveeColorChanged();  // "Fixed" : la couleur unie revient tout de suite ; mémorisé après 2 s
+  goveeColorChanged();  // mémorisé après 2 s
   startSlide(dir, false);
 }
 
-static void longPress() { ledWheel = (ledWheel + 1) % WHEEL_COUNT; }  // luminosité -> teinte -> effet -> ...
+static void longPress() { ledWheel = (ledWheel + 1) % WHEEL_COUNT; }  // luminosité <-> teinte
 
 extern const PageOps ledPage = {draw, wheel, click, swipeX, nullptr, longPress};

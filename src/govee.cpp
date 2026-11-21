@@ -23,16 +23,7 @@ static volatile bool goveeFound = false;
 static volatile bool connecting = false;  // connexion en cours dans connectTask
 uint32_t goveeRetry = 0;
 bool ledOn = true, ledCustom = false;
-int ledWheel = WHEEL_BRI, ledFx = FX_FIXED, ledFxSpeed = FX_SPEED_DEFAULT;
-const char* const LED_FX_NAMES[FX_COUNT] = {"Fixed", "Blink", "Smooth blink", "Random blink", "Breathe", "Rainbow"};
-const float FX_SPEEDS[FX_SPEED_COUNT] = {0.25f, 0.35f, 0.5f, 0.7f, 1.f, 1.4f, 2.f, 2.8f, 4.f};  // x1,4 par cran
-#define FX_GAP_MS   100   // effets : une couleur tous les 100 ms (2 trames chacune, voir sendColor)
-#define BLINK_MS    500   // clignotement : 0,5 s allumé, 0,5 s éteint
-#define SMOOTH_MS   1000  // clignotement doux : fondu 1/4, allumé 1/4, fondu 1/4, éteint 1/4
-#define RANDOM_SLOT 400   // clignotement aléatoire : par tranche de 400 ms, un éclair de 150 ms dans 35 % des
-#define RANDOM_ON   150   // tranches, décalé au hasard : écarts de 0,3 à 4 s environ
-#define BREATHE_MS  3000  // respiration : une inspiration-expiration en 3 s
-#define RAINBOW_MS  7200  // balayage RVB : tour complet de la roue des couleurs en 7,2 s
+int ledWheel = WHEEL_BRI;
 // Luminosité en % : le H7090 attend 0-100 (au-delà il sature : avec 0-255, seul le bas de la course agissait).
 #define GOVEE_BRI_MAX 100
 // La barre écrase le bas de sa plage (de 1 à ~65 la différence se voit à peine) : la luminosité choisie passe par
@@ -64,8 +55,6 @@ void goveeInit() {
   ledHue = s.hue % 360;
   ledCustom = s.custom;
   ledBri = constrain(s.bri, 5, 100);
-  ledFx = s.fx % FX_COUNT;
-  ledFxSpeed = s.fxSpeed < FX_SPEED_COUNT ? s.fxSpeed : FX_SPEED_DEFAULT;
 }
 
 bool goveeConnected() { return goveeWr != nullptr; }
@@ -86,88 +75,13 @@ LedColor hueColor(int hue) {
 
 LedColor ledCurrent() { return ledCustom ? hueColor(ledHue) : LED_COLORS[ledColor]; }
 
-// Hachage entier (lowbias32) : hasard reproductible, la pastille et la barre clignotent ensemble.
-static uint32_t hash32(uint32_t x) {
-  x ^= x >> 16; x *= 0x7feb352dU; x ^= x >> 15; x *= 0x846ca68bU; x ^= x >> 16;
-  return x;
-}
-
 // Luminosité à envoyer (0-GOVEE_BRI_MAX) pour une intensité 0-1 : 0 seulement à 0, sinon au moins 1.
 static int barLevel(float x) {
   return x <= 0 ? 0 : max(1, (int)lroundf(GOVEE_BRI_MAX * powf(min(x, 1.f), GOVEE_BRI_GAMMA)));
 }
 
-static float easeSine(float x) { return 0.5f - 0.5f * cosf(x * (float)PI); }
-
-// Intensité de l'effet (0 = éteint, 1 = pleine luminosité choisie) au temps t de l'effet (ms, à la vitesse x1).
-static float fxLevel(uint32_t now) {
-  float k = 1;
-  if (ledFx == FX_BLINK) {
-    k = now / BLINK_MS % 2 ? 0 : 1;
-  } else if (ledFx == FX_SMOOTH_BLINK) {
-    float p = now % SMOOTH_MS / (float)SMOOTH_MS * 4;  // 0-1 monte, 1-2 allumé, 2-3 descend, 3-4 éteint
-    k = p < 1 ? easeSine(p) : p < 2 ? 1 : p < 3 ? 1 - easeSine(p - 2) : 0;
-  } else if (ledFx == FX_RANDOM_BLINK) {
-    uint32_t slot = now / RANDOM_SLOT, h = hash32(slot), start = (h >> 8) % (RANDOM_SLOT - RANDOM_ON);
-    uint32_t in = now % RANDOM_SLOT;
-    k = h % 100 < 35 && in >= start && in < start + RANDOM_ON ? 1 : 0;
-  } else if (ledFx == FX_BREATHE) {
-    k = 0.06f + 0.94f * (0.5f - 0.5f * cosf(now % BREATHE_MS * (2 * PI / BREATHE_MS)));  // jamais tout à fait noir
-  }
-  return k;
-}
-
-// Teinte de l'effet (pleine intensité) : la couleur choisie, ou la roue des couleurs pour l'arc-en-ciel.
-static LedColor fxColor(uint32_t now) {
-  return ledFx == FX_RAINBOW ? hueColor(now % RAINBOW_MS * 360 / RAINBOW_MS) : ledCurrent();
-}
-
-// Couleur affichée (pastille, anneau) : la teinte assombrie par l'intensité.
-static LedColor ledShownAt(uint32_t now) {
-  LedColor c = fxColor(now);
-  float k = fxLevel(now);
-  c.r = c.r * k;
-  c.g = c.g * k;
-  c.b = c.b * k;
-  return c;
-}
-
-// Temps de l'effet : avance de (temps écoulé x vitesse), si bien qu'un changement de vitesse ne fait pas sauter
-// l'effet (il accélère ou ralentit à partir de là où il en est).
-static uint32_t fxTime(uint32_t now) {
-  static uint32_t last = now;
-  static double t = 0;
-  if ((int32_t)(now - last) > 0) {  // appelé par goveeService et par la page LED : instants croissants
-    t += (double)(now - last) * FX_SPEEDS[ledFxSpeed];
-    last = now;
-  }
-  return (uint32_t)fmod(t, 4294967296.0);
-}
-
-LedColor ledShown(uint32_t now) { return ledShownAt(fxTime(now)); }
-
-// Avant goveeInit (qui recharge l'état mémorisé) : préréglage Rouge joué par chaque effet.
 void goveeSelfTest() {
   assert(barLevel(0) == 0 && barLevel(1e-6f) == 1 && barLevel(1) == 100 && barLevel(0.5f) > 70 && barLevel(0.5f) < 80);
-  ledCustom = false;
-  ledColor = 1;  // Rouge (255, 0, 0)
-  ledFx = FX_BLINK;
-  assert(ledShownAt(0).r == 255 && ledShownAt(BLINK_MS).r == 0 && ledShownAt(2 * BLINK_MS).r == 255);
-  ledFx = FX_SMOOTH_BLINK;  // monte, allumé, descend, éteint
-  assert(ledShownAt(0).r == 0 && ledShownAt(SMOOTH_MS / 8).r > 100 && ledShownAt(SMOOTH_MS / 8).r < 155 &&
-         ledShownAt(SMOOTH_MS * 3 / 8).r == 255 && ledShownAt(SMOOTH_MS * 7 / 8).r == 0);
-  ledFx = FX_RANDOM_BLINK;  // tranche 0 : éclair de 0 à 150 ms ; puis ~12 % du temps allumé, à intervalles irréguliers
-  assert(ledShownAt(0).r == 255 && ledShownAt(RANDOM_ON + 50).r == 0);
-  int lit = 0;
-  for (uint32_t t = 0; t < 40000; t += 50) lit += ledShownAt(t).r > 0;
-  assert(lit > 40 && lit < 200);  // sur 800 échantillons
-  ledFx = FX_BREATHE;
-  assert(ledShownAt(0).r < 20 && ledShownAt(BREATHE_MS / 2).r >= 250);
-  ledFx = FX_RAINBOW;
-  LedColor a = ledShownAt(0), b = ledShownAt(RAINBOW_MS / 3);  // 0° rouge, 120° vert
-  assert(a.r == 255 && !a.g && b.g == 255 && !b.r);
-  ledFx = FX_FIXED;
-  ledColor = 0;
 }
 
 void goveeSend(std::initializer_list<uint8_t> payload) {
@@ -218,47 +132,18 @@ void goveeService(bool ledPage) {
   uint32_t now = millis();
   if (changedAt && now - changedAt > SAVE_AFTER_MS) {
     changedAt = 0;
-    ledStateSave({(uint8_t)ledColor, (uint16_t)ledHue, ledCustom, (uint8_t)ledBri, (uint8_t)ledFx, (uint8_t)ledFxSpeed});
+    ledStateSave({(uint8_t)ledColor, (uint16_t)ledHue, ledCustom, (uint8_t)ledBri});
   }
   if (goveeWr && goveeClient && goveeClient->isConnected()) {
-    // Effets : la barre ignore l'intensité d'une couleur RVB (un rouge sombre = son rouge, le noir est ignoré) ;
-    // l'intensité passe donc par sa commande de luminosité, l'extinction par marche / arrêt, et la couleur n'est
-    // envoyée que quand la teinte change (arc-en-ciel). fxLvl : dernière luminosité d'effet envoyée, -1 = aucune.
-    static LedColor fxSent = {nullptr, 0, 0, 0};
-    static int fxLvl = -1;
     if (now - lastSend < GOVEE_MIN_GAP_MS) return;
-    uint32_t t = fxTime(now);
     if (colorPending) {
       colorPending = false;
-      sendColor(fxSent = fxColor(t));
+      sendColor(ledCurrent());
       lastSend = now;
-    } else if (ledFx == FX_FIXED && fxLvl >= 0) {  // effet arrêté : la barre reprend allumage et luminosité choisis
-      if (fxLvl == 0 && ledOn) goveeSend({0x33, 0x01, 1});
-      fxLvl = -1;
-      ledBriSent = -1;
-      lastSend = now;
-    } else if (ledBri != ledBriSent && (ledFx == FX_FIXED || !ledOn)) {
+    } else if (ledBri != ledBriSent) {
       goveeSend({0x33, 0x04, (uint8_t)barLevel(ledBri / 100.f)});
       ledBriSent = ledBri;
       lastSend = now;
-    } else if (ledFx != FX_FIXED && ledOn && now - lastSend >= FX_GAP_MS) {
-      // shortcut: l'effet est joué par le M5Dial ; éteint, hors de portée ou en veille, la barre garde son dernier
-      // état. Scènes intégrées de la barre (autonomes) si un jour leurs codes H7090 sont connus.
-      LedColor c = fxColor(t);
-      float k = fxLevel(t);
-      int lvl = k < 0.03f ? 0 : barLevel(ledBri / 100.f * k);
-      if (c.r != fxSent.r || c.g != fxSent.g || c.b != fxSent.b) {  // teinte changée (arc-en-ciel)
-        sendColor(fxSent = c);
-        lastSend = now;
-      } else if (lvl != fxLvl) {
-        if (lvl == 0) goveeSend({0x33, 0x01, 0});                   // éteinte (clignotements)
-        else {
-          if (fxLvl <= 0) goveeSend({0x33, 0x01, 1});               // rallumée
-          goveeSend({0x33, 0x04, (uint8_t)lvl});
-        }
-        fxLvl = lvl;
-        lastSend = now;
-      }
     }
     return;
   }

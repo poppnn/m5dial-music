@@ -151,7 +151,19 @@
   </section>
 
   <section>
-    <h2>7. Roadmap</h2>
+    <h2>7. Wireless updates (optional)</h2>
+    <p>The M5Dial can update itself through your phone's hotspot. Give it the hotspot name and password once, over USB-C (needs the firmware installed with the button above, at least once, since it brings room for a second firmware):</p>
+    <div class="row">
+      <input type="text" id="wf-ssid" maxlength="32" placeholder="Hotspot name" aria-label="Hotspot name" autocomplete="off">
+      <input type="password" id="wf-pass" maxlength="63" placeholder="Password" aria-label="Hotspot password" autocomplete="off">
+      <button class="btn" id="wf-send">Save to the M5Dial</button>
+    </div>
+    <p class="muted" id="wf-status" aria-live="polite"></p>
+    <p>Then, when an update is out: turn the hotspot on (iPhone: <em>Maximize Compatibility</em> on, the M5Dial only sees 2.4 GHz), and on the M5Dial go to <strong>Settings → Update</strong>, press twice. It connects, compares versions, downloads, then restarts (Bluetooth comes back after the restart). Settings and pairing are kept.</p>
+  </section>
+
+  <section>
+    <h2>8. Roadmap</h2>
     <ul>
       <li>Print and fit the new mount, battery shell and lid on the wheel.</li>
       <li>Check the Android firmware with Gadgetbridge and the Windows firmware with the PC app.</li>
@@ -331,6 +343,22 @@
     if (!r.startsWith("DONE")) throw new Error("The transfer did not finish (" + r + ").");
     status("Done: the image shows while the M5Dial waits for the phone.");
   }));
+
+  // Partage de connexion pour la mise à jour OTA : gardé dans le M5Dial (src/settings.cpp), jamais renvoyé.
+  $("wf-send").addEventListener("click", async () => {
+    const ssid = $("wf-ssid").value, pass = $("wf-pass").value, out = $("wf-status");
+    if (!ssid || /[\t\n\r]/.test(ssid + pass)) { out.textContent = "Enter the hotspot name (and its password)."; return; }
+    if (new TextEncoder().encode(ssid).length > 32 || new TextEncoder().encode(pass).length > 63) { out.textContent = "Name or password too long."; return; }
+    $("wf-send").disabled = true;
+    try {
+      await withDial(async ({ send, answer }) => {
+        await send("BOOTANIM WIFI " + ssid + "\t" + pass);
+        const r = await answer();
+        out.textContent = r === "OK" ? "Saved. On the M5Dial: Settings → Update." : "The M5Dial refused it (" + r + "). Install the latest firmware first.";
+      });
+    } catch (e) { if (e.name !== "NotFoundError") out.textContent = e.message; }
+    finally { $("wf-send").disabled = false; }
+  });
 
   $("ba-clear").addEventListener("click", () => run($("ba-clear"), async ({ send, answer }) => {
     await send("BOOTANIM CLEAR");

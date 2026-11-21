@@ -4,7 +4,7 @@
 #include "clock.h"
 
 Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7,
-                     NOTIF_SENDER, 0};
+                     NOTIF_SENDER, 0, 1};
 const uint16_t ACCENT_COLORS[] = {0xFA20, 0xF8C3, 0xF951, 0x901F, 0x02DF, 0x06FF, 0x072B, 0xFE80, 0xFFFF};
 const char* const ACCENT_NAMES[] = {"orange", "red", "pink", "purple", "blue", "cyan", "green", "yellow", "white"};
 const int ACCENT_COUNT = sizeof(ACCENT_COLORS) / sizeof(ACCENT_COLORS[0]);
@@ -27,6 +27,7 @@ void settingsLoad() {
   settings.notifMode = prefs.isKey("notifMode") ? min<uint8_t>(prefs.getUChar("notifMode"), NOTIF_FULL)
                        : prefs.getBool("notifTxt", false) ? NOTIF_FULL : NOTIF_SENDER;
   settings.accent = prefs.getUChar("accent", 0) % ACCENT_COUNT;
+  settings.haptic = prefs.getUChar("haptic", settings.haptic) ? 1 : 0;
 }
 
 void settingsSave() {
@@ -41,6 +42,7 @@ void settingsSave() {
   prefs.putUChar("nightTo", settings.nightTo);
   prefs.putUChar("notifMode", settings.notifMode);
   prefs.putUChar("accent", settings.accent);
+  prefs.putUChar("haptic", settings.haptic);
 }
 
 // Plage de nuit qui peut passer minuit (21 h -> 7 h) ou non (1 h -> 5 h).
@@ -61,7 +63,7 @@ void settingsSelfTest() {
 
 LedState ledStateLoad() {
   return {prefs.getUChar("ledCol", 0), prefs.getUShort("ledHue", 0), prefs.getBool("ledCus", false),
-          prefs.getUChar("ledBri", 100), prefs.getUChar("ledFx", 0), prefs.getUChar("ledFxSpd", 4)};
+          prefs.getUChar("ledBri", 100)};
 }
 
 void ledStateSave(const LedState& s) {
@@ -69,8 +71,17 @@ void ledStateSave(const LedState& s) {
   prefs.putUShort("ledHue", s.hue);
   prefs.putBool("ledCus", s.custom);
   prefs.putUChar("ledBri", s.bri);
-  prefs.putUChar("ledFx", s.fx);
-  prefs.putUChar("ledFxSpd", s.fxSpeed);
+}
+
+bool wifiLoad(std::string& ssid, std::string& pass) {
+  ssid = prefs.getString("wifiS", "").c_str();
+  pass = prefs.getString("wifiP", "").c_str();
+  return !ssid.empty();
+}
+
+void wifiSave(const char* ssid, const char* pass) {
+  prefs.putString("wifiS", ssid);
+  prefs.putString("wifiP", pass);
 }
 
 // Clé NVS (15 caractères max) : "n" + adresse sans les ":" = 13 caractères.

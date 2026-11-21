@@ -2,6 +2,7 @@
 // ne jamais déborder le tampon de réception) et lecture directe des JPEG dans la flash projetée en mémoire.
 //   -> "BOOTANIM INFO"      <- "BOOTANIM CAP <taille partition> <images>"
 //   -> "BOOTANIM CLEAR"     <- "BOOTANIM OK"
+//   -> "BOOTANIM WIFI <nom>\t<mot de passe>"  <- "BOOTANIM OK" : partage de connexion pour la mise à jour OTA
 //   -> "BOOTANIM PUT <n>"   <- "BOOTANIM READY", puis n octets par blocs de 4096, chacun acquitté par
 //                              "BOOTANIM ACK <reçus>" ; à la fin "BOOTANIM DONE <images>" ou "BOOTANIM ERR <raison>"
 #include <Arduino.h>
@@ -9,6 +10,7 @@
 #include "bootanim.h"
 #include "app.h"
 #include "display.h"
+#include "settings.h"
 
 #define HDR        12
 #define ENTRY      12
@@ -83,7 +85,7 @@ bool bootAnimDraw(uint32_t now) {
 static bool receiving = false;
 static uint8_t* buf = nullptr;    // bloc en cours ; buf + CHUNK = premier bloc (en-tête), écrit en tout dernier
 static uint32_t want = 0, got = 0, bufLen = 0, firstLen = 0, lastRx = 0;
-static char line[40];
+static char line[128];  // assez pour WIFI : nom 32 + mot de passe 63
 static uint8_t lineLen = 0;
 
 static bool writeSector(uint32_t off, const uint8_t* d, uint32_t n) {
@@ -105,6 +107,13 @@ static void command(const char* s) {
   s += 9;
   if (!strcmp(s, "INFO")) {
     Serial.printf("BOOTANIM CAP %u %u\n", part ? (unsigned)part->size : 0u, frames);
+  } else if (!strncmp(s, "WIFI ", 5)) {
+    const char *ssid = s + 5, *tab = strchr(ssid, '\t');
+    size_t n = tab ? tab - ssid : 0;
+    if (!n || n > 32 || strlen(tab + 1) > 63) { Serial.println("BOOTANIM ERR wifi"); return; }
+    wifiSave(std::string(ssid, n).c_str(), tab + 1);
+    Serial.println("BOOTANIM OK");
+    dirty = true;
   } else if (!part) {
     Serial.println("BOOTANIM ERR nopart");  // reflasher l'image complète (nouvelle table de partitions)
   } else if (!strcmp(s, "CLEAR")) {
