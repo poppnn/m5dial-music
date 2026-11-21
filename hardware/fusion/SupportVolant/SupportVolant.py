@@ -504,7 +504,7 @@ def holder_cuts(b, shell, loc, ang, z_tt, W, T, wall, x_stop, x1, wb, tc):
     b.extrude(b.rect(*loc((xr - 0.2 + x1 + 12) / 2, 0), x1 + 12.2 - xr, W, ang), z_mt + 0.3, z_ct - z_mt - 0.3, CUT, [shell])
     # Bloc : 2 embouts mâles côte à côte, posés par le dessus dans un logement serré (clipsés, un point de colle au
     # besoin) ; broches à travers un rebord de 0,6 vers la cartouche ; derrière eux une marche de 0,6 encaisse la
-    # poussée et les fils remontent droit (vers le M5Dial, ou le TP4056 du chargeur).
+    # poussée et les fils remontent droit (vers le M5Dial, ou la carte de charge du chargeur).
     xm1 = xr - 0.8                       # face avant des embouts mâles (contre le rebord)
     xm0 = xm1 - DUP_L
     b.extrude(b.rect(*loc((xm0 + xm1) / 2, 0), DUP_L, DUP_W, ang), z_pf, z_tt + 1 - z_pf, CUT, [shell])
@@ -638,17 +638,22 @@ def cartridge_bodies(b, loc, ang, z_tt, T, wall, x_stop, x1, wb, tc, l_b):
     return cart, cap
 
 
-# Chargeur de cartouche (BAT_TYPE 1) : socle posé sur la table, même logement que le support du volant (détrompeur,
-# clip, embouts mâles), et au-dessus un compartiment pour un module TP4056 (carte 28 x 17,5, USB-C ou micro-USB) :
-# les 2 embouts mâles remontent dans le compartiment, leurs fils vont aux pastilles B+ / B- du module.
+# Chargeur de cartouche (BAT_TYPE 1) : socle posé sur la table, même logement que le support du volant (clip,
+# embouts mâles), et au-dessus un compartiment pour la carte de charge d'une puff JNR (28 x 22, onglet de 11 avec la
+# prise USB-C dessous, afficheur « 188 % » soudé dessus) : afficheur lisible par la fenêtre du couvercle depuis l'avant
+# (côté de la cartouche ; les chiffres se lisent depuis le côté de la prise), prise USB-C au ras de la face avant,
+# au-dessus de la cartouche. Les 2 embouts mâles remontent derrière la carte ; ses fils rouge (+) et noir (-) y vont.
 DOCK_AT = (0.0, -150.0)      # place du chargeur dans le document Fusion (à l'écart du support du volant)
-BAY_IN_W = 17.6              # compartiment : largeur intérieure (TP4056 26 x 17 + jeu)
-BAY_POST = 3.0               # rails sous la carte : les fils des embouts passent dessous
-BAY_H = 10.5                 # hauteur des parois du compartiment au-dessus du bac
-USB_W, USB_H = 9.2, 3.3      # prise USB-C du TP4056 : encoche à sa taille, à ras de la face arrière
-USB_OVH = 0.6                # la prise dépasse du bord de la carte de 0,6 : la paroi arrière n'a que 0,6 là où la
-                             # carte s'appuie (ajuster si la prise affleure mal)
+JNR_W, JNR_L, PCB_T = 28.0, 22.0, 1.0  # carte : largeur, longueur (sans l'onglet), épaisseur
+TAB_W, TAB_L, TAB_OFF = 11.0, 8.5, 4.0  # onglet de la prise : largeur, longueur, distance au bord gauche (afficheur
+                             # dessus, prise vers soi)
+USB_W, USB_H = 9.2, 3.3      # prise USB-C sous l'onglet : encoche à sa taille (3,2 de haut + jeu)
+USB_OVH = 1.0                # la prise dépasse du bout de l'onglet de 1 mm : elle affleure la face avant
+SOCK_Z = 1.0                 # prise surélevée de 1 mm : la fiche passe au-dessus du bout de la cartouche
+DISP = (3.5, 9.5, 13.5, 8.0) # afficheur : depuis le bord gauche, depuis le bord opposé à la prise, largeur, profondeur
+BAY_IN_W = JNR_W + 0.6       # compartiment : largeur intérieure
 LID_T, LIP_H, LIP_T = 1.6, 2.5, 1.2  # couvercle : plaque, rebord emboîté (0,2 de jeu), épaisseur du rebord
+BAY_H = SOCK_Z + USB_H - 0.1 + PCB_T + 0.2 + LIP_H  # le rebord du couvercle arrive 0,2 au-dessus de la carte : il la tient
 FRAMES = {}                  # repères (cx, cy, angle, dessus du bac) du support et du chargeur, pour les contrôles
 
 
@@ -677,35 +682,49 @@ def dock(b, P):
     FRAMES["dock"] = (ox, oy, 0.0, z_tt)
     body = b.solid(b.rrect_arcs(ox, oy, l_tray, W + 2 * wall, 0, 3.0), 0, h_tray)
     body.name = "Chargeur cartouche"
-    # Semelle : plus large (stable), arrêtée au bout ouvert (la nervure de la cartouche passe dessous)
+    # Semelle : plus large (stable), arrêtée au bout ouvert
     b.combine(body, b.solid(b.rrect_arcs(*loc((x0 - 8 + x1) / 2, 0), x1 - x0 + 8, W + 2 * wall + 16, 0, 6.0), 0, wall), JOIN)
-    # Compartiment du TP4056 sur le dessus (parois arrondies), rails sous la carte
+    # Compartiment de la carte JNR sur le dessus (parois arrondies)
     bw = BAY_IN_W + 2 * wall
     b.combine(body, b.solid(b.rrect_arcs(ox, oy, l_tray, bw, 0, 3.0), z_tt - 0.1, BAY_H + 0.1), JOIN)
     b.extrude(b.rrect_arcs(ox, oy, l_tray - 2 * wall, BAY_IN_W, 0, 1.5), z_tt, BAY_H + 1, CUT, [body])
+    # Carte : afficheur dessus, onglet vers l'avant (x), son bord gauche côté -y ; prise au ras de la face avant
+    xf = x0 + l_tray                     # face avant du compartiment (au-dessus du bout ouvert)
+    xt1 = xf - USB_OVH                   # bout de l'onglet
+    xb1 = xt1 - TAB_L                    # bord avant de la carte
+    xb0 = xb1 - JNR_L                    # bord arrière
+    yt = -JNR_W / 2 + TAB_OFF + TAB_W / 2  # axe de l'onglet et de la prise
+    z_sb = z_tt + SOCK_Z                 # dessous de la prise
+    z_pb = z_sb + USB_H - 0.1            # dessous de la carte
+    # Rails sous les bords de la carte (les 7,5 mm arrière restent libres : pastilles des fils), cale sous la prise,
+    # et 2 butées derrière la carte : elle ne recule pas quand on enfonce la fiche
     for sy in (1, -1):
-        b.combine(body, b.solid(b.rect(*loc(0, sy * (BAY_IN_W / 2 - 0.6)), l_tray - 2 * wall, 1.2, 0), z_tt - 0.1, BAY_POST + 0.1), JOIN)
-    # Paroi arrière amincie de l'intérieur à USB_OVH là où la carte s'appuie : son bord y entre, et sa prise USB-C
-    # arrive à ras de la face extérieure par une encoche à sa taille (ouverte en haut : la carte se pose d'en haut)
-    z_pcb = z_tt + BAY_POST + 1.6        # dessus de la carte
-    b.extrude(b.rect(*loc(x0 + USB_OVH + (wall - USB_OVH) / 2 + 0.05, 0), wall - USB_OVH + 0.1, 17.4, 0), z_tt + BAY_POST - 0.2,
+        b.combine(body, b.solid(b.rect(*loc((xb0 + 7.5 + xb1) / 2, sy * (JNR_W / 2 - 0.5)), xb1 - xb0 - 7.5, 1.0, 0),
+                                z_tt - 0.1, z_pb - z_tt + 0.1), JOIN)
+        b.combine(body, b.solid(b.rect(*loc(xb0 - 0.8, sy * 7), 1.2, 1.2, 0), z_tt - 0.1, z_pb + PCB_T + 1 - z_tt + 0.1), JOIN)
+    b.combine(body, b.solid(b.rect(*loc((xf - 7 + xf - wall) / 2, yt), 7 - wall, USB_W - 1, 0), z_tt - 0.1, SOCK_Z + 0.1), JOIN)
+    # Face avant : encoche de la prise à travers la paroi (ouverte en haut : la carte se pose d'en haut), et paroi
+    # amincie à USB_OVH au niveau de l'onglet
+    b.extrude(b.rect(*loc(xf - (wall + 0.3) / 2 + 0.2, yt), wall + 0.3, USB_W, 0), z_sb - 0.1, BAY_H + 1, CUT, [body])
+    b.extrude(b.rect(*loc(xf - (wall + USB_OVH) / 2 - 0.05, yt), wall - USB_OVH + 0.1, TAB_W + 0.6, 0), z_pb - 0.2,
               BAY_H + 1, CUT, [body])
-    b.extrude(b.rect(*loc(x0 + USB_OVH / 2, 0), USB_OVH + 0.4, USB_W, 0), z_pcb - 0.1, z_tt + BAY_H - z_pcb + 1, CUT, [body])
     # Logement de la cartouche (mêmes découpes que le support du volant) : le bloc des embouts s'ouvre dans le
-    # compartiment ; le dessus du bac sert de fond au compartiment
+    # compartiment, derrière la carte ; le dessus du bac sert de fond au compartiment
     holder_cuts(b, body, loc, 0.0, z_tt, W, T, wall, x_stop, x1, d["wb"], d["tc"])
 
-    # Couvercle : plaque arrondie, rebord emboîté (0,2 de jeu, sauf face à l'USB), fenêtre des LED de charge
+    # Couvercle : plaque arrondie, rebord emboîté (0,2 de jeu) qui appuie sur les bords de la carte, fenêtre de
+    # l'afficheur, languette qui comble l'encoche au-dessus de la prise et la tient
     zt = z_tt + BAY_H
     lid = b.solid(b.rrect_arcs(ox, oy, l_tray, bw, 0, 3.0), zt, LID_T)
     lid.name = "Couvercle chargeur"
     li, wi = l_tray - 2 * wall - 0.4, BAY_IN_W - 0.4
     b.combine(lid, b.solid(b.rrect_arcs(ox, oy, li, wi, 0, 1.3), zt - LIP_H, LIP_H + 0.1), JOIN)
     b.extrude(b.rrect_arcs(ox, oy, li - 2 * LIP_T, wi - 2 * LIP_T, 0, 0.6), zt - LIP_H - 0.1, LIP_H + 0.1, CUT, [lid])
-    b.extrude(b.rect(*loc(x0 + wall + 1, 0), 4, 17.6, 0), zt - LIP_H - 0.2, LIP_H + 0.1, CUT, [lid])
-    # Languette qui comble l'encoche au-dessus de la prise (face arrière lisse) et appuie sur elle : la carte est tenue
-    b.combine(lid, b.solid(b.rect(*loc(x0 + wall / 2, 0), wall, USB_W - 0.3, 0), z_pcb + USB_H + 0.1, zt - z_pcb - USB_H), JOIN)
-    b.extrude(b.poly(rrect(*loc(x0 + wall + 10, 0), 12, 5, 0, 2.49)), zt - 0.1, LID_T + 0.2, CUT, [lid])
+    b.combine(lid, b.solid(b.rect(*loc(xf - USB_OVH / 2, yt), USB_OVH, USB_W - 0.3, 0), z_pb + 0.1, zt - z_pb - 0.1 + 0.1), JOIN)
+    dx0, dy0, dw, dd = DISP
+    b.extrude(b.poly(rrect(*loc(xb0 + dy0 + dd / 2, -JNR_W / 2 + dx0 + dw / 2), dd + 0.6, dw + 0.6, 0, 1.0)),
+              zt - 0.1, LID_T + 0.2, CUT, [lid])
+    FRAMES["board"] = (xb0, xb1, xt1, yt, z_sb, z_pb)
     return body, lid
 
 

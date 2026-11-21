@@ -198,9 +198,9 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   with solder tabs) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
   **2 male Dupont jumper ends** (6 mm pins), their wires going to the M5Dial battery plug. Vape cells have **no protection circuit**:
   check they read above 3.0 V before use, and a small protection board (DW01) on the cell is safer.
-  Charging dock: a **TP4056 module** (26 × 17 mm board, USB-C) and 2 more male Dupont jumper ends.
-  The TP4056 charges at **1 A** out of the box, too much for an 850 mAh cell: replace its programming resistor
-  (R3, 1.2 kΩ, next to the chip) with **2.4 kΩ** (about 500 mA).
+  Charging dock: the **charge board of a JNR puff** (28 × 22 mm plus an 11 mm tab with the USB-C socket underneath,
+  "188 %" display on top, red + / black - battery wires) and 2 more male Dupont jumper ends. It charges the same
+  cell it came with. **Make sure it can't heat**: unsolder the puff sensor (or its heater wires) before use.
 - Per spoke (bottom and right): **M5 × 14 hex screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
 
 ### Assembly
@@ -225,10 +225,10 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    - Swap: slide the cartridge in, cradle up and connector end first, until both side arms click (the spring pushes
      it against the hooks: no play); to remove, **pinch the two arm ends** that stick out and the spring pushes it
      out. Upside down or the wrong way round it stops against the pin tips long before any contact: don't force it.
-   - Charging dock: drop 2 male jumper ends into the dock's pocket (inside the TP4056 bay, + on the "+" side), put a
-     spring in its back hole, solder the wires to the module's **B+ / B-** pads (they run under the board, which
-     sits on the two rails), push the board against the back wall with its USB socket in the notch, press the lid on
-     (the LEDs show through its window). Slide the cartridge in like in the car; red LED = charging, blue/green = full.
+   - Charging dock: drop 2 male jumper ends into the dock's pocket (in the bay, + on the "+" side), put a spring in
+     its back hole, join the board's **red wire to the + end and black to the -** behind the board, then lay the
+     board display up on its rails, tab forward, USB-C socket in the front notch and its back edge against the two
+     stops; press the lid on (the display shows through its window). Slide the cartridge in like in the car.
 4. Push the shell's (or holder's) round collar into the tube from underneath (3 lugs into 3 notches) and **turn it
    35° clockwise as seen from below** until it clicks.
 5. Fit the mount behind the bottom and right spokes, one screw per spoke through the Ø 16 hole with the Ø 20
@@ -281,10 +281,11 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   car mount it stays below the mount). No keying rib: the cradle-up, connector-first shape is the only way the
   sockets can meet the pins.
 - **Charging dock**: the same pocket, clip, spring and male jumper block as the car holder on a wider base plate,
-  with a 17.6 × 39.6 × 10.5 mm bay on top for a **26 × 17 mm TP4056** (board on 3 mm rails so the wires pass under
-  it). The back wall is thinned to 0.6 mm where the board's edge rests, so its **USB-C socket is flush** with the
-  outside through a 9.2 mm notch (`USB_OVH` if your socket sticks out more or less); the push-on lid (0.2 mm gap lip,
-  LED window) has a tab that fills the notch above the socket and holds the board down.
+  with a 28.6 mm wide bay on top for the **JNR puff charge board**, display up and readable from the front (the
+  cartridge side) through a window in the lid. The board rests on two rails 4.2 mm up (its USB-C socket is under
+  the tab, on a 1 mm pad, so the plug clears the cartridge end); the socket is **flush with the front face** through
+  a 9.2 mm notch (`USB_OVH`, `TAB_OFF`, `DISP` if your board differs), two stops behind the board take the plug's
+  push, the wires join behind it; the push-on lid's lip holds the board down and a tab fills the notch above the socket.
 - **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
   washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
