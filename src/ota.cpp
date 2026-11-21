@@ -21,18 +21,19 @@
 #else
 #define OTA_FILE "m5dial.bin"
 #endif
-#define WIFI_TIMEOUT_MS 20000
+#define WIFI_TIMEOUT_MS 30000
 #define READ_TIMEOUT_MS 15000
 
-static void show(const char* title, const std::string& line, float progress = -1) {
+static void show(const char* title, const std::string& line, float progress = -1, const std::string& line2 = "") {
   canvas.fillScreen(TFT_BLACK);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
   canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(title, 120, 100);
+  canvas.drawString(title, 120, 92);
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0x8410);
-  canvas.drawString(fit(line, 190).c_str(), 120, 136);
+  canvas.drawString(fit(line, 200).c_str(), 120, 128);
+  if (!line2.empty()) canvas.drawString(fit(line2, 190).c_str(), 120, 152);
   if (progress >= 0) {
     canvas.fillArc(120, 120, 119, 111, 0, 360, 0x2104);
     canvas.fillArc(120, 120, 119, 111, -90, -90 + 360.f * progress, accent());
@@ -41,11 +42,37 @@ static void show(const char* title, const std::string& line, float progress = -1
   pushFrame();
 }
 
-[[noreturn]] static void finish(const char* title, const std::string& line) {
-  show(title, line);
-  delay(3000);
+[[noreturn]] static void finish(const char* title, const std::string& line, const std::string& line2 = "",
+                                uint32_t ms = 3000) {
+  Serial.printf("OTA: %s | %s | %s\n", title, line.c_str(), line2.c_str());
+  show(title, line, -1, line2);
+  delay(ms);
   ESP.restart();
   for (;;) {}
+}
+
+static volatile int wifiReason = 0;  // dernière raison de déconnexion (esp_wifi : 201 réseau absent, 15 / 204 mot de passe...)
+
+// Échec de connexion : dit pourquoi, d'après la dernière raison et un scan (réseau vu ou non, canal, signal).
+[[noreturn]] static void wifiFailed(const std::string& ssid) {
+  show("No Wi-Fi", "Scanning...");
+  WiFi.disconnect();
+  int n = WiFi.scanNetworks();
+  int seen = -1;
+  for (int i = 0; i < n; i++) if (WiFi.SSID(i) == ssid.c_str()) seen = i;
+  char why[48], how[48];
+  if (n <= 0) {
+    snprintf(why, sizeof(why), "No network seen at all");
+    snprintf(how, sizeof(how), "Wi-Fi radio off? (code %d)", wifiReason);
+  } else if (seen < 0) {
+    snprintf(why, sizeof(why), "Hotspot not seen (%d others)", n);
+    snprintf(how, sizeof(how), "Keep its screen open, 2.4 GHz");
+  } else {
+    snprintf(why, sizeof(why), "Seen: ch %d, %d dBm", WiFi.channel(seen), WiFi.RSSI(seen));
+    bool pw = wifiReason == 15 || wifiReason == 202 || wifiReason == 204 || wifiReason == 2;
+    snprintf(how, sizeof(how), pw ? "Wrong password? (code %d)" : "Refused (code %d)", wifiReason);
+  }
+  finish("No Wi-Fi", why, how, 10000);
 }
 
 void otaRun() {
@@ -54,14 +81,27 @@ void otaRun() {
   M5Dial.Display.setBrightness(settingsBacklight());
   show("Update", "Stopping Bluetooth...");
   NimBLEDevice::deinit(true);
+  WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) { wifiReason = info.wifi_sta_disconnected.reason; },
+               ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  WiFi.persistent(false);  // rien d'écrit dans la NVS du Wi-Fi
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
   WiFi.begin(ssid.c_str(), pass.c_str());
-  for (uint32_t t0 = millis(); WiFi.status() != WL_CONNECTED;) {
-    // Partage de connexion en 2,4 GHz (iPhone : « Maximiser la compatibilité »), sinon le M5Dial ne le voit pas
-    if (millis() - t0 > WIFI_TIMEOUT_MS) finish("No Wi-Fi", "Hotspot on, 2.4 GHz?");
+  // Partage de connexion en 2,4 GHz (iPhone : écran Partage de connexion ouvert, « Maximiser la compatibilité »).
+  // L'iPhone n'apparaît parfois qu'au bout de quelques secondes : nouvel essai toutes les 8 s.
+  for (uint32_t t0 = millis(), tTry = t0; WiFi.status() != WL_CONNECTED;) {
+    uint32_t now = millis();
+    if (now - t0 > WIFI_TIMEOUT_MS) wifiFailed(ssid);
+    if (now - tTry > 8000) {
+      tTry = now;
+      WiFi.disconnect();
+      WiFi.begin(ssid.c_str(), pass.c_str());
+    }
     M5Dial.update();
     if (M5Dial.BtnA.wasPressed()) finish("Cancelled", "Restarting...");
-    show("Connecting", ssid + " (press = cancel)");
+    char sub[40];
+    snprintf(sub, sizeof(sub), "%lus  press = cancel", (unsigned long)((now - t0) / 1000));
+    show("Connecting", ssid, -1, wifiReason ? std::string(sub) + "  (" + std::to_string(wifiReason) + ")" : sub);
     delay(200);
   }
 
