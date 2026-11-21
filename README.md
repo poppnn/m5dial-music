@@ -11,7 +11,9 @@ Bluetooth (BLE) media remote on the M5Stack M5Dial (ESP32-S3), for **iPhone, And
 
 **One firmware per platform**, picked in the [web flasher](https://poppnn.github.io/m5dial-music/) (iPhone by
 default): each one only runs what its platform needs. When updating, leave **"Erase device"** unchecked in the
-web flasher: settings, paired phones and the boot image are kept (ticked, the whole M5Dial is wiped).
+web flasher: settings, paired phones and the boot image are kept (ticked, the whole M5Dial is wiped). After that,
+updates can also come **over the air** through the phone's hotspot (Settings › Update). The first install with the
+OTA layout moves the boot image partition: send the boot image again once.
 
 | Firmware | Bluetooth name | Track info, notifications | Build |
 |---|---|---|---|
@@ -79,15 +81,9 @@ Or download a version's binaries from [Releases](https://github.com/poppnn/m5dia
 Swipe vertically to the LED page. The M5Dial connects to the bar over BLE (unofficial Govee protocol):
 wheel = brightness, press = on / off, swipe left / right = colour (9 presets).
 **Short hold** (0.6 s) on the wheel = **hue** mode: the ring becomes a colour wheel and the wheel scrolls the hue
-(5° per detent, one wheel turn is about one colour circle); another short hold = **effect** mode: swipe left /
-right picks **Fixed**, **Blink** (0.5 s on / off), **Smooth blink** (fades in, stays, fades out, off: 1 s),
-**Random blink** (short flashes at random intervals, 0.3 to 4 s apart), **Breathe** (3 s fade in and out) or
-**Rainbow** (RGB sweep, 7 s per colour circle) and the wheel sets its **speed** (x0.25 to x4), all played live on the colour dot; another
-short hold goes back to brightness. Effects use the chosen colour
-and brightness (Rainbow sweeps every hue); the M5Dial plays them itself, so the bar keeps the last colour if the
-M5Dial disconnects or powers off. The bottom
+(5° per detent, one wheel turn is about one colour circle); another short hold goes back to brightness. The bottom
 line shows the bar connection: **Connected** in green, **Disconnected** in red (connecting runs in the background,
-the page never freezes). The last colour (preset or hue), brightness, effect and speed are remembered and sent to the bar
+the page never freezes). The last colour (preset or hue) and brightness are remembered and sent to the bar
 on every connection.
 Close the Govee Home app: the bar only accepts one connection.
 
@@ -109,7 +105,14 @@ Close the Govee Home app: the bar only accepts one connection.
   - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
     power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
     full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
-    active icons, notification border).
+    active icons, notification border), **Click**: a short buzzer tick on every wheel detent and press (the
+    M5Dial has no vibration motor), on by default.
+  - **Update** (over the air): shows the phone hotspot saved from the web flasher (section 7). Hotspot on
+    (iPhone: Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second press: Bluetooth stops, the
+    M5Dial joins the hotspot, reads the published version and, if it differs, downloads this platform's firmware
+    over HTTPS (certificate checked against pinned roots), writes it to the second app slot, checks it and
+    restarts on it. Up to date, no Wi-Fi or any error: it says so and restarts as before. Press during
+    "Connecting" to cancel.
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".
@@ -140,7 +143,8 @@ the screen never freezes.
 **Boot image or GIF from the browser** (no build needed): on https://poppnn.github.io/m5dial-music/, section 6, pick a
 picture or an animated GIF (square crop, 240 × 240, up to 300 frames), then "Send to the M5Dial" with the M5Dial on
 USB-C (Chrome or Edge: Web Serial). The page turns it into JPEG frames, sends them over USB and the M5Dial stores them
-in its own flash partition (`bootanim`, 4.9 MB, `partitions.csv`); it is then shown full screen while waiting for the
+in its own flash partition (`bootanim`, 1.9 MB, `partitions.csv`: the rest holds two 3 MB app slots for the
+over-the-air update); it is then shown full screen while waiting for the
 phone, under the spinning arc. "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
 installed with the web flasher's full install (it adds the partition; settings are kept).
 
