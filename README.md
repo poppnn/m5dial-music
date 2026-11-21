@@ -203,7 +203,8 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   **2 male Dupont jumper ends** (6 mm pins), their wires going to the M5Dial battery plug. Vape cells have **no protection circuit**:
   check they read above 3.0 V before use, and a small protection board (DW01) on the cell is safer.
   Charging dock: the **charge board of a JNR puff** (28 × 22 mm plus an 11 mm tab with the USB-C socket underneath,
-  "188 %" display on top, red + / black - battery wires) and 2 more male Dupont jumper ends. It charges the same
+  "188 %" display on top, red + / black - battery wires), 2 more male Dupont jumper ends and 3 M1.4 × 4-5 mm
+  self-tapping screws. It charges the same
   cell it came with. **Make sure it can't heat**: unsolder the puff sensor (or its heater wires) before use.
 - Per spoke (bottom and right): **M5 × 14 hex screw**, **fender washer M5 × 20** (a plain M5 washer drops into the Ø 16 hole), **M5 nut**.
 
@@ -232,7 +233,8 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    - Charging dock: drop 2 male jumper ends into the dock's pocket (in the bay, + on the "+" side), put a spring in
      its back hole, join the board's **red wire to the + end and black to the -** behind the board, then lay the
      board display up on its rails, tab forward, USB-C socket in the front notch and its back edge against the two
-     stops; press the lid on (the display shows through its window). Slide the cartridge in like in the car.
+     stops, and fix it with **3 M1.4 × 4 (or 5) self-tapping screws** through its holes into the posts; press the lid
+     on (the display shows through its window). Slide the cartridge in like in the car.
 4. Push the shell's (or holder's) round collar into the tube from underneath (3 lugs into 3 notches) and **turn it
    35° clockwise as seen from below** until it clicks.
 5. Fit the mount behind the bottom and right spokes, one screw per spoke through the Ø 16 hole with the Ø 20
@@ -286,7 +288,9 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   sockets can meet the pins.
 - **Charging dock**: the same pocket, clip, spring and male jumper block as the car holder on a wider base plate,
   with a 28.6 mm wide bay on top for the **JNR puff charge board**, display up and readable from the front (the
-  cartridge side) through a window in the lid. The board rests on two rails 4.2 mm up (its USB-C socket is under
+  cartridge side) through a window in the lid. The board rests on two rails and **3 screw posts** (Ø 3.4, 1.1 mm
+  pilot holes for M1.4 self-tapping screws, at its 3 holes: `HOLES`; the bay is offset 1.9 mm so the top post
+  clears the jumper pocket) 4.2 mm up (its USB-C socket is under
   the tab, on a 1 mm pad, so the plug clears the cartridge end); the socket is **flush with the front face** through
   a 9.2 mm notch (`USB_OVH`, `TAB_OFF`, `DISP` if your board differs), two stops behind the board take the plug's
   push, the wires join behind it; the push-on lid's lip holds the board down and a tab fills the notch above the socket.
