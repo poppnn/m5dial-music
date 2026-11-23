@@ -26,6 +26,7 @@
 #define ENC_STEPS_PER_DETENT 2  // défaut (Réglages > Molette) : 2 impulsions par cran mesurées sur ce M5Dial
 #define SWIPE_MIN_PX         40
 #define CALL_REJECT_MS       800  // appel entrant : appui long sur la molette = refuser
+#define PAIR_WINDOW_MS       120000  // un NOUVEL appareil ne s'appaire que 2 min après l'allumage (s'il y en a déjà un)
 #define LONG_PRESS_MS        600  // appui long court (page LED : luminosité <-> teinte) ; extinction à 2 s
 
 // "Toujours droit" (IMU externe).

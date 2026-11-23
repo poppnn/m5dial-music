@@ -118,6 +118,10 @@ Close the Govee Home app: the bar only accepts one connection.
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".
     First press = "confirm?", second press = do it; turning the wheel cancels. The forgotten device must also
     forget "M5Dial Music" in its Bluetooth settings before pairing again.
+  - **Pairing a new device**: once one device is paired, a new one is only accepted during the **first 2 minutes
+    after power-on** (pairing needs no code, so a stranger nearby could otherwise pair and show fake calls or
+    notifications). Already paired devices reconnect at any time. To add a phone: power the M5Dial off and on,
+    then pair within 2 minutes.
 
 ## Interface
 

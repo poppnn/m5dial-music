@@ -102,16 +102,25 @@ static void endRx(const char* err) {
   dirty = true;
 }
 
+// "<nom>\t<mot de passe>" : nom de 1 à 32 octets, mot de passe de 0 (réseau ouvert) à 63 octets.
+static bool wifiParse(const char* s, std::string& ssid, std::string& pass) {
+  const char* tab = strchr(s, '\t');
+  size_t n = tab ? tab - s : 0;
+  if (!n || n > 32 || strlen(tab + 1) > 63) return false;
+  ssid.assign(s, n);
+  pass = tab + 1;
+  return true;
+}
+
 static void command(const char* s) {
   if (strncmp(s, "BOOTANIM ", 9)) return;
   s += 9;
+  std::string ssid, pass;
   if (!strcmp(s, "INFO")) {
     Serial.printf("BOOTANIM CAP %u %u\n", part ? (unsigned)part->size : 0u, frames);
   } else if (!strncmp(s, "WIFI ", 5)) {
-    const char *ssid = s + 5, *tab = strchr(ssid, '\t');
-    size_t n = tab ? tab - ssid : 0;
-    if (!n || n > 32 || strlen(tab + 1) > 63) { Serial.println("BOOTANIM ERR wifi"); return; }
-    wifiSave(std::string(ssid, n).c_str(), tab + 1);
+    if (!wifiParse(s + 5, ssid, pass)) { Serial.println("BOOTANIM ERR wifi"); return; }
+    wifiSave(ssid.c_str(), pass.c_str());
     Serial.println("BOOTANIM OK");
     dirty = true;
   } else if (!part) {
@@ -173,4 +182,9 @@ void bootAnimSelfTest() {
   assert(bootAnimParse(d, sizeof(d), n, ms) && n == 1 && ms == 100);
   d[16] = 5;  // image qui dépasse la fin
   assert(!bootAnimParse(d, sizeof(d), n, ms));
+  std::string ssid, pass;  // partage de connexion : espaces gardés, mot de passe vide permis, sans tabulation refusé
+  assert(wifiParse("iPhone de Bob\tmot de passe", ssid, pass) && ssid == "iPhone de Bob" && pass == "mot de passe");
+  assert(wifiParse("Open\t", ssid, pass) && ssid == "Open" && pass.empty());
+  assert(!wifiParse("iPhone", ssid, pass) && !wifiParse("\tpass", ssid, pass));
+  assert(!wifiParse("123456789012345678901234567890123\tp", ssid, pass));  // nom de 33 octets
 }

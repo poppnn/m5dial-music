@@ -197,7 +197,9 @@ void gbAnswer(bool accept) {
 
 void gbInit(NimBLEServer* server) {
   NimBLEService* s = server->createService(NUS_SVC);
-  s->createCharacteristic(NUS_RX, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR)->setCallbacks(new RxCB());
+  // Lien chiffré exigé : rien n'est accepté d'un appareil pas encore appairé (voir la fenêtre d'appairage, ble_phone.cpp)
+  s->createCharacteristic(NUS_RX, NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::WRITE_NR | NIMBLE_PROPERTY::WRITE_ENC)
+      ->setCallbacks(new RxCB());
   tx = s->createCharacteristic(NUS_TX, NIMBLE_PROPERTY::NOTIFY);
 }
 
