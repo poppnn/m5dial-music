@@ -88,24 +88,20 @@ static void onEntityUpdate(NimBLERemoteCharacteristic*, uint8_t* d, size_t len, 
 // Appairage sans code (pas d'écran à clavier) : n'importe qui à portée pourrait s'appairer pendant que le M5Dial
 // attend un téléphone, et afficher de faux appels ou notifications. Un appareil NOUVEAU n'est donc accepté que dans
 // les PAIR_WINDOW_MS après l'allumage, sauf s'il n'y en a encore aucun ; les appareils déjà appairés, toujours.
-static int bondsAtConnect = 0;
+// Fenêtre fermée : plus aucun appairage n'est ENREGISTRÉ (sinon, liste pleine à 3, NimBLE effaçait le plus ancien
+// pour faire de la place à l'inconnu), et seul un lien chiffré avec des clés déjà enregistrées est gardé.
+static bool pairOpen = true;
 
 class ServerCB : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer*, NimBLEConnInfo& info) override {
     connHandle = info.getConnHandle();
-    bondsAtConnect = NimBLEDevice::getNumBonds();
+    pairOpen = !NimBLEDevice::getNumBonds() || millis() < PAIR_WINDOW_MS;
+    NimBLEDevice::setSecurityAuth(pairOpen, false, true);  // bonding seulement fenêtre ouverte, Secure Connections
     NimBLEDevice::startSecurity(connHandle);  // AMS exige un lien chiffré (appairage)
   }
   void onAuthenticationComplete(NimBLEConnInfo& info) override {
-    bool fresh = NimBLEDevice::getNumBonds() > bondsAtConnect;  // il vient de s'appairer
-    if (info.isEncrypted() && fresh && bondsAtConnect > 0 && millis() > PAIR_WINDOW_MS) {
-      NimBLEDevice::deleteBond(info.getIdAddress());
-      NimBLEDevice::getServer()->disconnect(info.getConnHandle());
-    } else if (info.isEncrypted()) {
-      needSetup = true;  // découverte GATT faite dans loop(), pas dans la tâche BLE
-    } else {
-      NimBLEDevice::getServer()->disconnect(info.getConnHandle());
-    }
+    if (info.isEncrypted() && (pairOpen || info.isBonded())) needSetup = true;  // découverte GATT dans loop()
+    else NimBLEDevice::getServer()->disconnect(info.getConnHandle());
   }
   void onDisconnect(NimBLEServer*, NimBLEConnInfo&, int) override {
     linkGen++;
