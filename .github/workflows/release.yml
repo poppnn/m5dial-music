@@ -21,13 +21,18 @@ jobs:
       - run: pio run
         env:
           PLATFORMIO_BUILD_FLAGS: -DFW_VERSION='"${{ env.VERSION }}"'
-      - name: Binaires (firmware seul + image complète pour 0x0)
+      # Mise à jour : boot_app0 (remet le démarrage sur app0, même après une mise à jour OTA qui démarre sur app1)
+      # + application, à 0xe000 comme le web flasher ; la NVS (0x9000-0xe000, réglages) n'est pas touchée.
+      # L'image complète depuis 0x0 remplit ce trou de 0xFF : elle efface les réglages (installation neuve).
+      - name: Binaires (mise à jour à 0xe000 + image complète pour 0x0)
         run: |
           mkdir dist
           for E in m5dial android windows; do
             B=.pio/build/$E
             N=m5dial-music-$([ $E = m5dial ] && echo iphone || echo $E)-$GITHUB_REF_NAME
-            cp $B/firmware.bin "dist/$N-firmware.bin"
+            esptool.py --chip esp32s3 merge_bin -o "dist/$N-update-0xe000.bin" --target-offset 0xe000 --flash_mode keep \
+              0xe000 ~/.platformio/packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin \
+              0x10000 $B/firmware.bin
             esptool.py --chip esp32s3 merge_bin -o "dist/$N-full-0x0.bin" \
               --flash_mode keep --flash_size 8MB \
               0x0 $B/bootloader.bin 0x8000 $B/partitions.bin \
@@ -46,8 +51,8 @@ jobs:
             echo
             echo "- Easiest: https://poppnn.github.io/m5dial-music/ (Chrome or Edge, M5Dial over USB-C), then pick iPhone, Android or Windows."
             echo "- One firmware per platform: iphone (AMS, ANCS), android (Gadgetbridge), windows (PC app in tools/windows)."
-            echo "- \`*-full-0x0.bin\`: full image, flash at address 0x0 (esptool, Espressif web flasher)."
-            echo "- \`*-firmware.bin\`: app only, at 0x10000 (update of an already installed M5Dial)."
+            echo "- \`*-full-0x0.bin\`: full image, flash at address 0x0 (esptool, Espressif web flasher). **Erases settings and paired devices.**"
+            echo "- \`*-update-0xe000.bin\`: update of an already installed M5Dial, flash at 0xe000: keeps settings, and boots the new firmware even after an over-the-air update."
           } > CHANGELOG.md
           cat CHANGELOG.md
       - uses: softprops/action-gh-release@v2
