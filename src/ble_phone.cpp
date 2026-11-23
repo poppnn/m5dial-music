@@ -181,11 +181,19 @@ static void transmit(uint8_t cmd) {
 }
 
 static QueueHandle_t cmdQueue = nullptr;
+static volatile bool cmdSending = false;
 
 static void cmdTask(void*) {
   uint8_t cmd;
-  for (;;) if (xQueueReceive(cmdQueue, &cmd, portMAX_DELAY)) transmit(cmd);
+  for (;;) {
+    if (!xQueueReceive(cmdQueue, &cmd, portMAX_DELAY)) continue;
+    cmdSending = true;
+    transmit(cmd);
+    cmdSending = false;
+  }
 }
+
+bool bleBusy() { return setupRunning || cmdSending || (cmdQueue && uxQueueMessagesWaiting(cmdQueue)) || ancsBusy(); }
 
 void sendCmd(uint8_t cmd) {
   if (!cmdQueue) {

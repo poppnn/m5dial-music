@@ -20,6 +20,7 @@ void goveeInit();                  // callbacks du scan + dernier état mémoris
 void goveeSelfTest();              // courbe de luminosité
 void goveeService(bool ledPage);   // connexion, envois limités en fréquence, mémorisation, à chaque tour de loop()
 bool goveeConnected();
+bool goveeBusy();                  // connexion à la barre en cours (tâche de fond)
 void goveeSend(std::initializer_list<uint8_t> payload);
 void goveeColorChanged();          // couleur modifiée : envoyée au prochain goveeService()
 void goveeChanged();               // luminosité / état modifiés : mémorisés après 2 s sans changement

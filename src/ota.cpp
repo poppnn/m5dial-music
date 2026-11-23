@@ -9,6 +9,8 @@
 #include <NimBLEDevice.h>
 #include "ota.h"
 #include "ota_roots.h"
+#include "ble_phone.h"
+#include "govee.h"
 #include "config.h"
 #include "display.h"
 #include "settings.h"
@@ -80,6 +82,9 @@ void otaRun() {
   if (!wifiLoad(ssid, pass)) return;
   M5Dial.Display.setBrightness(settingsBacklight());
   show("Update", "Stopping Bluetooth...");
+  // Les tâches de fond (connexion à la barre LED, découverte du téléphone, commandes en file) finissent d'abord :
+  // arrêté sous elles, le Bluetooth libéré les faisait planter. loop() ne tourne plus, rien de nouveau n'arrive.
+  for (uint32_t t0 = millis(); (goveeBusy() || bleBusy()) && millis() - t0 < 6000;) delay(20);
   NimBLEDevice::deinit(true);
   WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) { wifiReason = info.wifi_sta_disconnected.reason; },
                ARDUINO_EVENT_WIFI_STA_DISCONNECTED);

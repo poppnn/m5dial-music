@@ -89,14 +89,20 @@ void ancsReset() {
 // (il faut déconnexion + reconnexion pendant ~50 ms), à protéger par un compteur de connexion si ça arrive.
 struct WriteReq { uint8_t len; uint8_t d[96]; };
 
+static volatile bool writing = false;
+
 static void writerTask(void*) {
   WriteReq w;
   for (;;) {
     if (!xQueueReceive(writes, &w, portMAX_DELAY)) continue;
+    writing = true;
     NimBLERemoteCharacteristic* c = cp;
     if (c) c->writeValue(w.d, w.len, true);
+    writing = false;
   }
 }
+
+bool ancsBusy() { return writing || (writes && uxQueueMessagesWaiting(writes)); }
 
 static bool write(const std::vector<uint8_t>& v) {
   if (!cp || v.size() > sizeof(WriteReq::d)) return false;

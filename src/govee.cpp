@@ -58,6 +58,7 @@ void goveeInit() {
 }
 
 bool goveeConnected() { return goveeWr != nullptr; }
+bool goveeBusy() { return connecting; }
 
 LedColor hueColor(int hue) {
   float h = (hue % 360) / 60.f, x = 1 - fabsf(fmodf(h, 2) - 1);

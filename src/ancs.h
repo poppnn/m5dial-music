@@ -7,6 +7,7 @@
 void ancsSetup(NimBLEClient* client);  // iPhone connecté et chiffré (depuis setupAms)
 bool ancsService();                    // dans loop() : true si un appel ou une notification vient d'arriver
 void ancsReset();                      // déconnexion
+bool ancsBusy();                       // requête au Control Point en file ou en cours d'envoi
 
 bool ancsCall(std::string& caller);    // appel entrant en cours
 void ancsAnswer(bool accept);          // décrocher / refuser

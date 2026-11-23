@@ -30,6 +30,7 @@ bool parsePlaybackInfo(const std::string& s, int& state, float& rate, float& ela
 void startBle();
 void startSetup();  // depuis loop() : si needSetup, découverte GATT (AMS, CTS, ANCS) dans une tâche à part
 void sendCmd(uint8_t cmd);
+bool bleBusy();     // découverte, commande ou requête ANCS en cours dans une tâche de fond
 std::string connectedPeer();               // adresse d'identité du téléphone connecté ("" sinon)
 void forgetBond(const NimBLEAddress& a);   // oublie un appareil (le déconnecte s'il est connecté)
 void forgetAllBonds();
