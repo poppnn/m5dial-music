@@ -287,13 +287,14 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
   car mount it stays below the mount). No keying rib: the cradle-up, connector-first shape is the only way the
   sockets can meet the pins.
 - **Charging dock**: the same pocket, clip, spring and male jumper block as the car holder on a wider base plate,
-  with a 28.6 mm wide bay on top for the **JNR puff charge board**, display up and readable from the front (the
-  cartridge side) through a window in the lid. The board rests on two rails and **3 screw posts** (Ø 3.4, 1.1 mm
-  pilot holes for M1.4 self-tapping screws, at its 3 holes: `HOLES`; the bay is offset 1.9 mm so the top post
-  clears the jumper pocket) 4.2 mm up (its USB-C socket is under
-  the tab, on a 1 mm pad, so the plug clears the cartridge end); the socket is **flush with the front face** through
-  a 9.2 mm notch (`USB_OVH`, `TAB_OFF`, `DISP` if your board differs), two stops behind the board take the plug's
-  push, the wires join behind it; the push-on lid's lip holds the board down and a tab fills the notch above the socket.
+  symmetric, with a 32.4 mm wide bay on top (the base widened to match) for the **JNR puff charge board**, display
+  up and readable from the front (the cartridge side) through a window in the lid. The board rests on two rails and
+  **3 screw posts** (Ø 3.4, 1.1 mm pilot holes for M1.4 self-tapping screws, at its 3 holes: `HOLES`) 4.2 mm up,
+  1.9 mm off-centre in the bay so the top post clears the jumper pocket (its USB-C socket is under the tab, on a
+  1 mm pad, so the plug clears the cartridge end). The tab ends at the front face, so the **socket sits right at
+  the edge**, through a 9.2 mm notch and a tab slot (`TAB_IN`, `TAB_OFF`, `DISP` if your board differs); two stops
+  behind the board take the plug's push, the wires join behind it; the push-on lid has a tongue that fills the slot
+  above the tab and holds it down.
 - **Nut caps**: low dome Ø 24 × 7.5 mm pushed onto the nut (hex socket 8.1 mm across flats), with or without the
   washer underneath; an M5 × 14 screw ends inside it. **Dummy cap**: same dome with a peg split into 4 fingers that
   clips into the Ø 16 hole (hook 0.3 mm under the 5 mm spoke). Source
