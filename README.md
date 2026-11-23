@@ -198,11 +198,12 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
 - M5Stack **M5Dial** (v1.1). Optional: **IMU Pro Mini** unit on Port A (screen stays level, pressure) and **ENV III**
   unit on Port B (temperature, humidity, pressure), with short Grove cables.
 - LiPo **103450** (50 × 34 × 10 mm) with its protection board and a lead long enough to reach the M5Dial.
-  **Or** the removable cartridge: per battery one **16350** Li-ion cell (Ø 16 × 35 mm, e.g. from a disposable vape,
-  with solder tabs) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
+  **Or** the removable cartridge: per battery one **16350** Li-ion cell, **850 mAh** (Ø 16 × 35 mm, the cell of a
+  **JNR** disposable puff, with solder tabs: + on one end, - on the other) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
   **2 male Dupont jumper ends** (6 mm pins), their wires going to the M5Dial battery plug. Vape cells have **no protection circuit**:
   check they read above 3.0 V before use, and a small protection board (DW01) on the cell is safer.
-  Charging dock: the **charge board of a JNR puff** (28 × 22 mm plus an 11 mm tab with the USB-C socket underneath,
+  Charging dock: the **charge board of a JNR puff**, marked **SIC C023-M22 V1.5** on the back (28 × 22 mm plus an
+  11 mm tab with the USB-C socket underneath,
   "188 %" display on top, red + / black - battery wires), 2 more male Dupont jumper ends and 3 M1.4 × 4-5 mm
   self-tapping screws. It charges the same
   cell it came with. **Make sure it can't heat**: unsolder the puff sensor (or its heater wires) before use.
