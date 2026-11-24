@@ -38,6 +38,10 @@ void ledStateSave(const LedState& s);
 bool wifiLoad(std::string& ssid, std::string& pass);
 void wifiSave(const char* ssid, const char* pass);
 
+// Appareils à oublier, choisis dans la Web UI (le Bluetooth y est arrêté) : oubliés au démarrage suivant.
+void bondForgetLater(const std::string& id);  // id = "adresse/type"
+std::string bondForgetTake();                 // liste "id,id," puis effacée
+
 // Nom des appareils appairés (NimBLE ne garde que leur adresse) : mémorisé à la connexion.
 void bondNameSave(const std::string& addr, const std::string& name);
 std::string bondName(const std::string& addr);  // "" si inconnu

@@ -32,7 +32,7 @@
 #define WIFI_TIMEOUT_MS 30000
 #define READ_TIMEOUT_MS 15000
 
-static void show(const char* title, const std::string& line, float progress = -1, const std::string& line2 = "") {
+void show(const char* title, const std::string& line, float progress, const std::string& line2) {
   canvas.fillScreen(TFT_BLACK);
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_24);
@@ -245,9 +245,9 @@ void otaSelfTest() {
   assert(pwLabel(-1) == "`" && pwLabel(PW_COUNT) == "OK" && pwLabel(PW_FIRST + 62) == "space");  // l'anneau boucle
 }
 
-void otaRun() {
+void wifiSession(const char* title) {
   M5Dial.Display.setBrightness(settingsBacklight());
-  show("Update", "Stopping Bluetooth...");
+  show(title, "Stopping Bluetooth...");
   // Les tâches de fond (connexion à la barre LED, découverte du téléphone, commandes en file) finissent d'abord :
   // arrêté sous elles, le Bluetooth libéré les faisait planter. loop() ne tourne plus, rien de nouveau n'arrive.
   for (uint32_t t0 = millis(); (goveeBusy() || bleBusy()) && millis() - t0 < 6000;) delay(20);
@@ -259,6 +259,10 @@ void otaRun() {
   WiFi.setSleep(false);
   encLast = encoderRead();
   joinWifi();
+}
+
+void otaRun() {
+  wifiSession("Update");
 
   WiFiClientSecure client;
   client.setCACert(OTA_ROOTS);

@@ -235,8 +235,19 @@ void forgetAllBonds() {
   NimBLEDevice::deleteAllBonds();
 }
 
+// Appareils oubliés depuis la Web UI : "aa:bb:cc:dd:ee:ff/0,..." (adresse, type d'adresse).
+static void forgetPending() {
+  std::string l = bondForgetTake();
+  for (size_t i = 0, e; (e = l.find(',', i)) != std::string::npos; i = e + 1) {
+    std::string id = l.substr(i, e - i);
+    size_t slash = id.find('/');
+    if (slash == 17) NimBLEDevice::deleteBond(NimBLEAddress(id.substr(0, 17), (uint8_t)atoi(id.c_str() + 18)));
+  }
+}
+
 void startBle() {
   NimBLEDevice::init(BLE_NAME);
+  forgetPending();
   NimBLEDevice::setMTU(185);
   NimBLEDevice::setSecurityAuth(true, false, true);  // bonding, sans MITM, Secure Connections
   NimBLEDevice::setSecurityIOCap(BLE_HS_IO_NO_INPUT_OUTPUT);

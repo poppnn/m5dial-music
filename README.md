@@ -117,6 +117,13 @@ Close the Govee Home app: the bar only accepts one connection.
     over HTTPS (certificate checked against pinned roots), writes it to the second app slot, checks it and
     restarts on it. Up to date or any error: it says so and restarts as before. Press during "Connecting" to go
     back to the list (wrong password: it asks again).
+  - **Web UI** (from the phone, no computer): press twice, pick the hotspot like for Update, then open the address
+    shown on the M5Dial (`http://172.20.10.x` on an iPhone hotspot) in the phone's browser. The page changes every
+    setting (same as here, plus LED colour, hue and brightness, and the hotspot), **exports** them as a JSON file
+    and **imports** one (all values checked first: a wrong file changes nothing), lists the paired devices
+    ("Forget": done at the next restart, Bluetooth being off meanwhile) and sends a **boot image or GIF** (same as
+    the web flasher, converted in the phone's browser). Bluetooth is off during the session; "Done", a press on the
+    M5Dial or 15 minutes without use restarts it. No password on the page: only devices on your hotspot reach it.
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".

@@ -84,6 +84,18 @@ void wifiSave(const char* ssid, const char* pass) {
   prefs.putString("wifiP", pass);
 }
 
+void bondForgetLater(const std::string& id) {
+  String s = prefs.getString("bondDel", "");
+  if (s.length() + id.size() + 1 <= 200) prefs.putString("bondDel", s + id.c_str() + ",");
+}
+
+std::string bondForgetTake() {
+  if (!prefs.isKey("bondDel")) return "";
+  std::string s = prefs.getString("bondDel").c_str();
+  prefs.remove("bondDel");
+  return s;
+}
+
 // Clé NVS (15 caractères max) : "n" + adresse sans les ":" = 13 caractères.
 static String bondKey(const std::string& addr) {
   String k = "n";

@@ -9,5 +9,11 @@ void bootAnimInit();             // au démarrage : trouve la partition et lit l
 void bootAnimService();          // dans loop() : commandes "BOOTANIM ..." reçues sur le port USB
 bool bootAnimDraw(uint32_t now); // dessine l'image courante dans canvas ; false s'il n'y a pas d'animation
 uint32_t bootAnimSplashMs();     // temps minimal d'affichage au démarrage (0 sans image)
+// Écriture d'une nouvelle animation par morceaux (USB ou Web UI) : Begin (taille totale), Write..., End = valide ?
+uint32_t bootAnimCapacity();     // taille de la partition (0 : ancienne table de partitions)
+bool bootAnimBegin(uint32_t total);
+bool bootAnimWrite(const uint8_t* d, size_t n);
+bool bootAnimEnd();
+void bootAnimClear();            // revient au logo
 bool bootAnimParse(const uint8_t* d, size_t n, uint16_t& count, uint32_t& totalMs);  // en-tête valide ?
 void bootAnimSelfTest();

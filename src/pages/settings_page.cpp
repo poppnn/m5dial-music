@@ -6,9 +6,10 @@
 #include "../imu.h"
 #include "../ota.h"
 #include "../settings.h"
+#include "../webui.h"
 
 enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_HAPTIC, IT_VALUES,
-       IT_UPDATE = IT_VALUES, IT_DEV0 };  // puis les appareils
+       IT_UPDATE = IT_VALUES, IT_WEBUI, IT_DEV0 };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
 static const uint16_t SLEEP_OPTS[] = {0, 5, 10, 20, 30, 60};   // min
@@ -130,6 +131,9 @@ static bool draw(float) {
       std::string ssid, pass;
       label = "Update";
       snprintf(val, sizeof(val), "%s", wifiLoad(ssid, pass) ? ssid.c_str() : "choose Wi-Fi");
+    } else if (i == IT_WEBUI) {  // réglages, image de démarrage... depuis le navigateur du téléphone
+      label = "Web UI";
+      snprintf(val, sizeof(val), "phone");
     } else if (!bonds) {
       label = "Devices";
       snprintf(val, sizeof(val), "none");
@@ -166,10 +170,11 @@ static void wheel(int detents) {
 static void click() {
   int bonds = NimBLEDevice::getNumBonds();
   if (sel < IT_VALUES) { editing = !editing; return; }
-  if (sel != IT_UPDATE && !bonds) return;
+  if (sel != IT_UPDATE && sel != IT_WEBUI && !bonds) return;
   if (!confirming) { confirming = true; return; }
   confirming = false;
   if (sel == IT_UPDATE) otaRun();  // ne revient pas : redémarre à la fin
+  else if (sel == IT_WEBUI) webuiRun();  // idem
   else if (sel - IT_DEV0 < bonds) forgetBond(NimBLEDevice::getBondedAddress(sel - IT_DEV0));
   else forgetAllBonds();
 }

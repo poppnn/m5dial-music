@@ -81,25 +81,76 @@ bool bootAnimDraw(uint32_t now) {
   return true;
 }
 
-// ---------- réception ----------
-static bool receiving = false;
-static uint8_t* buf = nullptr;    // bloc en cours ; buf + CHUNK = premier bloc (en-tête), écrit en tout dernier
-static uint32_t want = 0, got = 0, bufLen = 0, firstLen = 0, lastRx = 0;
-static char line[128];  // assez pour WIFI : nom 32 + mot de passe 63
-static uint8_t lineLen = 0;
+// ---------- écriture (USB ou Wi-Fi) : par secteurs de 4 Ko, l'en-tête (premier secteur) en tout dernier ----------
+static uint8_t* buf = nullptr;    // secteur en cours ; buf + CHUNK = premier secteur (en-tête), gardé pour la fin
+static uint32_t want = 0, got = 0, bufLen = 0, firstLen = 0;
 
 static bool writeSector(uint32_t off, const uint8_t* d, uint32_t n) {
   return esp_partition_erase_range(part, off, CHUNK) == ESP_OK && esp_partition_write(part, off, d, n) == ESP_OK;
 }
 
-static void endRx(const char* err) {
-  receiving = false;
+uint32_t bootAnimCapacity() { return part ? part->size : 0; }
+
+bool bootAnimBegin(uint32_t total) {
   free(buf);
   buf = nullptr;
-  if (err) { Serial.printf("BOOTANIM ERR %s\n", err); return; }
+  if (!part || total < HDR || total > part->size || !(buf = (uint8_t*)malloc(2 * CHUNK))) return false;
+  unmap();
+  esp_partition_erase_range(part, 0, CHUNK);  // l'ancienne animation est invalidée tout de suite
+  want = total;
+  got = bufLen = firstLen = 0;
+  return true;
+}
+
+bool bootAnimWrite(const uint8_t* d, size_t n) {
+  if (!buf || got + n > want) return false;
+  while (n) {
+    size_t k = min<size_t>(n, CHUNK - bufLen);
+    memcpy(buf + bufLen, d, k);
+    bufLen += k;
+    got += k;
+    d += k;
+    n -= k;
+    if (bufLen < CHUNK && got < want) continue;
+    uint32_t off = got - bufLen;
+    if (!off) { memcpy(buf + CHUNK, buf, bufLen); firstLen = bufLen; }
+    else if (!writeSector(off, buf, bufLen)) return false;
+    bufLen = 0;
+  }
+  return true;
+}
+
+// Transfert complet : en-tête écrit, animation relue. Incomplet ou en erreur : rien n'est validé (pas d'en-tête).
+bool bootAnimEnd() {
+  bool ok = buf && got == want && writeSector(0, buf + CHUNK, firstLen);
+  free(buf);
+  buf = nullptr;
   bootAnimInit();
-  if (frames) Serial.printf("BOOTANIM DONE %u\n", frames); else Serial.println("BOOTANIM ERR format");
   dirty = true;
+  return ok && frames;
+}
+
+void bootAnimClear() {
+  if (!part) return;
+  free(buf);
+  buf = nullptr;
+  unmap();
+  esp_partition_erase_range(part, 0, CHUNK);
+  dirty = true;
+}
+
+// ---------- réception par USB ----------
+static bool receiving = false;
+static uint32_t lastRx = 0;
+static char line[128];  // assez pour WIFI : nom 32 + mot de passe 63
+static uint8_t lineLen = 0;
+
+static void endRx(const char* err) {
+  receiving = false;
+  bool ok = bootAnimEnd() && !err;
+  if (err) Serial.printf("BOOTANIM ERR %s\n", err);
+  else if (ok) Serial.printf("BOOTANIM DONE %u\n", frames);
+  else Serial.println("BOOTANIM ERR format");
 }
 
 // "<nom>\t<mot de passe>" : nom de 1 à 32 octets, mot de passe de 0 (réseau ouvert) à 63 octets.
@@ -126,18 +177,12 @@ static void command(const char* s) {
   } else if (!part) {
     Serial.println("BOOTANIM ERR nopart");  // reflasher l'image complète (nouvelle table de partitions)
   } else if (!strcmp(s, "CLEAR")) {
-    unmap();
-    esp_partition_erase_range(part, 0, CHUNK);
-    dirty = true;
+    bootAnimClear();
     Serial.println("BOOTANIM OK");
   } else if (!strncmp(s, "PUT ", 4)) {
     uint32_t n = strtoul(s + 4, nullptr, 10);
     if (n < HDR || n > part->size) { Serial.println("BOOTANIM ERR size"); return; }
-    if (!(buf = (uint8_t*)malloc(2 * CHUNK))) { Serial.println("BOOTANIM ERR memory"); return; }
-    unmap();
-    esp_partition_erase_range(part, 0, CHUNK);  // l'ancienne animation est invalidée tout de suite
-    want = n;
-    got = bufLen = firstLen = 0;
+    if (!bootAnimBegin(n)) { Serial.println("BOOTANIM ERR memory"); return; }
     lastRx = millis();
     receiving = true;
     Serial.println("BOOTANIM READY");
@@ -157,20 +202,15 @@ void bootAnimService() {
     }
     return;
   }
-  while (got < want && Serial.available()) {
-    int n = Serial.read(buf + bufLen, min<uint32_t>(CHUNK - bufLen, want - got));
+  uint8_t tmp[512];
+  while (got < want && Serial.available()) {  // chaque bloc de 4 Ko reçu est acquitté (le PC envoie le suivant)
+    int n = Serial.read(tmp, min<uint32_t>(sizeof(tmp), min<uint32_t>(CHUNK - got % CHUNK, want - got)));
     if (n <= 0) break;
-    bufLen += n;
-    got += n;
     lastRx = millis();
-    if (bufLen < CHUNK && got < want) continue;
-    uint32_t off = got - bufLen;
-    if (!off) { memcpy(buf + CHUNK, buf, bufLen); firstLen = bufLen; }  // en-tête : écrit à la fin seulement
-    else if (!writeSector(off, buf, bufLen)) { endRx("flash"); return; }
-    bufLen = 0;
-    if (got < want) Serial.printf("BOOTANIM ACK %u\n", (unsigned)got);
+    if (!bootAnimWrite(tmp, n)) { endRx("flash"); return; }
+    if (got % CHUNK == 0 && got < want) Serial.printf("BOOTANIM ACK %u\n", (unsigned)got);
   }
-  if (got == want) endRx(writeSector(0, buf + CHUNK, firstLen) ? nullptr : "flash");
+  if (got == want) endRx(nullptr);
   else if (millis() - lastRx > RX_TIMEOUT_MS) endRx("timeout");
 }
 
