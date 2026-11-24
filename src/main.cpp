@@ -41,9 +41,11 @@ volatile bool dirty = true;
 uint32_t lastInput = 0;
 static Page page = PAGE_MUSIC;
 
-// Retour « haptique » : le M5Dial n'a pas de vibreur, le buzzer fait un tic très court (Réglages > Click).
-static void tick(bool press = false) {
-  if (settings.haptic) M5Dial.Speaker.tone(press ? 2600 : 4000, press ? 12 : 6);
+// Retour « haptique » : le M5Dial n'a pas de vibreur, le buzzer bipe (Réglages > Click). Mêmes sons que le firmware
+// d'usine (M5Dial-UserDemo, main/hal/hal.cpp) : molette 7000 Hz dans un sens, 6000 Hz dans l'autre, bouton 2000 Hz,
+// 20 ms chacun, à pleine puissance.
+void haptic(int dir) {
+  if (settings.haptic) M5Dial.Speaker.tone(dir < 0 ? 7000 : dir > 0 ? 6000 : 2000, 20);
 }
 
 // Changement de page : tout l'écran glisse verticalement (sortie easeIn, puis entrée easeOut), la page
@@ -129,7 +131,7 @@ void setup() {
   assert(fabsf(wrap180(350.f) + 10.f) < 1e-3f && fabsf(wrap180(-190.f) - 170.f) < 1e-3f);
   assert(fabsf(easeOutBack(0)) < 1e-4f && fabsf(easeOutBack(1) - 1) < 1e-4f && easeOutBack(0.7f) > 1);  // rebond
 
-  M5Dial.Speaker.setVolume(90);  // tic discret
+  M5Dial.Speaker.setVolume(255);  // pleine puissance, comme le firmware d'usine
   imuInit();      // référence "droit" = orientation au démarrage (volant au centre)
   sensorsInit();  // ENV III / baromètre de l'IMU Pro Mini, Port A ou B
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
@@ -168,7 +170,7 @@ void loop() {
   while (encLast - enc >= steps) { detents--; encLast -= steps; }
   std::string caller;
   bool call = !bootShown && ancsCall(caller);
-  if (!bootShown && !call && detents) { PAGES[page]->wheel(detents); tick(); }  // démarrage, appel : molette ignorée
+  if (!bootShown && !call && detents) { PAGES[page]->wheel(detents); haptic(detents); }  // démarrage, appel : molette ignorée
   if (detents) dirty = true;  // image tout de suite : sinon jusqu'à 250 ms d'attente au repos
   if (volPing) { volPing = false; musicVolumePing(); dirty = true; }
 
@@ -188,7 +190,7 @@ void loop() {
   if (M5Dial.BtnA.isReleased()) swallowBtn = longDone = false;
   if (!bootShown && !call && !longDone && !swallowBtn && PAGES[page]->longPress && M5Dial.BtnA.pressedFor(LONG_PRESS_MS)) {
     PAGES[page]->longPress();  // l'extinction reste possible en continuant d'appuyer jusqu'à 2 s
-    tick(true);
+    haptic(0);
     longDone = true;
     dirty = true;
   }
@@ -208,7 +210,7 @@ void loop() {
     dirty = true;
   } else if (!bootShown && btnClick) {  // au relâcher, pour distinguer l'appui long
     PAGES[page]->click();
-    tick(true);
+    haptic(0);
     dirty = true;
   } else if (!bootShown && t.wasClicked()) {
     if (PAGES[page]->tap) {
@@ -216,7 +218,7 @@ void loop() {
     } else {
       PAGES[page]->click();
     }
-    tick(true);
+    haptic(0);
     dirty = true;
   }
 

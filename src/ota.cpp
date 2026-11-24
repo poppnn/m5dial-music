@@ -13,6 +13,7 @@
 #include <NimBLEDevice.h>
 #include "ota.h"
 #include "ota_roots.h"
+#include "app.h"
 #include "ble_phone.h"
 #include "govee.h"
 #include "config.h"
@@ -68,7 +69,7 @@ static int readDetents() {
   int d = 0;
   while (e - encLast >= st) { d++; encLast += st; }
   while (encLast - e >= st) { d--; encLast -= st; }
-  if (d && settings.haptic) M5Dial.Speaker.tone(4000, 6);
+  if (d) haptic(d);
   return d;
 }
 
@@ -81,7 +82,7 @@ static Key readKey() {
   Key k = K_NONE;
   if (M5Dial.BtnA.isPressed() && !held && M5Dial.BtnA.pressedFor(LONG_PRESS_MS)) { held = true; k = K_LONG; }
   else if (M5Dial.BtnA.wasReleased()) { k = held ? K_NONE : K_CLICK; held = false; }
-  if (k != K_NONE && settings.haptic) M5Dial.Speaker.tone(2600, 12);
+  if (k != K_NONE) haptic(0);
   return k;
 }
 

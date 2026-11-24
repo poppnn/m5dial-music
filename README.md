@@ -105,7 +105,7 @@ Close the Govee Home app: the bar only accepts one connection.
   - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
     power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
     full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
-    active icons, notification border), **Click**: a short buzzer tick on every wheel detent and press (the
+    active icons, notification border), **Click**: a buzzer beep on every wheel detent and press, the same as the factory firmware (wheel 7000 / 6000 Hz by direction, press 2000 Hz, 20 ms; the
     M5Dial has no vibration motor), on by default.
   - **Update** (over the air, no computer needed): shows the saved hotspot ("choose Wi-Fi" if none). Hotspot on
     (iPhone: Personal Hotspot screen open, Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second
