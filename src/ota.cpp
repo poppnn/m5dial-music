@@ -1,7 +1,11 @@
-// Mise à jour OTA : Bluetooth arrêté (sa mémoire sert au Wi-Fi et au TLS), Wi-Fi du partage de connexion, version
+// Mise à jour OTA : Bluetooth arrêté (sa mémoire sert au Wi-Fi et au TLS), réseau choisi à la molette parmi les
+// réseaux visibles (mot de passe tapé à la molette, ou celui déjà enregistré), version
 // en ligne (ota/version.txt), puis firmware de cette plateforme (ota/<plateforme>.bin) écrit dans l'autre
 // emplacement d'application ; on démarre dessus au redémarrage. HTTPS vérifié avec les racines de ota_roots.h.
 #include <M5Dial.h>
+#include <assert.h>
+#include <algorithm>
+#include <vector>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -13,6 +17,7 @@
 #include "govee.h"
 #include "config.h"
 #include "display.h"
+#include "encoder.h"
 #include "settings.h"
 
 #define OTA_BASE "https://poppnn.github.io/m5dial-music/ota/"
@@ -55,31 +60,191 @@ static void show(const char* title, const std::string& line, float progress = -1
 
 static volatile int wifiReason = 0;  // dernière raison de déconnexion (esp_wifi : 201 réseau absent, 15 / 204 mot de passe...)
 
-// Échec de connexion : dit pourquoi, d'après la dernière raison et un scan (réseau vu ou non, canal, signal).
-[[noreturn]] static void wifiFailed(const std::string& ssid) {
-  show("No Wi-Fi", "Scanning...");
-  WiFi.disconnect();
-  int n = WiFi.scanNetworks();
-  int seen = -1;
-  for (int i = 0; i < n; i++) if (WiFi.SSID(i) == ssid.c_str()) seen = i;
-  char why[48], how[48];
-  if (n <= 0) {
-    snprintf(why, sizeof(why), "No network seen at all");
-    snprintf(how, sizeof(how), "Wi-Fi radio off? (code %d)", wifiReason);
-  } else if (seen < 0) {
-    snprintf(why, sizeof(why), "Hotspot not seen (%d others)", n);
-    snprintf(how, sizeof(how), "Keep its screen open, 2.4 GHz");
-  } else {
-    snprintf(why, sizeof(why), "Seen: ch %d, %d dBm", WiFi.channel(seen), WiFi.RSSI(seen));
-    bool pw = wifiReason == 15 || wifiReason == 202 || wifiReason == 204 || wifiReason == 2;
-    snprintf(how, sizeof(how), pw ? "Wrong password? (code %d)" : "Refused (code %d)", wifiReason);
+// ---------- molette et bouton, lus ici : loop() ne tourne plus pendant la mise à jour ----------
+static long encLast = 0;
+
+static int readDetents() {
+  long e = encoderRead(), st = settings.encSteps;
+  int d = 0;
+  while (e - encLast >= st) { d++; encLast += st; }
+  while (encLast - e >= st) { d--; encLast -= st; }
+  if (d && settings.haptic) M5Dial.Speaker.tone(4000, 6);
+  return d;
+}
+
+enum Key { K_NONE, K_CLICK, K_LONG };
+
+// Appui court (au relâcher) ou appui long (dès LONG_PRESS_MS, sans clic au relâcher).
+static Key readKey() {
+  static bool held = false;
+  M5Dial.update();
+  Key k = K_NONE;
+  if (M5Dial.BtnA.isPressed() && !held && M5Dial.BtnA.pressedFor(LONG_PRESS_MS)) { held = true; k = K_LONG; }
+  else if (M5Dial.BtnA.wasReleased()) { k = held ? K_NONE : K_CLICK; held = false; }
+  if (k != K_NONE && settings.haptic) M5Dial.Speaker.tone(2600, 12);
+  return k;
+}
+
+// ---------- choix d'un réseau ----------
+// Liste à la molette (5 lignes autour de la sélection, comme les Réglages) ; appui = choisir.
+static int choose(const char* title, const std::vector<std::string>& items, int sel) {
+  for (;;) {
+    sel = constrain(sel + readDetents(), 0, (int)items.size() - 1);
+    if (readKey() == K_CLICK) return sel;
+    canvas.fillScreen(TFT_BLACK);
+    canvas.setTextDatum(middle_center);
+    canvas.setFont(&fonts::efontJA_16);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString(title, 120, 30);
+    for (int i = sel - 2; i <= sel + 2; i++) {
+      if (i < 0 || i >= (int)items.size()) continue;
+      int y = 120 + (i - sel) * 30;
+      if (i == sel) canvas.fillRoundRect(20, y - 13, 200, 26, 8, 0x2104);
+      canvas.setTextColor(i == sel ? TFT_WHITE : 0x8410);
+      canvas.drawString(fit(items[i], 2 * textSpace(y, 16, 112) - 12).c_str(), 120, y);
+    }
+    canvas.setTextColor(0x5AEB);
+    canvas.drawString("Press: choose", 120, 212);
+    frameShift = 0;
+    pushFrame();
+    delay(15);
   }
-  finish("No Wi-Fi", why, how, 10000);
+}
+
+// ---------- mot de passe à la molette ----------
+// Anneau de saisie : OK, effacer, puis les caractères (minuscules d'abord : les mots de passe de partage de
+// connexion en sont souvent faits). Molette = caractère, appui = l'ajouter, appui long = terminé.
+static const char PW_CHARS[] = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ -_.!@#$%&*?+=/:;,'\"()[]{}<>^~|\\`";
+enum { PW_OK, PW_DEL, PW_FIRST };
+static const int PW_COUNT = PW_FIRST + sizeof(PW_CHARS) - 1;
+
+static std::string pwLabel(int e) {
+  e = (e % PW_COUNT + PW_COUNT) % PW_COUNT;
+  return e == PW_OK ? "OK" : e == PW_DEL ? "DEL" : PW_CHARS[e - PW_FIRST] == ' ' ? "space" : std::string(1, PW_CHARS[e - PW_FIRST]);
+}
+
+// Applique l'entrée e de l'anneau au mot de passe. Renvoie 1 = terminé, -1 = retour (effacer sur un mot de passe
+// vide), 0 = on continue.
+static int pwApply(std::string& pw, int e) {
+  if (e == PW_OK) return 1;
+  if (e == PW_DEL) {
+    if (pw.empty()) return -1;
+    pw.pop_back();
+  } else if (pw.size() < 63) {
+    pw += PW_CHARS[e - PW_FIRST];
+  }
+  return 0;
+}
+
+static bool enterPassword(const std::string& ssid, std::string& pw) {
+  int sel = PW_FIRST;
+  for (;;) {
+    sel = ((sel + readDetents()) % PW_COUNT + PW_COUNT) % PW_COUNT;
+    Key k = readKey();
+    if (k == K_LONG) return true;
+    if (k == K_CLICK) {
+      int r = pwApply(pw, sel);
+      if (r) return r > 0;
+    }
+    canvas.fillScreen(TFT_BLACK);
+    canvas.setTextDatum(middle_center);
+    canvas.setFont(&fonts::efontJA_16);
+    canvas.setTextColor(0x8410);
+    canvas.drawString(fit(ssid, 150).c_str(), 120, 30);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString("Password", 120, 52);
+    canvas.setFont(&fonts::efontJA_24);
+    std::string shown = pw + "_";  // fin du mot de passe si trop long pour la ligne
+    while (canvas.textWidth(shown.c_str()) > 190) shown.erase(0, 1);
+    canvas.drawString(shown.c_str(), 120, 88);
+    for (int d = -2; d <= 2; d++) {  // caractère choisi en gros, ses voisins de part et d'autre
+      canvas.setTextSize(d ? 1 : 2);
+      canvas.setTextColor(d ? 0x5AEB : (sel < PW_FIRST ? accent() : TFT_WHITE));
+      canvas.drawString(pwLabel(sel + d).c_str(), 120 + d * 46 + (d > 0 ? 8 : d < 0 ? -8 : 0), 146);
+    }
+    canvas.setTextSize(1);
+    canvas.setFont(&fonts::efontJA_16);
+    canvas.setTextColor(0x5AEB);
+    canvas.drawString("Press: add   Hold: done", 120, 200);
+    frameShift = 0;
+    pushFrame();
+    delay(15);
+  }
+}
+
+// ---------- connexion ----------
+// Partage de connexion en 2,4 GHz (iPhone : écran Partage de connexion ouvert, « Maximiser la compatibilité »).
+// L'iPhone n'apparaît parfois qu'au bout de quelques secondes : nouvel essai toutes les 8 s. "" = connecté, sinon la
+// raison de l'échec.
+static std::string connect(const std::string& ssid, const std::string& pass) {
+  wifiReason = 0;
+  WiFi.begin(ssid.c_str(), pass.c_str());
+  for (uint32_t t0 = millis(), tTry = t0; WiFi.status() != WL_CONNECTED;) {
+    uint32_t now = millis();
+    if (now - t0 > WIFI_TIMEOUT_MS || readKey() == K_CLICK) {
+      WiFi.disconnect();
+      bool pw = wifiReason == 15 || wifiReason == 202 || wifiReason == 204 || wifiReason == 2;
+      return now - t0 <= WIFI_TIMEOUT_MS ? "Cancelled" : pw ? "Wrong password?" : "Not reached (" + std::to_string(wifiReason) + ")";
+    }
+    if (now - tTry > 8000) {
+      tTry = now;
+      WiFi.disconnect();
+      WiFi.begin(ssid.c_str(), pass.c_str());
+    }
+    show("Connecting", ssid, -1, std::to_string((now - t0) / 1000) + "s   press = back");
+    delay(100);
+  }
+  return "";
+}
+
+// Réseaux visibles (sans doublons, le plus fort d'abord, le réseau enregistré en tête), choix, mot de passe,
+// connexion ; recommence jusqu'à ce qu'une connexion réussisse. Le réseau qui marche est enregistré.
+static void joinWifi() {
+  std::string saved, savedPass;
+  bool hasSaved = wifiLoad(saved, savedPass);
+  for (;;) {
+    show("Wi-Fi", "Scanning...", -1, "Turn the hotspot on");
+    int n = WiFi.scanNetworks();
+    std::vector<std::string> nets;
+    std::vector<bool> open;
+    for (int i = 0; i < n; i++) {
+      std::string s = WiFi.SSID(i).c_str();
+      if (s.empty() || std::find(nets.begin(), nets.end(), s) != nets.end()) continue;
+      bool first = hasSaved && s == saved;
+      nets.insert(first ? nets.begin() : nets.end(), s);
+      open.insert(first ? open.begin() : open.end(), WiFi.encryptionType(i) == WIFI_AUTH_OPEN);
+    }
+    WiFi.scanDelete();
+    std::vector<std::string> items = nets;
+    if (hasSaved && !nets.empty() && nets[0] == saved) items[0] += "  (saved)";
+    items.push_back("Scan again");
+    items.push_back("Cancel");
+    int c = choose(nets.empty() ? "No network: hotspot on?" : "Choose the Wi-Fi", items, 0);
+    if (c == (int)items.size() - 1) finish("Cancelled", "Restarting...");
+    if (c >= (int)nets.size()) continue;
+    std::string pass = hasSaved && nets[c] == saved ? savedPass : "";
+    if (!open[c] && pass.empty() && !enterPassword(nets[c], pass)) continue;
+    std::string err = connect(nets[c], pass);
+    if (err.empty()) {
+      if (!hasSaved || nets[c] != saved || pass != savedPass) wifiSave(nets[c].c_str(), pass.c_str());
+      return;
+    }
+    if (nets[c] == saved) hasSaved = false;  // mot de passe enregistré refusé : on le redemandera
+    show("No Wi-Fi", nets[c], -1, err);
+    delay(2500);
+  }
+}
+
+void otaSelfTest() {
+  std::string pw;
+  assert(pwApply(pw, PW_FIRST) == 0 && pw == "a");                       // premier caractère : 'a'
+  assert(pwApply(pw, PW_FIRST + 36) == 0 && pw == "aA");                 // après les 26 minuscules et 10 chiffres
+  assert(pwApply(pw, PW_DEL) == 0 && pw == "a" && pwApply(pw, PW_DEL) == 0 && pw.empty());
+  assert(pwApply(pw, PW_DEL) == -1 && pwApply(pw, PW_OK) == 1);          // effacer sur vide = retour ; OK = terminé
+  assert(pwLabel(-1) == "`" && pwLabel(PW_COUNT) == "OK" && pwLabel(PW_FIRST + 62) == "space");  // l'anneau boucle
 }
 
 void otaRun() {
-  std::string ssid, pass;
-  if (!wifiLoad(ssid, pass)) return;
   M5Dial.Display.setBrightness(settingsBacklight());
   show("Update", "Stopping Bluetooth...");
   // Les tâches de fond (connexion à la barre LED, découverte du téléphone, commandes en file) finissent d'abord :
@@ -88,27 +253,11 @@ void otaRun() {
   NimBLEDevice::deinit(true);
   WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) { wifiReason = info.wifi_sta_disconnected.reason; },
                ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
-  WiFi.persistent(false);  // rien d'écrit dans la NVS du Wi-Fi
+  WiFi.persistent(false);  // rien d'écrit dans la NVS du Wi-Fi : le réseau est gardé dans nos réglages
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
-  WiFi.begin(ssid.c_str(), pass.c_str());
-  // Partage de connexion en 2,4 GHz (iPhone : écran Partage de connexion ouvert, « Maximiser la compatibilité »).
-  // L'iPhone n'apparaît parfois qu'au bout de quelques secondes : nouvel essai toutes les 8 s.
-  for (uint32_t t0 = millis(), tTry = t0; WiFi.status() != WL_CONNECTED;) {
-    uint32_t now = millis();
-    if (now - t0 > WIFI_TIMEOUT_MS) wifiFailed(ssid);
-    if (now - tTry > 8000) {
-      tTry = now;
-      WiFi.disconnect();
-      WiFi.begin(ssid.c_str(), pass.c_str());
-    }
-    M5Dial.update();
-    if (M5Dial.BtnA.wasPressed()) finish("Cancelled", "Restarting...");
-    char sub[40];
-    snprintf(sub, sizeof(sub), "%lus  press = cancel", (unsigned long)((now - t0) / 1000));
-    show("Connecting", ssid, -1, wifiReason ? std::string(sub) + "  (" + std::to_string(wifiReason) + ")" : sub);
-    delay(200);
-  }
+  encLast = encoderRead();
+  joinWifi();
 
   WiFiClientSecure client;
   client.setCACert(OTA_ROOTS);

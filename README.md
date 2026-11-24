@@ -107,12 +107,16 @@ Close the Govee Home app: the bar only accepts one connection.
     full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
     active icons, notification border), **Click**: a short buzzer tick on every wheel detent and press (the
     M5Dial has no vibration motor), on by default.
-  - **Update** (over the air): shows the phone hotspot saved from the web flasher (section 7). Hotspot on
-    (iPhone: Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second press: Bluetooth stops, the
-    M5Dial joins the hotspot, reads the published version and, if it differs, downloads this platform's firmware
+  - **Update** (over the air, no computer needed): shows the saved hotspot ("choose Wi-Fi" if none). Hotspot on
+    (iPhone: Personal Hotspot screen open, Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second
+    press: Bluetooth stops and the M5Dial lists the Wi-Fi networks it sees (saved one first, then "Scan again",
+    "Cancel"); turn and press to pick one. For a new network, type the password with the wheel: turn = character
+    (OK, DEL, then a-z, 0-9, A-Z, space, symbols), press = add it, hold = done (DEL on an empty password goes
+    back). The network that works is saved for next time (or send it from the web flasher, section 7). Then it
+    reads the published version and, if it differs, downloads this platform's firmware
     over HTTPS (certificate checked against pinned roots), writes it to the second app slot, checks it and
-    restarts on it. Up to date, no Wi-Fi or any error: it says so and restarts as before. Press during
-    "Connecting" to cancel.
+    restarts on it. Up to date or any error: it says so and restarts as before. Press during "Connecting" to go
+    back to the list (wrong password: it asks again).
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
   - Paired devices (name read on connection, connected one in green): "Forget" a device, or "Erase all".

@@ -30,6 +30,7 @@
 #include "encoder.h"
 #include "govee.h"
 #include "imu.h"
+#include "ota.h"
 #include "power.h"
 #include "clock.h"
 #include "settings.h"
@@ -119,6 +120,7 @@ void setup() {
   cleanTextSelfTest();
   bootAnimSelfTest();
   goveeSelfTest();
+  otaSelfTest();
   LedColor red = hueColor(0), green = hueColor(120), blue = hueColor(240);  // roue des teintes HSV
   assert(red.r == 255 && !red.g && !red.b && green.g == 255 && !green.r && blue.b == 255 && !blue.g);
 

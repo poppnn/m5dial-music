@@ -126,10 +126,10 @@ static bool draw(float) {
     if (i < IT_VALUES) {
       label = LABELS[i];
       valueText(i, val, sizeof(val));
-    } else if (i == IT_UPDATE) {  // partage de connexion du téléphone, enregistré depuis le web flasher
+    } else if (i == IT_UPDATE) {  // partage de connexion enregistré (choisi à la molette ou depuis le web flasher)
       std::string ssid, pass;
       label = "Update";
-      snprintf(val, sizeof(val), "%s", wifiLoad(ssid, pass) ? ssid.c_str() : "no Wi-Fi");
+      snprintf(val, sizeof(val), "%s", wifiLoad(ssid, pass) ? ssid.c_str() : "choose Wi-Fi");
     } else if (!bonds) {
       label = "Devices";
       snprintf(val, sizeof(val), "none");
@@ -166,8 +166,7 @@ static void wheel(int detents) {
 static void click() {
   int bonds = NimBLEDevice::getNumBonds();
   if (sel < IT_VALUES) { editing = !editing; return; }
-  std::string ssid, pass;
-  if (sel == IT_UPDATE ? !wifiLoad(ssid, pass) : !bonds) return;
+  if (sel != IT_UPDATE && !bonds) return;
   if (!confirming) { confirming = true; return; }
   confirming = false;
   if (sel == IT_UPDATE) otaRun();  // ne revient pas : redémarre à la fin
