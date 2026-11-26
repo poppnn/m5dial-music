@@ -9,8 +9,9 @@
 #include "../settings.h"
 #include "../logo.h"
 
-extern const PageOps musicPage, ledPage, chronoPage, clockPage, sensorsPage, systemPage, settingsPage;
-const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &clockPage, &sensorsPage, &systemPage, &settingsPage};
+extern const PageOps musicPage, ledPage, chronoPage, clockPage, systemPage, settingsPage;
+const PageOps* const PAGES[PAGE_COUNT] = {&musicPage, &ledPage, &chronoPage, &clockPage, &systemPage, &settingsPage};
+const char* const PAGE_NAMES[PAGE_COUNT] = {"Music", "LED", "Stopwatch", "Clock", "System", "Settings"};
 
 // Téléphone connecté : l'arc qui tourne se resserre vers le centre en se refermant en cercle, puis éclate en une
 // pastille de validation (coche) avec une onde qui part vers le bord. Ensuite, fondu vers l'interface.
@@ -38,7 +39,7 @@ static void drawLinked(uint32_t now, uint32_t t) {
   }
 }
 
-// Logo centré + arc qui tourne sur le bord de l'écran + texte discret.
+// Logo centré + arc qui tourne sur le bord de l'écran + texte discret. Appui = ouvrir les pages sans téléphone.
 void drawBoot(uint32_t now) {
   const int c = 120;
   if (linkedAt) { drawLinked(now, now - linkedAt); return; }
@@ -58,9 +59,11 @@ void drawBoot(uint32_t now) {
   canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
-  if (custom) canvas.fillRoundRect(c - 78, 175, 156, 43, 12, TFT_BLACK);  // textes lisibles sur l'image
+  if (custom) canvas.fillRoundRect(c - 78, 164, 156, 60, 12, TFT_BLACK);  // textes lisibles sur l'image
   canvas.setTextColor(0xAD55);
-  canvas.drawString("Waiting for phone", c, 186);
+  canvas.drawString("Waiting for phone", c, 174);
   canvas.setTextColor(0x5AEB);
-  canvas.drawString(BLE_NAME, c, 206);  // nom à choisir dans les réglages Bluetooth
+  canvas.drawString(BLE_NAME, c, 194);  // nom à choisir dans les réglages Bluetooth
+  canvas.setTextColor(accent());
+  canvas.drawString("Press: open", c, 213);  // pages sans téléphone (LED, chrono...)
 }

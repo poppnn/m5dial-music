@@ -3,8 +3,8 @@
 #include "config.h"
 #include "clock.h"
 
-Settings settings = {IMU_DIR, ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7,
-                     NOTIF_SENDER, 0, 1};
+Settings settings = {ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7,
+                     NOTIF_SENDER, 0, 1, {PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CLOCK, PAGE_SYS, PAGE_SET}};
 const uint16_t ACCENT_COLORS[] = {0xFA20, 0xF8C3, 0xF951, 0x901F, 0x02DF, 0x06FF, 0x072B, 0xFE80, 0xFFFF};
 const char* const ACCENT_NAMES[] = {"orange", "red", "pink", "purple", "blue", "cyan", "green", "yellow", "white"};
 const int ACCENT_COUNT = sizeof(ACCENT_COLORS) / sizeof(ACCENT_COLORS[0]);
@@ -14,7 +14,6 @@ static Preferences prefs;
 
 void settingsLoad() {
   prefs.begin("m5dial", false);  // reste ouvert : écritures rares (validation d'un réglage, connexion)
-  settings.imuDir = prefs.getChar("imuDir", settings.imuDir) < 0 ? -1 : 1;
   settings.encSteps = constrain(prefs.getUChar("encSteps", settings.encSteps), 1, 4);
   settings.dimAfterS = prefs.getUShort("dimS", settings.dimAfterS);
   settings.sleepAfterMin = prefs.getUShort("sleepM", settings.sleepAfterMin);
@@ -28,10 +27,33 @@ void settingsLoad() {
                        : prefs.getBool("notifTxt", false) ? NOTIF_FULL : NOTIF_SENDER;
   settings.accent = prefs.getUChar("accent", 0) % ACCENT_COUNT;
   settings.haptic = prefs.getUChar("haptic", settings.haptic) ? 1 : 0;
+  uint8_t order[PAGE_COUNT];
+  // Absent, ou d'un firmware qui avait d'autres pages (taille ou contenu différents) : ordre par défaut
+  if (prefs.getBytesLength("pages") == PAGE_COUNT && prefs.getBytes("pages", order, PAGE_COUNT) == PAGE_COUNT &&
+      pageOrderParse(pageOrderText(order), order))
+    memcpy(settings.pageOrder, order, PAGE_COUNT);
+}
+
+bool pageOrderParse(const std::string& s, uint8_t* order) {
+  if (s.size() != PAGE_COUNT) return false;
+  uint8_t seen = 0, tmp[PAGE_COUNT];
+  for (int i = 0; i < PAGE_COUNT; i++) {
+    int p = s[i] - '0';
+    if (p < 0 || p >= PAGE_COUNT || seen & 1 << p) return false;
+    seen |= 1 << p;
+    tmp[i] = p;
+  }
+  memcpy(order, tmp, PAGE_COUNT);
+  return true;
+}
+
+std::string pageOrderText(const uint8_t* order) {
+  std::string s;
+  for (int i = 0; i < PAGE_COUNT; i++) s += (char)('0' + (order[i] < 10 ? order[i] : 9));
+  return s;
 }
 
 void settingsSave() {
-  prefs.putChar("imuDir", settings.imuDir);
   prefs.putUChar("encSteps", settings.encSteps);
   prefs.putUShort("dimS", settings.dimAfterS);
   prefs.putUShort("sleepM", settings.sleepAfterMin);
@@ -43,6 +65,10 @@ void settingsSave() {
   prefs.putUChar("notifMode", settings.notifMode);
   prefs.putUChar("accent", settings.accent);
   prefs.putUChar("haptic", settings.haptic);
+  uint8_t old[PAGE_COUNT];
+  if (prefs.getBytesLength("pages") != PAGE_COUNT || prefs.getBytes("pages", old, PAGE_COUNT) != PAGE_COUNT ||
+      memcmp(old, settings.pageOrder, PAGE_COUNT))  // putBytes réécrit même sans changement
+    prefs.putBytes("pages", settings.pageOrder, PAGE_COUNT);
 }
 
 // Plage de nuit qui peut passer minuit (21 h -> 7 h) ou non (1 h -> 5 h).
@@ -59,6 +85,10 @@ uint8_t settingsBacklight() { return (settingsNight() ? settings.briNight : sett
 void settingsSelfTest() {
   assert(inNight(23, 21, 7) && inNight(3, 21, 7) && !inNight(12, 21, 7) && !inNight(7, 21, 7));
   assert(inNight(2, 1, 5) && !inNight(6, 1, 5));
+  uint8_t o[PAGE_COUNT] = {};
+  assert(pageOrderParse("530124", o) && o[0] == 5 && o[5] == 4 && pageOrderText(o) == "530124");
+  assert(!pageOrderParse("530125", o) && !pageOrderParse("53012", o) && !pageOrderParse("53012a", o));
+  assert(!pageOrderParse("012346", o) && o[0] == 5);  // refusé : rien de modifié
 }
 
 LedState ledStateLoad() {

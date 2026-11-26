@@ -29,13 +29,6 @@
 #define PAIR_WINDOW_MS       120000  // un NOUVEL appareil ne s'appaire que 2 min après l'allumage (s'il y en a déjà un)
 #define LONG_PRESS_MS        600  // appui long court (page LED : luminosité <-> teinte) ; extinction à 2 s
 
-// "Toujours droit" (IMU externe).
-#define IMU_DIR        1      // défaut (Réglages > Sens IMU)
-#define IMU_TAU_S      0.40f  // passe-bas de la gravité : les vibrations (> ~1 Hz) sont écrasées
-#define MIN_TILT_G     0.35f  // gravité dans le plan de l'écran trop faible (posé à plat) : angle gelé
-#define ROT_HYST_DEG   8.0f   // hystérésis : on ne suit un nouvel angle qu'au-delà de 8°
-#define ROT_TAU_S      0.12f  // lissage visuel de la rotation affichée
-
 // Animations
 #define ARC_TAU_S      0.25f  // l'arc de progression rejoint sa valeur en douceur
 #define VOL_TAU_S      0.12f

@@ -9,6 +9,7 @@
 #include "settings.h"
 
 bool bootShown = true;
+bool bootSkipped = false;
 uint32_t fadeStart = 0;
 uint32_t linkedAt = 0;
 static bool fadeTo = true;
@@ -16,13 +17,15 @@ static float fadeLevel = 1, dimLevel = 1;  // rétroéclairage = réglage jour/n
 
 // Fondu au noir par le rétroéclairage : l'écran courant s'éteint, bascule, le nouveau s'allume.
 void updateFade(uint32_t now) {
-  bool wantBoot = linkMode == LINK_NONE;
-  if (wantBoot) linkedAt = 0;
+  bool wantBoot = linkMode == LINK_NONE && !bootSkipped;
+  if (linkMode == LINK_NONE) linkedAt = 0;
   // Image de démarrage : montrée au moins bootAnimSplashMs() après la mise sous tension, même si le téléphone est
   // déjà là ; l'animation de connexion (puis le fondu) ne commence qu'après.
   else if (bootShown && !linkedAt && now >= bootAnimSplashMs()) linkedAt = now | 1;
   // Connexion : l'animation de validation se joue en entier sur l'écran de démarrage, puis le fondu
-  bool animDone = wantBoot || !bootShown || (linkedAt && now - linkedAt >= LINK_ANIM_MS);
+  // Écran quitté à la main (sans téléphone) : fondu tout de suite
+  bool animDone = wantBoot || !bootShown || (linkMode == LINK_NONE && bootSkipped) ||
+                  (linkedAt && now - linkedAt >= LINK_ANIM_MS);
   if (!fadeStart && wantBoot != bootShown && animDone) { fadeStart = now | 1; fadeTo = wantBoot; }
   if (!fadeStart) return;
   uint32_t t = now - fadeStart;

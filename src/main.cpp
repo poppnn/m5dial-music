@@ -2,14 +2,16 @@
  * M5Dial -> télécommande multimédia BLE : iPhone via "Apple Media Service" (AMS, avec titre et
  * progression), Android et Windows via HID (touches multimédia). Plus LED Govee, chrono, page système.
  *
- * Modules : ble_phone (AMS + HID), govee (LED), display (rendu DMA), imu (toujours droit),
+ * Modules : ble_phone (AMS + HID), govee (LED), display (rendu DMA),
  * power (rétroéclairage, extinction), anim (easing, glissements), pages/ (une page par fichier).
  * Ici : setup, boucle principale, gestes, changement de page et cadence d'images.
  *
  * iPhone : un appel entrant prend tout l'écran (appui = décrocher, appui long = refuser) ; une notification
  * s'affiche par-dessus la page (app + expéditeur ; texte ou rien : Réglages), appui, tap ou glissement = la fermer.
  *
- * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages.
+ * Pages, swipe vertical pour passer de l'une à l'autre : Musique, LED, Chrono, Horloge, Système, Réglages (ordre
+ * choisi dans la Web UI). Sans téléphone, l'écran de démarrage attend ; appui, tap ou glissement = ouvrir les pages
+ * quand même (LED, chrono...). Il revient quand le téléphone se déconnecte.
  *   Encodeur  gauche/droite : volume -/+ (LED : luminosité)
  *   Bouton central / tap    : play/pause (LED : on/off, Chrono : départ/pause)
  *   Bouton central 0,6 s    : LED : molette = luminosité <-> teinte
@@ -20,7 +22,6 @@
 #include <algorithm>
 #include "ancs.h"
 #include "gb.h"
-#include "sensors.h"
 #include "anim.h"
 #include "app.h"
 #include "ble_phone.h"
@@ -29,7 +30,6 @@
 #include "display.h"
 #include "encoder.h"
 #include "govee.h"
-#include "imu.h"
 #include "ota.h"
 #include "webui.h"
 #include "power.h"
@@ -40,7 +40,8 @@
 
 volatile bool dirty = true;
 uint32_t lastInput = 0;
-static Page page = PAGE_MUSIC;
+static uint8_t pagePos = 0;     // rang dans settings.pageOrder
+static Page page = PAGE_MUSIC;  // = settings.pageOrder[pagePos]
 
 // Retour « haptique » : le M5Dial n'a pas de vibreur, le buzzer bipe (Réglages > Click). Mêmes sons que le firmware
 // d'usine (M5Dial-UserDemo, main/hal/hal.cpp) : molette 7000 Hz dans un sens, 6000 Hz dans l'autre, bouton 2000 Hz,
@@ -68,7 +69,8 @@ static float pageOffset(uint32_t now) {
   if (t < PAGE_OUT_MS) return pageDir * 240.f * easeInCubic(t / (float)PAGE_OUT_MS);
   if (!pageFlipped) {
     pageFlipped = true;
-    page = (Page)((page + (pageDir < 0 ? 1 : PAGE_COUNT - 1)) % PAGE_COUNT);  // vers le haut = page suivante
+    pagePos = (pagePos + (pageDir < 0 ? 1 : PAGE_COUNT - 1)) % PAGE_COUNT;  // vers le haut = page suivante
+    page = (Page)settings.pageOrder[pagePos];
     goveeRetry = 0;  // cherche les LED tout de suite
   }
   if (t < PAGE_OUT_MS + PAGE_IN_MS)
@@ -101,7 +103,7 @@ static bool draw(float dt) {
   bool anim = PAGES[page]->draw(dt);
   anim |= drawToast(now);
   pushFrame();
-  return anim || dimming || fadeStart || slideDir || pageDir || imuTurning();
+  return anim || dimming || fadeStart || slideDir || pageDir;
 }
 
 void setup() {
@@ -110,16 +112,15 @@ void setup() {
   setCpuFrequencyMhz(CPU_MHZ);
   Serial.setRxBufferSize(2 * 4096 + 256);  // avant M5Dial.begin (qui ouvre Serial) : un bloc d'image de démarrage tient
   auto cfg = M5.config();
-  cfg.external_imu = true;  // le M5Dial n'a pas d'IMU : cherche une Unit IMU sur le Port A
   M5Dial.begin(cfg, false, false);  // ni l'encodeur de la lib (lu par sondage : perdait des pas), ni RFID
   encoderInit();  // molette : compteur matériel PCNT
   M5Dial.BtnA.setHoldThresh(2000);
   Serial.begin(115200);
   settingsLoad();
   settingsSelfTest();
+  page = (Page)settings.pageOrder[0];  // première page choisie dans la Web UI
   ancsSelfTest();
   gbSelfTest();
-  sensorsSelfTest();
   cleanTextSelfTest();
   bootAnimSelfTest();
   goveeSelfTest();
@@ -134,8 +135,6 @@ void setup() {
   assert(fabsf(easeOutBack(0)) < 1e-4f && fabsf(easeOutBack(1) - 1) < 1e-4f && easeOutBack(0.7f) > 1);  // rebond
 
   M5Dial.Speaker.setVolume(255);  // pleine puissance, comme le firmware d'usine
-  imuInit();      // référence "droit" = orientation au démarrage (volant au centre)
-  sensorsInit();  // ENV III / baromètre de l'IMU Pro Mini, Port A ou B
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
   bootAnimInit();
   startBle();
@@ -144,23 +143,16 @@ void setup() {
 }
 
 void loop() {
-  static uint32_t lastUs = micros();
-  uint32_t nowUs = micros();
-  float dt = (nowUs - lastUs) / 1e6f;
-  lastUs = nowUs;
-
   M5Dial.update();
   if (needSetup) lastInput = millis();  // téléphone connecté : écran rallumé (il était atténué pendant l'attente) avant l'animation de validation
   startSetup();  // téléphone connecté et chiffré : découverte GATT en tâche de fond
   bootAnimService();  // image / GIF de démarrage envoyé depuis le web flasher (USB)
   static Link prevLink = LINK_NONE;
-  if (linkMode == LINK_NONE && prevLink != LINK_NONE) ancsReset();
+  if (linkMode == LINK_NONE && prevLink != LINK_NONE) { ancsReset(); bootSkipped = false; }  // retour à l'attente
   prevLink = linkMode;
   gbService();  // Android / Windows : lignes reçues de Gadgetbridge ou du programme PC
   if (ancsService()) { lastInput = millis(); dirty = true; }  // appel ou notification : écran rallumé
   clockService();  // heure reçue de l'iPhone : appliquée ici (I2C du RTC hors de la tâche BLE)
-  imuUpdate(dt);
-  sensorsUpdate();
   goveeService(page == PAGE_LED);
 
   // Encodeur (accumule les impulsions jusqu'à un cran complet)
@@ -197,9 +189,14 @@ void loop() {
     dirty = true;
   }
 
-  // Position du tap ramenée dans le repère de l'interface, tournée de rot degrés
-  float tr = rot * DEG_TO_RAD, tx = t.x - 120, ty = t.y - 120;
-  int ux = 120 + cosf(tr) * tx + sinf(tr) * ty, uy = 120 - sinf(tr) * tx + cosf(tr) * ty;
+  int ux = t.x, uy = t.y;
+  // Écran de démarrage (aucun téléphone) : appui, tap ou glissement = ouvrir les pages quand même
+  if (bootShown && !linkedAt && !fadeStart && (btnClick || t.wasClicked() || t.wasFlicked() || t.wasDragged())) {
+    bootSkipped = true;
+    haptic(0);
+    btnClick = false;
+    dirty = true;
+  }
   if (call) {  // appel entrant : rond vert / rouge, ou molette (appui = décrocher, appui long = refuser)
     int b = t.wasClicked() ? callButtonAt(ux, uy) : 0;
     if (b) { ancsAnswer(b > 0); dirty = true; }
@@ -226,10 +223,7 @@ void loop() {
 
   if (btnHold) shutdown("Power off...");  // appui long 2 s
   if (!bootShown && !call && (t.wasFlicked() || t.wasDragged())) {
-    // Geste ramené dans le repère de l'interface, qui peut être tournée de rot degrés.
-    float r = rot * DEG_TO_RAD;
-    float dx = cosf(r) * t.distanceX() + sinf(r) * t.distanceY();
-    float dy = -sinf(r) * t.distanceX() + cosf(r) * t.distanceY();
+    float dx = t.distanceX(), dy = t.distanceY();
     if (toastShown(now)) ancsToastDismiss();  // notification affichée : n'importe quel glissement la ferme
     else if (fabsf(dy) > fabsf(dx) && fabsf(dy) > SWIPE_MIN_PX) startPageSlide(dy < 0 ? -1 : +1);  // vertical : page
     else if (fabsf(dx) > SWIPE_MIN_PX) PAGES[page]->swipeX(dx > 0 ? +1 : -1);

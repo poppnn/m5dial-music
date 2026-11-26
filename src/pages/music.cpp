@@ -1,4 +1,5 @@
-// Page Musique : arc de progression, titre / artiste (iPhone), anneau de volume, heure.
+// Page Musique : arc de progression, titre / artiste (iPhone), anneau de volume, heure. Sans téléphone (pages ouvertes
+// depuis l'écran de démarrage) : "No phone".
 // iPhone : icônes aléatoire / répétition (tap dessus = changer), tap ailleurs = lecture / pause.
 #include <algorithm>
 #include "pages.h"
@@ -83,14 +84,21 @@ static bool draw(float) {
   canvas.setTextDatum(middle_center);
 
   bool info = linkMode == LINK_AMS || (linkMode == LINK_HID && !m.title.empty());  // HID + Gadgetbridge / PC : titre
-  if (linkMode == LINK_HID && !info) {
+  if (linkMode == LINK_NONE) {
+    canvas.setFont(&fonts::efontJA_24);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString("No phone", c, 108);
+    canvas.setFont(&fonts::efontJA_16);
+    canvas.setTextColor(0xAD55);
+    canvas.drawString("Waiting for phone...", c, 140);
+  } else if (linkMode == LINK_HID && !info) {
     canvas.setFont(&fonts::efontJA_24);
     canvas.setTextColor(TFT_WHITE);
     canvas.drawString("Connected", c, 108);
     canvas.setFont(&fonts::efontJA_16);
     canvas.setTextColor(0xAD55);
     canvas.drawString("Remote control", c, 140);
-  } else if (info) {  // LINK_NONE : rien, l'interface est en train de disparaître
+  } else if (info) {
     if (m.playing) {  // icône lecture / pause
       canvas.fillRect(c - 9, 52, 6, 18, TFT_WHITE);
       canvas.fillRect(c + 3, 52, 6, 18, TFT_WHITE);
@@ -110,13 +118,13 @@ static bool draw(float) {
     if (m.repeat >= 0) drawRepeat(REP_X, ICON_Y, m.repeat ? accent() : 0x4208, m.repeat == 1);
   }
   tm t;
-  if (clockNow(t)) {
+  if (clockNow(t)) {  // en haut, au-dessus de l'icône lecture / pause : blanc et en 24 px pour se lire d'un coup d'œil
     char hm[8];
     snprintf(hm, sizeof(hm), "%02d:%02d", t.tm_hour, t.tm_min);
-    canvas.setFont(&fonts::efontJA_16);
+    canvas.setFont(&fonts::efontJA_24);
     canvas.setTextDatum(middle_center);
-    canvas.setTextColor(0x8410);
-    canvas.drawString(hm, c, 30);
+    canvas.setTextColor(TFT_WHITE);
+    canvas.drawString(hm, c, 31);
   }
   return volVisible || arcLag;
 }

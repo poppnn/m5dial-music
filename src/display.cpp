@@ -1,9 +1,8 @@
 #include "display.h"
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
 #include <algorithm>
-#include "imu.h"
 
-M5Canvas canvas(&M5Dial.Display);  // UI dans le repère "droit"
+M5Canvas canvas(&M5Dial.Display);  // l'interface, composée ici puis envoyée par bandes
 float frameShift = 0;
 // 2 bandes de sortie (ping-pong) : le CPU tourne la bande N pendant que le DMA envoie la bande N-1.
 #define BAND_H 40  // 240x40x2 = 19,2 Ko par bande, 6 bandes par image
@@ -32,21 +31,14 @@ void pushFrame() {
   auto& d = M5Dial.Display;
   const uint16_t* src = (const uint16_t*)canvas.getBuffer();
   int s = (int)lroundf(frameShift);
-  float r = rot * DEG_TO_RAD;
   for (int k = 0; k < 240 / BAND_H; k++) {
     M5Canvas& b = band[k & 1];  // ce buffer a fini d'être envoyé : waitDMA() a précédé la bande k-1
     int y = k * BAND_H;
-    if (fabsf(rot) < 0.5f) {
-      uint16_t* dst = (uint16_t*)b.getBuffer();
-      for (int row = 0; row < BAND_H; row++) {  // ligne source décalée de s (glissement de page), noir hors image
-        int sr = y + row - s;
-        if (sr >= 0 && sr < 240) memcpy(dst + row * 240, src + sr * 240, 240 * 2);
-        else memset(dst + row * 240, 0, 240 * 2);
-      }
-    } else {
-      if (s) b.fillScreen(TFT_BLACK);  // image décalée : elle ne recouvre plus tout le disque
-      // décalage (0, s) de l'interface tourné de rot (sens horaire à l'écran)
-      canvas.pushRotateZoom(&b, 120 - s * sinf(r), 120 - y + s * cosf(r), rot, 1.f, 1.f);  // coins hors du disque : invisibles
+    uint16_t* dst = (uint16_t*)b.getBuffer();
+    for (int row = 0; row < BAND_H; row++) {  // ligne source décalée de s (glissement de page), noir hors image
+      int sr = y + row - s;
+      if (sr >= 0 && sr < 240) memcpy(dst + row * 240, src + sr * 240, 240 * 2);
+      else memset(dst + row * 240, 0, 240 * 2);
     }
     d.waitDMA();
     d.pushImageDMA(0, y, 240, BAND_H, (const lgfx::swap565_t*)b.getBuffer());  // format natif du panneau : 0 conversion

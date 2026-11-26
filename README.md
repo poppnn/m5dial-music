@@ -34,7 +34,8 @@ pythonw tools/windows/m5dial_pc.py
 It reads what Windows shows in its media panel (Spotify, Apple Music, browser...) and the Windows notifications
 (Settings › Privacy › Notifications must allow access). To start it with Windows: shortcut in `shell:startup`.
 
-7 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **Sensors**, **System**, **Settings**.
+6 pages, vertical swipe (up = next): **Music**, **LED**, **Stopwatch**, **Clock**, **System**, **Settings**. Their order
+is set in the **Web UI** (Page order); the first one opens after the boot screen.
 
 - Wheel: volume − / + (LED: brightness or hue)
 - Wheel press or screen tap: play / pause (LED: on / off, Stopwatch: start / pause)
@@ -43,7 +44,7 @@ It reads what Windows shows in its media panel (Spotify, Apple Music, browser...
 - Battery saving: screen dims after 20 s without input (any input wakes it), automatic power off after 10 min
   without a connected Bluetooth device; the WAKE button turns it back on. Both delays are adjustable.
 - Swipe left / right: next / previous track (LED: colour, Stopwatch: reset)
-- Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day
+- Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day (white, large, at the top)
 - iPhone: **shuffle** and **repeat** icons at the bottom (accent colour = on, "1" = repeat one): tap them to change.
   A tap elsewhere = play / pause.
 
@@ -91,18 +92,15 @@ Close the Govee Home app: the bar only accepts one connection.
 
 - **Stopwatch**: 7-segment display, hundredths, second-hand ring (one turn per minute). Press = start / pause,
   swipe left or right = reset. It keeps running when you change page.
-- **Clock**: phone time and date, seconds ring, and the cabin **temperature** (ENV III, else the IMU Pro Mini
-  barometer, else the IMU chip; not shown without a sensor). The M5Dial RTC keeps the time while
+- **Clock**: phone time and date, seconds ring. The M5Dial RTC keeps the time while
   disconnected and off; it is set again on every connection (and when daylight saving time changes).
-- **Sensors**: temperature, humidity, pressure (hPa) and barometric altitude, plus the units found and their port
-  (see [Sensors](#sensors)).
 - **System**: last boot reason (normal, crash, watchdog, brownout), connected phone and its signal, Govee LEDs,
   CPU frequency and temperature, frames per second and render time, free RAM, uptime. Battery level cannot be
   measured: the M5Dial has no battery voltage or charge signal wired to the ESP32 (it would need a voltage divider
   soldered to an ADC GPIO).
 - **Settings** (stored in the M5Dial memory, kept across power off and updates): turn = choose a row,
   press = edit (turn = value, applied immediately), press = done.
-  - IMU direction (normal / reversed), encoder pulses per detent (1 to 4), dim delay (never to 120 s),
+  - Encoder pulses per detent (1 to 4), dim delay (never to 120 s),
     power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
     full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
     active icons, notification border), **Click**: a buzzer beep on every wheel detent and press, the same as the factory firmware (wheel 7000 / 6000 Hz by direction, press 2000 Hz, 20 ms; the
@@ -110,7 +108,7 @@ Close the Govee Home app: the bar only accepts one connection.
   - **Update** (over the air, no computer needed): shows the saved hotspot ("choose Wi-Fi" if none). Hotspot on
     (iPhone: Personal Hotspot screen open, Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second
     press: Bluetooth stops and the M5Dial lists the Wi-Fi networks it sees (saved one first, then "Scan again",
-    "Cancel"); turn and press to pick one. For a new network, type the password with the wheel: turn = character
+    "Cancel"); turn the wheel and press to pick one. For a new network, type the password with the wheel: turn = character
     (OK, DEL, then a-z, 0-9, A-Z, space, symbols), press = add it, hold = done (DEL on an empty password goes
     back). The network that works is saved for next time (or send it from the web flasher, section 7). Then it
     reads the published version and, if it differs, downloads this platform's firmware
@@ -119,10 +117,10 @@ Close the Govee Home app: the bar only accepts one connection.
     back to the list (wrong password: it asks again).
   - **Web UI** (from the phone, no computer): press twice, pick the hotspot like for Update, then open the address
     shown on the M5Dial (`http://172.20.10.x` on an iPhone hotspot) in the phone's browser. The page changes every
-    setting (same as here, plus LED colour, hue and brightness, and the hotspot), **exports** them as a JSON file
+    setting (same as here, plus the **page order**, LED colour, hue and brightness, and the hotspot), **exports** them as a JSON file
     and **imports** one (all values checked first: a wrong file changes nothing), lists the paired devices
     ("Forget": done at the next restart, Bluetooth being off meanwhile) and sends a **boot image or GIF** (same as
-    the web flasher, converted in the phone's browser). Bluetooth is off during the session; "Done", a press on the
+    the web flasher, converted in the phone's browser, animated GIFs included on Safari). Bluetooth is off during the session; "Done", a press on the
     M5Dial or 15 minutes without use restarts it. No password on the page: only devices on your hotspot reach it.
   - Brightness: day, night or **auto** (night between "Night from" and "Night until", 21:00 → 7:00 by default,
     from the iPhone time; unknown time = day).
@@ -143,24 +141,25 @@ Close the Govee Home app: the bar only accepts one connection.
   during the transfer.
 - Every text is fitted to the round screen: long titles, names and settings rows are truncated with "..." to the
   width available at their height.
-- **Always upright**: with an **M5Stack IMU Pro Mini (or IMU Unit) on Port A**, the UI rotates to stay level. The M5Dial has no
-  built-in IMU. Mount the unit flat on the back of the case. The orientation at power on is the "upright"
-  reference. If the screen turns the wrong way: Settings › IMU dir › reversed.
 
 ## Boot screen
 
 While no device is connected, the M5Dial shows a logo (by default a music note drawn by the firmware), a spinning
-arc and "Waiting for phone". Controls are locked, except the hold to power off. On connection, the spinning arc
+arc and "Waiting for phone". **Press: open**: a press, tap or swipe opens the pages anyway, without a phone (LEDs,
+stopwatch, clock, settings; the Music page says "No phone"). When the phone connects later, the UI stays; when it
+disconnects, the boot screen comes back. Hold 2 s = power off, as everywhere. On connection from the boot screen, the spinning arc
 closes into a circle while shrinking to the centre, then bursts into a check mark badge with a white wave towards the
 edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) runs in the background meanwhile, so
 the screen never freezes.
 
 **Boot image or GIF from the browser** (no build needed): on https://poppnn.github.io/m5dial-music/, section 6, pick a
-picture or an animated GIF (square crop, 240 × 240, up to 300 frames), then "Send to the M5Dial" with the M5Dial on
-USB-C (Chrome or Edge: Web Serial). The page turns it into JPEG frames, sends them over USB and the M5Dial stores them
-in its own flash partition (`bootanim`, 1.9 MB, `partitions.csv`: the rest holds two 3 MB app slots for the
-over-the-air update); it is then shown full screen while waiting for the
-phone, under the spinning arc. "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
+picture or an animated GIF (up to 300 frames), pick the **size**: **inside the ring** (default: cropped round,
+212 px, a black gap keeps it off the spinning ring) or **full screen** (the ring drawn over it), then "Send to the
+M5Dial" with the M5Dial on USB-C (Chrome or Edge: Web Serial), or send it from the Web UI. The page decodes the GIF
+itself (it does not rely on the browser: Safari and Firefox work too), turns it into JPEG frames, lowers the JPEG
+quality and then the frame count by itself if it does not fit, and the M5Dial stores them in its own flash partition
+(`bootanim`, 1.9 MB, `partitions.csv`: the rest holds two 3 MB app slots for the over-the-air update); it is then
+shown while waiting for the phone. "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
 installed with the web flasher's full install (it adds the partition; settings are kept).
 
 To build your own logo into the firmware instead (PNG or BMP, ideally on a transparent or black background):
@@ -210,8 +209,7 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
 
 ### Hardware
 
-- M5Stack **M5Dial** (v1.1). Optional: **IMU Pro Mini** unit on Port A (screen stays level, pressure) and **ENV III**
-  unit on Port B (temperature, humidity, pressure), with short Grove cables.
+- M5Stack **M5Dial** (v1.1).
 - LiPo **103450** (50 × 34 × 10 mm) with its protection board and a lead long enough to reach the M5Dial.
   **Or** the removable cartridge: per battery one **16350** Li-ion cell, **850 mAh** (Ø 16 × 35 mm, the cell of a
   **JNR** disposable puff, with solder tabs: + on one end, - on the other) and **2 female Dupont jumper ends** (2.54 mm, 14 mm housings, wire attached); for the holder
@@ -257,9 +255,7 @@ other parts. The test part (two pads joined by a bar, ~20 cm³) checks the fit o
    washer, nut and screw head on either side (the hex pocket at the back of the pad holds a nut or a screw head),
    then press a **nut cap** onto each nut on the driver side, and clip the **dummy cap** into the left spoke's
    Ø 16 hole (nothing is fixed there; the three spokes look alike).
-6. Optional sensors: plug the **IMU Pro Mini** into Port A and the **ENV III** into Port B and fix them where you
-   like (double-sided tape, jumper wires); the printed holders are off by default. They are found at power on.
-7. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
+6. Before driving: turn the wheel lock to lock and check that nothing touches the stalks.
 
 ### Design notes
 
@@ -335,36 +331,16 @@ To do next (owner's list):
 - [ ] Test the **Android** firmware with Gadgetbridge (does it accept "Bangle.js M5Dial", track info, notifications,
       calls).
 - [ ] Test the **Windows** firmware with the PC app (`tools/windows`).
-- [ ] Boot GIF: send the exact error message shown under the buttons (section 6 of the web flasher).
+- [ ] Boot GIF: try a GIF again (decoded by the page now) and, if it still fails, send the message shown under the buttons.
 - [ ] Publish the print files on **MakerWorld** and add the link here and on the web flasher.
 - [ ] Add photos to `docs/img/` (wheel, pages, mount).
 - [ ] Release **v1.2.0** (three firmwares) once Android and Windows are checked.
-- [ ] Print the flatter nut caps and the dummy cap; plug the IMU Pro Mini (Port A) and the ENV III (Port B) and
-      check the Sensors page (values, ports found).
-- [ ] Later: DLight ambient light sensor, battery level (needs a voltage divider to an ADC pin).
+- [ ] Print the flatter nut caps and the dummy cap.
+- [ ] Later: battery level (needs a voltage divider to an ADC pin).
 
 ## License
 
 [MIT](LICENSE).
-
-## Sensors
-
-Ports: **A** = I2C (G13 SDA / G15 SCL), **B** = G1 / G2. Supported M5Stack units, each one optional and found at
-power on, on Port A or Port B:
-
-| Unit | Chips | Used for |
-|---|---|---|
-| **IMU Pro Mini** (Port A) | BMI270 + BMM150, BMP280 (0x76) | always upright (accelerometer), pressure, temperature |
-| **ENV III** (Port B) | SHT30 (0x44), QMP6988 (0x70) | temperature, humidity, pressure |
-| IMU Unit (Port A) | MPU6886 | always upright, chip temperature |
-
-The ESP32-S3 has only two I2C controllers (the internal bus and Port A), so Port B is read by moving the Port A
-controller onto its pins for each reading (once a second), then back. Temperature comes from the SHT30, else the
-BMP280, else the QMP6988; pressure from the QMP6988, else the BMP280. Altitude is barometric (standard atmosphere,
-1013.25 hPa at sea level), so it drifts with the weather. The BMM150 magnetometer is not used: on a steering wheel,
-in a steel car body, a compass would not be reliable. Code: `src/sensors.cpp`, page `src/pages/sensors_page.cpp`.
-
-Also worth a look later: **DLight** (BH1750, ambient light → automatic screen brightness).
 
 ## Notes
 
@@ -373,6 +349,6 @@ Also worth a look later: **DLight** (BH1750, ambient light → automatic screen 
 - Android and Windows have no built-in BLE service for track info: Gadgetbridge (Android) and the PC app (Windows)
   fill that gap with the Bangle.js text protocol (`src/gb.cpp`).
 - Encoder pulses per detent: 2 on this M5Dial; adjust in Settings › Wheel if one detent does not give one step.
-- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications), `gb` (Gadgetbridge / PC app lines), `sensors` (ENV III, BMP280),
-  `govee`, `display` (DMA rendering), `encoder` (wheel on the PCNT hardware counter), `bootanim` (boot image over USB), `imu`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
+- Code: `src/main.cpp` (loop, gestures, pages), `ble_phone` (AMS + HID + CTS), `ancs` (calls, notifications), `gb` (Gadgetbridge / PC app lines),
+  `govee`, `display` (DMA rendering), `encoder` (wheel on the PCNT hardware counter), `bootanim` (boot image over USB and Web UI), `webui`, `ota`, `clock`, `power`, `settings` (NVS), `pages/` (one file per page).
   Settings defaults: `src/config.h`. Code comments are in French.

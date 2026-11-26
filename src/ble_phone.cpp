@@ -205,6 +205,7 @@ static void cmdTask(void*) {
 bool bleBusy() { return setupRunning || cmdSending || (cmdQueue && uxQueueMessagesWaiting(cmdQueue)) || ancsBusy(); }
 
 void sendCmd(uint8_t cmd) {
+  if (linkMode == LINK_NONE) return;  // interface ouverte sans téléphone : rien à commander
   if (!cmdQueue) {
     cmdQueue = xQueueCreate(32, 1);
     xTaskCreate(cmdTask, "media_cmd", 4096, nullptr, 1, nullptr);
