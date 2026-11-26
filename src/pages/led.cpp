@@ -1,22 +1,23 @@
-// Page LED. Deux modes de molette, l'un après l'autre à chaque appui long court (0,6 s) :
-// - luminosité : l'anneau montre la luminosité, en fondu vers la nouvelle couleur ;
-// - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran : un tour de
-//   molette ~ un tour de roue) ; le repère et la pastille glissent en douceur vers la teinte choisie.
-// Glisser = préréglage suivant / précédent : la pastille et le nom sortent en glissant, la nouvelle pastille
-// entre avec un rebond. Appui = allumer / éteindre.
+// Page LED (design M5Dial Fluid). Deux modes de molette, l'un après l'autre à chaque appui long court (0,6 s) :
+// - luminosité : l'arc (dans la couleur de la barre) suit la luminosité avec un ressort ;
+// - teinte : l'anneau devient une roue des couleurs, la molette fait défiler la teinte (5° par cran) ; le bouton
+//   (cerclé de blanc, rempli de la teinte) glisse vers la teinte choisie.
+// Pastille de couleur avec son halo, nom du préréglage, puce d'état de la barre (Connected / Disconnected).
+// Glisser = préréglage suivant / précédent (la pastille et le nom glissent, la pastille rebondit). Appui = on / off.
 #include "pages.h"
 #include "../anim.h"
 #include "../config.h"
 #include "../display.h"
 #include "../govee.h"
 #include "../settings.h"
+#include "../ui.h"
 
 #define HUE_STEP   5      // degrés par cran
-#define HUE_TAU_S  0.07f  // le repère rejoint la teinte choisie en douceur
-#define RING_IN    111    // anneau de la roue : mêmes rayons que les autres anneaux
-#define RING_OUT   120
+#define RING_IN    107    // roue des teintes : 10 px autour du rayon 112, comme l'arc des autres pages
+#define RING_OUT   117
+#define SWATCH_Y   96
 
-static float ledBriShown = 1, hueShown = 0;
+static Spring briS, hueS;
 
 // Appelle f(x, y) pour chaque pixel de l'anneau, ligne par ligne (toujours dans le même ordre).
 template <typename F>
@@ -33,12 +34,11 @@ static void forRing(F f) {
   }
 }
 
-// Roue des couleurs : la teinte de chaque pixel (pas de 2°, 0° en haut, sens horaire) est calculée une seule
-// fois (~6,5 Ko) ; ensuite chaque image n'est qu'une recopie de couleurs dans le tampon. 180 fillArc par image
-// prenaient trop de temps : la boucle ralentissait et le tactile ne voyait plus les glissements.
+// Roue des couleurs : la teinte de chaque pixel (pas de 2°, 0° en haut, sens horaire) est calculée une seule fois ;
+// ensuite chaque image n'est qu'une recopie de couleurs dans le tampon (180 fillArc par image étaient trop lents).
 static uint8_t* ringIdx = nullptr;
 
-static void drawHueRing(int c, float hue, bool on) {
+static void drawHueRing(float hue, bool on) {
   if (!ringIdx) {
     size_t n = 0;
     forRing([&](int, int) { n++; });
@@ -55,66 +55,69 @@ static void drawHueRing(int c, float hue, bool on) {
     uint16_t pal[180];  // couleurs de la roue, octets inversés comme dans le tampon du canvas (swap565)
     for (int i = 0; i < 180; i++) {
       LedColor k = hueColor(i * 2 + 1);
-      uint16_t col = on ? canvas.color565(k.r, k.g, k.b) : canvas.color565(k.r / 5, k.g / 5, k.b / 5);
-      pal[i] = __builtin_bswap16(col);
+      uint16_t col = canvas.color565(k.r, k.g, k.b);
+      pal[i] = __builtin_bswap16(uiCol(on ? col : mix565(UI_GROUND, col, 0.25f)));
     }
     uint16_t* buf = (uint16_t*)canvas.getBuffer();
     size_t n = 0;
     forRing([&](int x, int y) { buf[y * 240 + x] = pal[ringIdx[n++]]; });
   } else {
-    canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // mémoire insuffisante : anneau neutre, la pastille suffit
+    uiRingStroke(120, 120, 112, 10, UI_SURFACE2);  // mémoire insuffisante : anneau neutre
   }
-  canvas.fillArc(c, c, 119, 106, -90 + hue - 2.5f, -90 + hue + 2.5f, TFT_WHITE);  // repère de la teinte choisie
+  float t = (hue - 90) * DEG_TO_RAD, x = 120 + 112 * cosf(t), y = 120 + 112 * sinf(t);
+  LedColor k = hueColor((int)lroundf(hue));
+  uiDisc(x, y, 9, solid(UI_INK));
+  uiDisc(x, y, 6, solid(canvas.color565(k.r, k.g, k.b)));
 }
 
 static bool draw(float dt) {
   static int shownKey = 0;  // préréglage affiché, ou -1 pour la teinte continue
-  static float rgb[3] = {255, 255, 255};
   static uint32_t popStart = 0;
+  static bool init = false;
   const int c = 120;
   uint32_t now = millis();
+  if (!init) { briS.x = ledBri; hueS.x = ledHue; init = true; }
   int key = ledCustom ? -1 : ledColor;
   if (!slideOutPhase && shownKey != key) {
     if (key >= 0) popStart = now;  // rebond seulement pour un préréglage (la teinte défile en continu)
     shownKey = key;
   }
-  static bool hueInit = false;
-  if (!hueInit) { hueShown = ledHue; hueInit = true; }  // première image : pas de glissement depuis 0°
-  float dh = wrap180(ledHue - hueShown);  // par le chemin le plus court (359° -> 0°)
-  hueShown = fmodf(hueShown + dh * smoothK(dt, HUE_TAU_S) + 360.f, 360.f);
-  LedColor lc = shownKey < 0 ? hueColor((int)lroundf(hueShown)) : LED_COLORS[shownKey];
-  LedColor tc = ledCurrent();
-  const float trgb[3] = {(float)tc.r, (float)tc.g, (float)tc.b};
-  float k = smoothK(dt, COLOR_TAU_S), dist = 0;
-  for (int i = 0; i < 3; i++) { rgb[i] += (trgb[i] - rgb[i]) * k; dist += fabsf(trgb[i] - rgb[i]); }
-
-  float target = ledOn ? ledBri / 100.f : 0;
-  ledBriShown += (target - ledBriShown) * smoothK(dt, VOL_TAU_S);
+  float dh = wrap180(ledHue - hueS.x);  // par le chemin le plus court (359° -> 0°)
+  hueS.x = ledHue - dh;
+  bool moving = hueS.step(ledHue, dt, 300, 28);
+  hueS.x = fmodf(hueS.x + 360.f, 360.f);
+  moving |= briS.step(ledBri, dt, 260, 24);
+  float hue = hueS.x;
+  LedColor lc = shownKey < 0 ? hueColor((int)lroundf(hue)) : LED_COLORS[shownKey];
+  uint16_t col = canvas.color565(lc.r, lc.g, lc.b);
   uint32_t tp = now - popStart;
-  float radius = 34.f * (tp < POP_MS ? 0.6f + 0.4f * easeOutBack(tp / (float)POP_MS) : 1.f);
-  int off = (int)slideOff;
+  float r = 38.f * (tp < POP_MS ? 0.7f + 0.3f * easeOutBackK(tp / (float)POP_MS, 2.4f) : 1.f);
+  int off = (int)(slideOff * 0.6f);
 
+  char cap[32];
   if (ledWheel == WHEEL_HUE) {
-    drawHueRing(c, hueShown, ledOn);
+    drawHueRing(hue, ledOn);
+    snprintf(cap, sizeof(cap), "HUE %d\xC2\xB0", (int)lroundf(hue) % 360);
   } else {
-    canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);
-    // Anneau = luminosité, dans la couleur de la barre (en fondu)
-    if (ledBriShown > 0.005f)
-      canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * ledBriShown, canvas.color565(rgb[0], rgb[1], rgb[2]));
+    uiValueArc(ledOn ? briS.x / 100.f : 0, solid(col), 6, ledOn, col);
+    if (ledOn) snprintf(cap, sizeof(cap), "BRIGHTNESS %d %%", (int)lroundf(briS.x));
+    else snprintf(cap, sizeof(cap), "LIGHT OFF");
   }
-  canvas.fillCircle(c + off, 92, (int)radius, ledOn ? canvas.color565(lc.r, lc.g, lc.b) : 0x2104);
-  canvas.setTextDatum(middle_center);
-  canvas.setFont(&fonts::efontJA_24);
-  char name[16];
-  if (shownKey < 0) snprintf(name, sizeof(name), "Hue %d°", ledHue);
-  else snprintf(name, sizeof(name), "%s", LED_COLORS[shownKey].name);
-  canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(name, c + off, 150);
-  canvas.setFont(&fonts::efontJA_16);
+  uiText(cap, c, 40, F_CAPTION, UI_INK3);
+  float keep = uiAlpha;
+  uiAlpha *= slideAlpha;
+  if (ledOn) {
+    uiDisc(c + off, SWATCH_Y, r + 20, solid(col), 0.22f);  // halo
+    uiDisc(c + off, SWATCH_Y, r, solid(col));
+  } else {
+    uiDisc(c + off, SWATCH_Y, r, solid(UI_INK4));
+    uiDisc(c + off, SWATCH_Y, r - 1.5f, solid(UI_SURFACE1));
+  }
+  uiText(shownKey < 0 ? "Custom" : LED_COLORS[shownKey].name, c + off, 156, F_TITLE, ledOn ? UI_INK : UI_INK3);
+  uiAlpha = keep;
   bool conn = goveeConnected();
-  canvas.setTextColor(conn ? 0x07E8 : 0xF8A2);  // barre LED connectée : vert, sinon rouge
-  canvas.drawString(conn ? "Connected" : "Disconnected", c, 180);
-  return fabsf(target - ledBriShown) > 0.004f || dist > 3 || tp < POP_MS || fabsf(dh) > 0.3f;
+  uiChip(190, conn ? "Connected" : "Disconnected", conn ? UI_POSITIVE : UI_NEGATIVE);
+  return moving || tp < POP_MS;
 }
 
 static void wheel(int detents) {

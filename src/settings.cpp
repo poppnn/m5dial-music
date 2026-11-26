@@ -5,11 +5,11 @@
 
 Settings settings = {ENC_STEPS_PER_DETENT, DIM_AFTER_MS / 1000, SLEEP_AFTER_MS / 60000, 50, 15, 0, 21, 7,
                      NOTIF_SENDER, 0, 1, {PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CLOCK, PAGE_SYS, PAGE_SET}};
-const uint16_t ACCENT_COLORS[] = {0xFA20, 0xF8C3, 0xF951, 0x901F, 0x02DF, 0x06FF, 0x072B, 0xFE80, 0xFFFF};
-const char* const ACCENT_NAMES[] = {"orange", "red", "pink", "purple", "blue", "cyan", "green", "yellow", "white"};
-const int ACCENT_COUNT = sizeof(ACCENT_COLORS) / sizeof(ACCENT_COLORS[0]);
-
-uint16_t accent() { return ACCENT_COLORS[settings.accent]; }
+// Design system M5Dial Fluid : dégradé accent-a (haut de l'écran) -> accent-b (bas). Le texte d'accent utilise a.
+const uint32_t ACCENT_RGB[][2] = {{0xff7a45, 0xff2e7e}, {0x3ee0ff, 0x4a6dff}, {0xd4ff4a, 0x2fe39a},
+                                  {0xffd84a, 0xff8f3d}, {0xffb3c2, 0xff4d6d}, {0xffffff, 0x9d9dab}};
+const char* const ACCENT_NAMES[] = {"Ember", "Ocean", "Lime", "Gold", "Rose", "Mono"};
+const int ACCENT_COUNT = sizeof(ACCENT_RGB) / sizeof(ACCENT_RGB[0]);
 static Preferences prefs;
 
 void settingsLoad() {

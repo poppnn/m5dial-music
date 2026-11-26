@@ -21,6 +21,8 @@
 #include "display.h"
 #include "encoder.h"
 #include "settings.h"
+#include "anim.h"
+#include "ui.h"
 
 #define OTA_BASE "https://poppnn.github.io/m5dial-music/ota/"
 #if defined(TARGET_ANDROID)
@@ -34,18 +36,22 @@
 #define READ_TIMEOUT_MS 15000
 
 void show(const char* title, const std::string& line, float progress, const std::string& line2) {
-  canvas.fillScreen(TFT_BLACK);
-  canvas.setTextDatum(middle_center);
-  canvas.setFont(&fonts::efontJA_24);
-  canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(title, 120, 92);
-  canvas.setFont(&fonts::efontJA_16);
-  canvas.setTextColor(0x8410);
-  canvas.drawString(fit(line, 200).c_str(), 120, 128);
-  if (!line2.empty()) canvas.drawString(fit(line2, 190).c_str(), 120, 152);
-  if (progress >= 0) {
-    canvas.fillArc(120, 120, 119, 111, 0, 360, 0x2104);
-    canvas.fillArc(120, 120, 119, 111, -90, -90 + 360.f * progress, accent());
+  uiAlpha = 1;
+  uiBackground();
+  const int c = 120;
+  bool err = !strcmp(title, "Error") || !strncmp(title, "No ", 3);
+  if (progress >= 0) {  // téléchargement : grand pourcentage sur l'arc de progression
+    uiValueArc(progress, GRAD);
+    uiText(uiFit(uiUpper(title), 150, F_CAPTION), c, 80, F_CAPTION, UI_INK3);
+    uiText(std::to_string((int)lroundf(progress * 100)) + "%", c, 116, F_DISPLAY, UI_INK);
+    uiText(uiFit(line, 170, F_BODY), c, 152, F_BODY, UI_INK2);
+    if (!line2.empty()) uiText(uiFit(line2, 150, F_MICRO), c, 172, F_MICRO, UI_INK3);
+  } else {
+    uiRingStroke(120, 120, 112, 6, UI_SURFACE2);
+    uiText(uiFit(uiUpper(title), 160, F_CAPTION), c, 86, F_CAPTION, err ? UI_NEGATIVE : UI_INK3);
+    UiFont f = uiWidth(line, F_TITLE) <= 190 ? F_TITLE : F_BODY;  // une adresse longue passe en plus petit
+    uiText(uiFit(line, 190, f), c, 114, f, UI_INK);
+    if (!line2.empty()) uiText(uiFit(line2, 180, F_BODY), c, 142, F_BODY, UI_INK2);
   }
   frameShift = 0;
   pushFrame();
@@ -90,29 +96,25 @@ static Key readKey() {
 // ---------- choix d'un réseau ----------
 // Liste à la molette (5 lignes autour de la sélection, comme les Réglages) ; appui = choisir.
 static int choose(const char* title, const std::vector<std::string>& items, int sel) {
+  Spring scroll;
+  scroll.x = sel;
+  uint32_t last = millis();
   for (;;) {
     // Crans lus AVANT constrain : c'est une macro qui évalue son premier argument jusqu'à 3 fois (le 2e appel à
     // readDetents() renvoyait 0, la sélection ne bougeait jamais).
     int d = readDetents();
     sel = constrain(sel + d, 0, (int)items.size() - 1);
     if (readKey() == K_CLICK) return sel;
-    canvas.fillScreen(TFT_BLACK);
-    canvas.setTextDatum(middle_center);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(title, 120, 30);
-    for (int i = sel - 2; i <= sel + 2; i++) {
-      if (i < 0 || i >= (int)items.size()) continue;
-      int y = 120 + (i - sel) * 30;
-      if (i == sel) canvas.fillRoundRect(20, y - 13, 200, 26, 8, 0x2104);
-      canvas.setTextColor(i == sel ? TFT_WHITE : 0x8410);
-      canvas.drawString(fit(items[i], 2 * textSpace(y, 16, 112) - 12).c_str(), 120, y);
-    }
-    canvas.setTextColor(0x5AEB);
-    canvas.drawString("Press: choose", 120, 212);
+    uint32_t now = millis();
+    scroll.step(sel, (now - last) / 1000.f, 280, 26);
+    last = now;
+    uiAlpha = 1;
+    uiBackground();
+    uiPicker(title, items.size(), scroll.x, [&](int i) { PickRow r; r.label = items[i]; return r; }, PICK_BROWSE,
+             "Press to choose");
     frameShift = 0;
     pushFrame();
-    delay(15);
+    delay(10);
   }
 }
 
@@ -151,26 +153,28 @@ static bool enterPassword(const std::string& ssid, std::string& pw) {
       int r = pwApply(pw, sel);
       if (r) return r > 0;
     }
-    canvas.fillScreen(TFT_BLACK);
-    canvas.setTextDatum(middle_center);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(0x8410);
-    canvas.drawString(fit(ssid, 150).c_str(), 120, 30);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Password", 120, 52);
-    canvas.setFont(&fonts::efontJA_24);
-    std::string shown = pw + "_";  // fin du mot de passe si trop long pour la ligne
-    while (canvas.textWidth(shown.c_str()) > 190) shown.erase(0, 1);
-    canvas.drawString(shown.c_str(), 120, 88);
-    for (int d = -2; d <= 2; d++) {  // caractère choisi en gros, ses voisins de part et d'autre
-      canvas.setTextSize(d ? 1 : 2);
-      canvas.setTextColor(d ? 0x5AEB : (sel < PW_FIRST ? accent() : TFT_WHITE));
-      canvas.drawString(pwLabel(sel + d).c_str(), 120 + d * 46 + (d > 0 ? 8 : d < 0 ? -8 : 0), 146);
+    uiAlpha = 1;
+    uiBackground();
+    const int c = 120;
+    uiText("PASSWORD", c, 38, F_CAPTION, UI_INK3);
+    uiText(uiFit(ssid, 140, F_MICRO), c, 54, F_MICRO, UI_INK2);
+    uiPill(44, 70, 152, 36, UI_SURFACE1, UI_HAIRLINE);
+    std::string shown = pw;  // fin du mot de passe si trop long pour le champ
+    while (shown.size() > 1 && uiWidth(shown, F_STRONG) > 128) shown.erase(0, 1);
+    int sw = shown.empty() ? 0 : uiWidth(shown, F_STRONG);
+    uiText(shown, c - 2, 88, F_STRONG, UI_INK);
+    canvas.fillSmoothRoundRect(c - 2 + sw / 2 + 2, 79, 2, 18, 1, uiAccentA());  // curseur
+    auto label = [](int e) { std::string l = pwLabel(e); return l == "space" ? std::string("SPACE") : l; };
+    for (int d = -2; d <= 2; d++) {  // caractères voisins de part et d'autre, plus petits et plus pâles
+      if (!d) continue;
+      bool n1 = abs(d) == 1;
+      uiText(label(sel + d), c + d * 44, 150 + abs(d) * 4, n1 ? F_BODY : F_SMALL, n1 ? UI_INK3 : UI_INK4);
     }
-    canvas.setTextSize(1);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(0x5AEB);
-    canvas.drawString("Press: add   Hold: done", 120, 200);
+    bool cmd = sel < PW_FIRST;  // OK ou DEL : disque d'accent
+    uiDisc(c, 150, 25, cmd ? GRAD : solid(UI_INK));
+    std::string cur = label(sel);
+    uiText(cur, c, 150, cur.size() > 1 ? (cur.size() > 3 ? F_CAPTION : F_STRONG) : F_TITLE, UI_ON_ACCENT);
+    uiText("PRESS ADD \xC2\xB7 HOLD DONE", c, 200, F_CAPTION, UI_INK3);
     frameShift = 0;
     pushFrame();
     delay(15);

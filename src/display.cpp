@@ -1,4 +1,5 @@
 #include "display.h"
+#include "ui.h"
 #include <soc/soc_memory_layout.h>  // esp_ptr_dma_capable (IDF 4.4)
 #include <algorithm>
 
@@ -31,14 +32,15 @@ void pushFrame() {
   auto& d = M5Dial.Display;
   const uint16_t* src = (const uint16_t*)canvas.getBuffer();
   int s = (int)lroundf(frameShift);
+  const uint16_t ground = __builtin_bswap16(UI_GROUND);  // hors de l'image (glissement de page) : couleur du fond
   for (int k = 0; k < 240 / BAND_H; k++) {
     M5Canvas& b = band[k & 1];  // ce buffer a fini d'être envoyé : waitDMA() a précédé la bande k-1
     int y = k * BAND_H;
     uint16_t* dst = (uint16_t*)b.getBuffer();
-    for (int row = 0; row < BAND_H; row++) {  // ligne source décalée de s (glissement de page), noir hors image
+    for (int row = 0; row < BAND_H; row++) {  // ligne source décalée de s (changement de page)
       int sr = y + row - s;
       if (sr >= 0 && sr < 240) memcpy(dst + row * 240, src + sr * 240, 240 * 2);
-      else memset(dst + row * 240, 0, 240 * 2);
+      else std::fill(dst + row * 240, dst + row * 240 + 240, ground);
     }
     d.waitDMA();
     d.pushImageDMA(0, y, 240, BAND_H, (const lgfx::swap565_t*)b.getBuffer());  // format natif du panneau : 0 conversion

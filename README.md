@@ -44,20 +44,22 @@ is set in the **Web UI** (Page order); the first one opens after the boot screen
 - Battery saving: screen dims after 20 s without input (any input wakes it), automatic power off after 10 min
   without a connected Bluetooth device; the WAKE button turns it back on. Both delays are adjustable.
 - Swipe left / right: next / previous track (LED: colour, Stopwatch: reset)
-- Screen (iPhone): title, artist, elapsed / total time, circular progress arc, time of day (white, large, at the top)
-- iPhone: **shuffle** and **repeat** icons at the bottom (accent colour = on, "1" = repeat one): tap them to change.
+- Music screen: time of day, NOW PLAYING / PAUSED, title, artist, a **transport row** (⏮, play / pause in an accent
+  disc, ⏭: tap them), elapsed and remaining time, and the progress arc with its knob.
+- iPhone: **shuffle** and **repeat** icons at the bottom (accent = on, a "1" badge = repeat one): tap them to change.
   A tap elsewhere = play / pause.
+- Turning the wheel for the volume dims the page and shows a large white arc with the level (iPhone).
 
 ## Calls and notifications (iPhone)
 
 Through Apple's ANCS service (no app to install, pairing is enough):
 
-- **Incoming call**: full screen on any page, iPhone style: caller name in large type, a red button (decline)
-  and a green one (answer) to tap. Or with the wheel: **press** = answer, **hold** (0.8 s) = decline. The screen
+- **Incoming call**: full screen on any page: initials avatar with green ripples, caller name, a red button
+  (decline) and a green one (answer) to tap. Or with the wheel: **press** = answer, **hold** (0.8 s) = decline. The screen
   then goes back to the previous page.
-- **Notification**: full screen, sliding down from the top. For safety while driving, the **app name**, the
+- **Notification**: a rounded card that drops in from the top over the dimmed page. For safety while driving, the **app name**, the
   **sender** (contact name in messaging apps) and the notification count (5 s). Settings › Notifs: **off** (none shown), **sender** (default), **full** (plus
-  the message text, 8 s). Press, tap or swipe = close (it slides away). Emojis are removed (the screen font has none; they would show as squares).
+  the message text, 8 s). Press, tap or swipe = close (it flies back up). Emojis are removed (the screen fonts have none; they would show as squares).
 - Simple gestures only (wheel, press): no precise swipes on these screens.
 - If the iPhone does not offer notifications for "M5Dial Music": iOS Settings › Bluetooth › (i) ›
   "Share System Notifications".
@@ -102,8 +104,8 @@ Close the Govee Home app: the bar only accepts one connection.
   press = edit (turn = value, applied immediately), press = done.
   - Encoder pulses per detent (1 to 4), dim delay (never to 120 s),
     power-off delay without a device (never to 60 min), day and night brightness, notifications (off / sender /
-    full), **accent colour** of the interface (orange, red, pink, purple, blue, cyan, green, yellow, white: arcs,
-    active icons, notification border), **Click**: a buzzer beep on every wheel detent and press, the same as the factory firmware (wheel 7000 / 6000 Hz by direction, press 2000 Hz, 20 ms; the
+    full), **accent** of the interface, a two-colour gradient (Ember, Ocean, Lime, Gold, Rose, Mono: arcs, play button,
+    avatars, active icons, the glow at the top of the screen), **Click**: a buzzer beep on every wheel detent and press, the same as the factory firmware (wheel 7000 / 6000 Hz by direction, press 2000 Hz, 20 ms; the
     M5Dial has no vibration motor), on by default.
   - **Update** (over the air, no computer needed): shows the saved hotspot ("choose Wi-Fi" if none). Hotspot on
     (iPhone: Personal Hotspot screen open, Maximize Compatibility, 2.4 GHz only), first press = "confirm?", second
@@ -134,22 +136,30 @@ Close the Govee Home app: the bar only accepts one connection.
 
 ## Interface
 
-- Eased animations: the progress arc and volume ring fill smoothly, and the title slides on a swipe or a track
-  change.
+The **M5Dial Fluid** design: blue-black ground with a soft glow of the accent from the top, a two-colour accent
+gradient, thin round-capped arcs with a white knob, **Manrope** anti-aliased fonts (SIL Open Font License,
+`tools/fonts`), status chips, page dots on the right edge after a swipe, and a curved list in Settings where rows glide
+through a fixed pill.
+
+- Spring animations (values travel to their target and settle with a hair of overshoot): progress arc, volume, LED
+  brightness and hue, Settings scrolling, the notification card. Pages cross-fade with a small lift between them; the
+  title slides and fades on a track change.
+- Texts the Manrope fonts cannot draw (Japanese, Cyrillic...) fall back to the efont font, as before.
+- Fonts: `python tools/fonts/make_fonts.py Manrope.ttf` regenerates `src/ui_fonts.h` (ASCII + Latin-1 for text,
+  digits only for the large figures, to keep the flash small).
 - Up to ~60 fps while animating, 4 fps at rest to save battery.
 - DMA output to the screen in ping-pong bands (2 × 19 KB) in internal SRAM: the encoder and BLE stay responsive
   during the transfer.
-- Every text is fitted to the round screen: long titles, names and settings rows are truncated with "..." to the
+- Every text is fitted to the round screen: long titles, names and settings rows are truncated with "…" to the
   width available at their height.
 
 ## Boot screen
 
-While no device is connected, the M5Dial shows a logo (by default a music note drawn by the firmware), a spinning
-arc and "Waiting for phone". **Press: open**: a press, tap or swipe opens the pages anyway, without a phone (LEDs,
+While no device is connected, the M5Dial shows a logo (by default three concentric gradient arcs turning at
+different speeds), its Bluetooth name and "Waiting for phone". **Press to open**: a press, tap or swipe opens the pages anyway, without a phone (LEDs,
 stopwatch, clock, settings; the Music page says "No phone"). When the phone connects later, the UI stays; when it
-disconnects, the boot screen comes back. Hold 2 s = power off, as everywhere. On connection from the boot screen, the spinning arc
-closes into a circle while shrinking to the centre, then bursts into a check mark badge with a white wave towards the
-edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) runs in the background meanwhile, so
+disconnects, the boot screen comes back. Hold 2 s = power off, as everywhere. On connection from the boot screen, an accent badge pops
+up with a check mark drawing itself and a ring expanding towards the edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) runs in the background meanwhile, so
 the screen never freezes.
 
 **Boot image or GIF from the browser** (no build needed): on https://poppnn.github.io/m5dial-music/, section 6, pick a
@@ -157,7 +167,7 @@ picture or an animated GIF (up to 300 frames), then "Send to the M5Dial" with th
 itself (it does not rely on the browser: Safari and Firefox work too), turns it into JPEG frames, lowers the JPEG
 quality and then the frame count by itself if it does not fit, and the M5Dial stores them in its own flash partition
 (`bootanim`, 1.9 MB, `partitions.csv`: the rest holds two 3 MB app slots for the over-the-air update); it is then
-shown full screen **in the background** while waiting for the phone: the spinning ring and the text are drawn over
+shown full screen **in the background** while waiting for the phone: the texts are drawn over
 it (no cropping needed). "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
 installed with the web flasher's full install (it adds the partition; settings are kept).
 

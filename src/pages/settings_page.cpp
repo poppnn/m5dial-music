@@ -1,10 +1,12 @@
-// Page Réglages : molette = choisir une ligne ; appui = modifier (molette = valeur, enregistrée aussitôt),
-// appui = terminer. Lignes "Mise à jour", "Oublier" / "Tout effacer" : premier appui = confirmation, second = action.
+// Page Réglages (design M5Dial Fluid, sélecteur courbé) : molette = choisir une ligne (les lignes glissent avec un
+// ressort) ; appui = modifier (molette = valeur, enregistrée aussitôt), appui = terminer. Lignes "Mise à jour", "Oublier" / "Tout effacer" : premier appui = confirmation, second = action.
 #include "pages.h"
+#include "../anim.h"
 #include "../ble_phone.h"
 #include "../display.h"
 #include "../ota.h"
 #include "../settings.h"
+#include "../ui.h"
 #include "../webui.h"
 
 enum { IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_HAPTIC, IT_VALUES,
@@ -76,14 +78,14 @@ static void setOpt(int it, int i) {
 static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
-    case IT_HAPTIC: snprintf(b, n, "%s", i ? "on" : "off"); break;
-    case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "full" : i == NOTIF_SENDER ? "sender" : "off"); break;
+    case IT_HAPTIC: snprintf(b, n, "%s", i ? "On" : "Off"); break;
+    case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "Full" : i == NOTIF_SENDER ? "Sender" : "Off"); break;
     case IT_ACCENT: snprintf(b, n, "%s", ACCENT_NAMES[i]); break;
-    case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "auto (night)" : "auto (day)") : i ? "night" : "day"); break;
+    case IT_MODE: snprintf(b, n, "%s", i == 2 ? (settingsNight() ? "Auto (night)" : "Auto (day)") : i ? "Night" : "Day"); break;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: snprintf(b, n, "%d:00", i); break;
     case IT_ENC: snprintf(b, n, "%d pulse%s", i + 1, i ? "s" : ""); break;
-    case IT_DIM: if (DIM_OPTS[i]) snprintf(b, n, "%u s", DIM_OPTS[i]); else snprintf(b, n, "never"); break;
-    case IT_SLEEP: if (SLEEP_OPTS[i]) snprintf(b, n, "%u min", SLEEP_OPTS[i]); else snprintf(b, n, "never"); break;
+    case IT_DIM: if (DIM_OPTS[i]) snprintf(b, n, "%u s", DIM_OPTS[i]); else snprintf(b, n, "Never"); break;
+    case IT_SLEEP: if (SLEEP_OPTS[i]) snprintf(b, n, "%u min", SLEEP_OPTS[i]); else snprintf(b, n, "Never"); break;
     case IT_BRI_DAY: snprintf(b, n, "%u %%", BRI_DAY_OPTS[i]); break;
     default: snprintf(b, n, "%u %%", BRI_NIGHT_OPTS[i]); break;
   }
@@ -99,55 +101,47 @@ static int itemCount() {
   return IT_DEV0 + (bonds ? bonds + 1 : 1);
 }
 
-static bool draw(float) {
-  const int c = 120;
+static Spring scrollS;
+
+static PickRow rowAt(int i, int bonds, const std::string& peer) {
+  PickRow r;
+  char val[40];
+  if (i < IT_VALUES) {
+    r.label = LABELS[i];
+    valueText(i, val, sizeof(val));
+    r.value = val;
+  } else if (i == IT_UPDATE) {  // partage de connexion enregistré (choisi à la molette ou depuis le web flasher)
+    std::string ssid, pass;
+    r.label = "Update";
+    r.value = wifiLoad(ssid, pass) ? ssid : "Wi-Fi\xE2\x80\xA6";
+  } else if (i == IT_WEBUI) {  // réglages, image de démarrage... depuis le navigateur du téléphone
+    r.label = "Web UI";
+    r.value = "Phone";
+  } else if (!bonds) {
+    r.label = "Devices";
+    r.value = "None";
+  } else if (i - IT_DEV0 < bonds) {  // un appareil appairé
+    std::string a = NimBLEDevice::getBondedAddress(i - IT_DEV0).toString(), name = bondName(a);
+    r.label = "Forget";
+    r.value = name.empty() ? a.substr(9) : name;
+    if (a == peer) r.valueColor = UI_POSITIVE;  // appareil connecté
+  } else {
+    r.label = "Erase all";
+    snprintf(val, sizeof(val), "%d device%s", bonds, bonds > 1 ? "s" : "");
+    r.value = val;
+  }
+  return r;
+}
+
+static bool draw(float dt) {
   int n = itemCount(), bonds = NimBLEDevice::getNumBonds();
   if (sel >= n) sel = n - 1;
   std::string peer = connectedPeer();
-  canvas.setFont(&fonts::efontJA_16);
-  canvas.setTextDatum(middle_center);
-  canvas.setTextColor(TFT_WHITE);
-  canvas.drawString("Settings", c, 26);
-  for (int i = sel - 2; i <= sel + 2; i++) {  // 5 lignes : au-delà, l'écran rond est trop étroit
-    if (i < 0 || i >= n) continue;
-    int y = 118 + (i - sel) * 28;
-    int room = textSpace(y, 16, 114) - 6;  // largeur de chaque colonne à cette hauteur
-    bool cur = i == sel;
-    char val[40];
-    std::string label;
-    bool live = false;
-    if (i < IT_VALUES) {
-      label = LABELS[i];
-      valueText(i, val, sizeof(val));
-    } else if (i == IT_UPDATE) {  // partage de connexion enregistré (choisi à la molette ou depuis le web flasher)
-      std::string ssid, pass;
-      label = "Update";
-      snprintf(val, sizeof(val), "%s", wifiLoad(ssid, pass) ? ssid.c_str() : "choose Wi-Fi");
-    } else if (i == IT_WEBUI) {  // réglages, image de démarrage... depuis le navigateur du téléphone
-      label = "Web UI";
-      snprintf(val, sizeof(val), "phone");
-    } else if (!bonds) {
-      label = "Devices";
-      snprintf(val, sizeof(val), "none");
-    } else if (i - IT_DEV0 < bonds) {  // un appareil appairé
-      std::string a = NimBLEDevice::getBondedAddress(i - IT_DEV0).toString(), name = bondName(a);
-      label = "Forget";
-      live = a == peer;  // appareil connecté : nom en vert
-      snprintf(val, sizeof(val), "%s", (name.empty() ? a.substr(9) : name).c_str());
-    } else {
-      label = "Erase all";
-      snprintf(val, sizeof(val), "%d device%s", bonds, bonds > 1 ? "s" : "");
-    }
-    if (cur && confirming) snprintf(val, sizeof(val), "confirm?");
-    if (cur) canvas.fillRoundRect(16, y - 13, 208, 26, 8, 0x2104);
-    canvas.setTextDatum(middle_right);
-    canvas.setTextColor(cur ? TFT_WHITE : 0x8410);
-    canvas.drawString(fit(label, room).c_str(), c - 4, y);
-    canvas.setTextDatum(middle_left);
-    canvas.setTextColor(cur && (editing || confirming) ? accent() : live ? 0x07E8 : cur ? TFT_WHITE : 0x8410);
-    canvas.drawString(fit(val, room).c_str(), c + 4, y);
-  }
-  return false;
+  bool moving = scrollS.step(sel, dt, 280, 26);
+  bool danger = confirming && sel >= IT_DEV0 && (bonds == 0 || sel - IT_DEV0 >= bonds);
+  PickState st = editing ? PICK_EDIT : danger ? PICK_DANGER : confirming ? PICK_CONFIRM : PICK_BROWSE;
+  uiPicker("Settings", n, scrollS.x, [&](int i) { return rowAt(i, bonds, peer); }, st);
+  return moving;
 }
 
 static void wheel(int detents) {
