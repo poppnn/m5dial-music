@@ -7,6 +7,7 @@
 #include "config.h"
 #include "display.h"
 #include "settings.h"
+#include "ui.h"
 
 bool bootShown = true;
 bool bootSkipped = false;
@@ -55,11 +56,9 @@ bool updateBacklight(uint32_t now, float dt) {
 // WAKE rallume. Sur USB le courant reste : M5Unified passe en veille profonde (débrancher/rebrancher pour relancer).
 // Le bouton du M5Dial (GPIO42) n'est pas une broche RTC : il ne peut pas réveiller une veille profonde.
 void shutdown(const char* msg) {
-  canvas.fillScreen(TFT_BLACK);
-  canvas.setTextDatum(middle_center);
-  canvas.setFont(&fonts::efontJA_24);
-  canvas.setTextColor(TFT_WHITE);
-  canvas.drawString(msg, 120, 120);
+  uiAlpha = 1;
+  uiBackground();
+  uiText(msg, 120, 120, F_TITLE, UI_INK);
   frameShift = 0;
   M5Dial.Display.setBrightness(settingsBacklight());
   pushFrame();

@@ -1,6 +1,8 @@
-// Page Musique : arc de progression, titre / artiste (iPhone), anneau de volume, heure. Sans téléphone (pages ouvertes
-// depuis l'écran de démarrage) : "No phone".
-// iPhone : icônes aléatoire / répétition (tap dessus = changer), tap ailleurs = lecture / pause.
+// Page Musique (design M5Dial Fluid) : arc de progression en dégradé avec son bouton, heure, légende (NOW PLAYING /
+// PAUSED), titre et artiste qui glissent au changement de piste, rangée de transport (précédent, lecture / pause
+// dans un disque d'accent, suivant), temps écoulé et restant, aléatoire et répétition (iPhone).
+// Sans téléphone (pages ouvertes depuis l'écran de démarrage) : "Waiting for phone".
+// Voile du volume (toutes les pages où la molette règle le volume) : la page s'assombrit, grand arc blanc et chiffre.
 #include <algorithm>
 #include "pages.h"
 #include "../anim.h"
@@ -9,14 +11,20 @@
 #include "../clock.h"
 #include "../display.h"
 #include "../settings.h"
+#include "../ui.h"
 
-#define SHUF_X        92   // icônes aléatoire / répétition, en bas de l'écran
-#define REP_X         148
-#define ICON_Y        204
+#define TRANSPORT_Y 160
+#define PREV_X      74
+#define NEXT_X      166
+#define ICON_Y      216   // aléatoire / répétition
+#define SHUF_X      100
+#define REP_X       140
 
 static Media m;
-static float el = 0, arcTarget = 0, arcShown = 0, arcLag = 0, volShown = 0;
+static float el = 0, arcTarget = 0, arcShown = 0, arcLag = 0;
 static uint32_t volUntil = 0;
+static Spring volS, volA;
+static bool volMoving = false;
 static std::string shownTitle, shownArtist;
 
 void musicTick(float dt, uint32_t now) {
@@ -25,39 +33,20 @@ void musicTick(float dt, uint32_t now) {
   if (m.duration > 0 && el > m.duration) el = m.duration;
   arcTarget = m.duration > 0 ? el / m.duration : 0;
   // Seuls les sauts (piste suivante, avance rapide : > 1 % d'un coup) sont lissés : l'arc part de son ancienne
-  // position et rattrape. La lecture normale est suivie directement : lissée, elle laissait l'arc en retard et
-  // relançait les 60 images/s par à-coups pendant toute la lecture.
-  // shortcut: piste < 25 s, chaque image au repos (250 ms) avance de > 1 % et compte comme un saut (60 images/s) ;
-  // seuil à rapporter à la durée de la piste si ça gêne.
+  // position et rattrape. La lecture normale est suivie directement (sinon l'arc reste en retard et relance les
+  // 60 images/s par à-coups pendant toute la lecture).
   static float prevTarget = 0;
   if (fabsf(arcTarget - prevTarget) > 0.01f) arcLag -= arcTarget - prevTarget;
   prevTarget = arcTarget;
   arcLag *= 1 - smoothK(dt, ARC_TAU_S);
   if (fabsf(arcLag) < 0.004f) arcLag = 0;
   arcShown = arcTarget + arcLag;
-  if (m.volume >= 0) volShown += (m.volume - volShown) * smoothK(dt, VOL_TAU_S);
+  bool show = (int32_t)(volUntil - now) > 0 && m.volume >= 0;
+  if (m.volume >= 0 && !volA.x) volS.x = m.volume;  // voile fermé : le chiffre part de la valeur actuelle
+  volMoving = volA.step(show ? 1.f : 0.f, dt, 300, 30);
+  if (m.volume >= 0) volMoving |= volS.step(m.volume, dt, 320, 28);
+  if (volA.x < 0.003f && !show) volA.x = 0;
   if (!slideOutPhase) { shownTitle = m.title; shownArtist = m.artist; }  // ancien texte figé pendant la sortie
-}
-
-// Aléatoire : deux flèches croisées. Répétition : boucle fléchée, "1" pour répéter le morceau.
-static void drawShuffle(int x, int y, uint16_t col) {
-  canvas.drawWideLine(x - 9, y - 5, x + 6, y + 5, 1.5f, col);
-  canvas.drawWideLine(x - 9, y + 5, x + 6, y - 5, 1.5f, col);
-  canvas.fillTriangle(x + 10, y - 5, x + 5, y - 9, x + 5, y - 1, col);
-  canvas.fillTriangle(x + 10, y + 5, x + 5, y + 1, x + 5, y + 9, col);
-}
-
-static void drawRepeat(int x, int y, uint16_t col, bool one) {
-  canvas.drawRoundRect(x - 10, y - 7, 20, 14, 5, col);
-  canvas.drawRoundRect(x - 9, y - 6, 18, 12, 4, col);
-  canvas.fillRect(x - 2, y - 8, 4, 4, TFT_BLACK);  // ouverture de la boucle, puis la flèche
-  canvas.fillTriangle(x + 3, y - 7, x - 2, y - 11, x - 2, y - 3, col);
-  if (one) {
-    canvas.setFont(&fonts::Font0);
-    canvas.setTextDatum(middle_center);
-    canvas.setTextColor(col);
-    canvas.drawString("1", x, y + 1);
-  }
 }
 
 void musicVolumePing() { volUntil = millis() + VOL_SHOW_MS; }
@@ -67,82 +56,73 @@ void volumeWheel(int detents) {
   if (detents) volPing = true;
 }
 
+float volumeAlpha() { return std::min(1.f, std::max(0.f, volA.x)); }
+bool volumeAnimating() { return volMoving || volA.x > 0; }
+
+void drawVolumeOverlay() {
+  float v = std::min(1.f, std::max(0.f, volS.x));
+  uiValueArc(v, solid(UI_INK), 10, true, UI_INK);
+  uiText("VOLUME", 120, 90, F_CAPTION, UI_INK3);
+  uiText(std::to_string((int)lroundf(v * 100)), 120, 124, F_DISPLAY, UI_INK);
+  uiText("turn to adjust", 120, 158, F_MICRO, UI_INK3);
+}
+
 static bool draw(float) {
   const int c = 120;
-  uint32_t now = millis();
-  canvas.fillArc(c, c, 119, 111, 0, 360, 0x2104);  // piste de fond de l'arc
-  if (arcShown > 0.002f) canvas.fillArc(c, c, 119, 111, -90, -90 + 360.f * arcShown, accent());
-
-  // Anneau de volume intérieur : visible 1,5 s après un changement, fondu au noir sur les 300 dernières ms
-  bool volVisible = (int32_t)(volUntil - now) > 0 && m.volume >= 0;
-  if (volVisible) {
-    float a = std::min(1.f, (volUntil - now) / 300.f);
-    canvas.fillArc(c, c, 106, 101, 0, 360, canvas.color565(30 * a, 30 * a, 34 * a));
-    if (volShown > 0.005f)
-      canvas.fillArc(c, c, 106, 101, -90, -90 + 360.f * volShown, canvas.color565(70 * a, 160 * a, 255 * a));
-  }
-  canvas.setTextDatum(middle_center);
-
   bool info = linkMode == LINK_AMS || (linkMode == LINK_HID && !m.title.empty());  // HID + Gadgetbridge / PC : titre
-  if (linkMode == LINK_NONE) {
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("No phone", c, 108);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(0xAD55);
-    canvas.drawString("Waiting for phone...", c, 140);
-  } else if (linkMode == LINK_HID && !info) {
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString("Connected", c, 108);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(0xAD55);
-    canvas.drawString("Remote control", c, 140);
-  } else if (info) {
-    if (m.playing) {  // icône lecture / pause
-      canvas.fillRect(c - 9, 52, 6, 18, TFT_WHITE);
-      canvas.fillRect(c + 3, 52, 6, 18, TFT_WHITE);
-    } else {
-      canvas.fillTriangle(c - 7, 52, c - 7, 70, c + 9, 61, TFT_WHITE);
-    }
-    int x = c + (int)slideOff;
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(fit(shownTitle.empty() ? "—" : shownTitle, 190).c_str(), x, 105);
-    canvas.setFont(&fonts::efontJA_16);
-    canvas.setTextColor(0xAD55);
-    canvas.drawString(fit(shownArtist, 170).c_str(), x, 137);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(mmss(el) + " / " + mmss(m.duration), c, 178);
-    if (m.shuffle >= 0) drawShuffle(SHUF_X, ICON_Y, m.shuffle ? accent() : 0x4208);
-    if (m.repeat >= 0) drawRepeat(REP_X, ICON_Y, m.repeat ? accent() : 0x4208, m.repeat == 1);
-  }
+  uiValueArc(linkMode == LINK_NONE ? 0 : arcShown, GRAD, 6, linkMode != LINK_NONE);
   tm t;
-  if (clockNow(t)) {  // en haut, au-dessus de l'icône lecture / pause : blanc et en 24 px pour se lire d'un coup d'œil
+  if (clockNow(t)) {
     char hm[8];
     snprintf(hm, sizeof(hm), "%02d:%02d", t.tm_hour, t.tm_min);
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextDatum(middle_center);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(hm, c, 31);
+    uiText(hm, c, 40, F_BODY, UI_INK2);
   }
-  return volVisible || arcLag;
+  if (linkMode == LINK_NONE) {
+    uiText("NO PHONE", c, 92, F_CAPTION, UI_INK3);
+    uiText("Waiting for phone", c, 118, F_TITLE, UI_INK);
+    uiText("Other pages still work", c, 142, F_BODY, UI_INK3);
+    return arcLag;
+  }
+  const char* cap = !info ? "REMOTE CONTROL" : m.playing ? "NOW PLAYING" : "PAUSED";
+  uiText(cap, c, 68, F_CAPTION, info && m.playing ? rgb565(ACCENT_RGB[settings.accent][0]) : UI_INK3);
+  float keep = uiAlpha;
+  uiAlpha *= slideAlpha;  // titre et artiste s'effacent en glissant
+  int off = (int)slideOff;
+  uiText(info ? uiFit(shownTitle.empty() ? "—" : shownTitle, 178, F_TITLE) : "Connected", c + off, 96, F_TITLE, UI_INK);
+  uiText(info ? uiFit(shownArtist, 160, F_BODY) : "Android / PC", c + off * 4 / 5, 120, F_BODY, UI_INK2);
+  uiAlpha = keep;
+  uiSkip(PREV_X, TRANSPORT_Y, -1, UI_INK2);
+  uiDisc(c, TRANSPORT_Y, 23, GRAD);
+  if (m.playing) uiPause(c, TRANSPORT_Y, UI_ON_ACCENT); else uiPlay(c + 2, TRANSPORT_Y, UI_ON_ACCENT);
+  uiSkip(NEXT_X, TRANSPORT_Y, 1, UI_INK2);
+  if (info && m.duration > 0) {
+    std::string tt = std::string(mmss(el).c_str()) + "  \xC2\xB7  -" + mmss(m.duration - el).c_str();
+    uiText(tt, c, 196, F_MICRO, UI_INK3);
+  }
+  uint16_t on = rgb565(ACCENT_RGB[settings.accent][0]);
+  if (linkMode == LINK_AMS && m.shuffle >= 0) uiShuffle(SHUF_X, ICON_Y, m.shuffle ? on : UI_INK4);
+  if (linkMode == LINK_AMS && m.repeat >= 0) uiRepeat(REP_X, ICON_Y, m.repeat ? on : UI_INK4, m.repeat == 1);
+  return arcLag;
 }
 
 static void click() { sendCmd(CMD_TOGGLE); }
 
-static bool near(int x, int y, int cx) { return abs(x - cx) < 22 && abs(y - ICON_Y) < 20; }
-
-static void tap(int x, int y, uint8_t) {
-  Media cur = mediaSnapshot();
-  if (linkMode == LINK_AMS && cur.shuffle >= 0 && near(x, y, SHUF_X)) { sendCmd(CMD_SHUFFLE); return; }
-  if (linkMode == LINK_AMS && cur.repeat >= 0 && near(x, y, REP_X)) { sendCmd(CMD_REPEAT); return; }
-  click();  // tout de suite : plus d'attente d'un double tap
-}
-
 static void swipeX(int dir) {
   sendCmd(dir < 0 ? CMD_NEXT : CMD_PREV);  // vers la gauche = suivante (comme un carrousel)
   startSlide(dir, false);
+}
+
+static void tap(int x, int y, uint8_t) {
+  if (linkMode != LINK_NONE && abs(y - TRANSPORT_Y) < 24) {  // rangée de transport
+    if (abs(x - PREV_X) < 22) { swipeX(+1); return; }
+    if (abs(x - NEXT_X) < 22) { swipeX(-1); return; }
+  }
+  Media cur = mediaSnapshot();
+  if (linkMode == LINK_AMS && abs(y - ICON_Y) < 16) {
+    if (cur.shuffle >= 0 && abs(x - SHUF_X) < 18) { sendCmd(CMD_SHUFFLE); return; }
+    if (cur.repeat >= 0 && abs(x - REP_X) < 18) { sendCmd(CMD_REPEAT); return; }
+  }
+  click();  // tout de suite : plus d'attente d'un double tap
 }
 
 extern const PageOps musicPage = {draw, volumeWheel, click, swipeX, tap};

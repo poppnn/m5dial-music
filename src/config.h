@@ -32,13 +32,15 @@
 // Animations
 #define ARC_TAU_S      0.25f  // l'arc de progression rejoint sa valeur en douceur
 #define VOL_TAU_S      0.12f
-#define VOL_SHOW_MS    1500
-#define SLIDE_OUT_MS   200
-#define SLIDE_IN_MS    280
+#define VOL_SHOW_MS    1400   // voile du volume : affiché après le dernier cran
+#define SLIDE_OUT_MS   160
+#define SLIDE_IN_MS    400
+#define SLIDE_PX       90.f   // distance du glissement du titre
 #define COLOR_TAU_S    0.18f  // fondu de la couleur de l'anneau LED
-#define POP_MS         380    // rebond de la pastille de couleur
-#define PAGE_OUT_MS    170    // glissement vertical entre pages : sortie puis entrée
-#define PAGE_IN_MS     280
+#define POP_MS         450    // rebond de la pastille de couleur
+#define PAGE_OUT_MS    160    // changement de page : la page part (36 px, s'efface)...
+#define PAGE_IN_MS     300    // ... puis la suivante monte de 44 px en apparaissant, avec un léger rebond
+#define DOTS_MS        1600   // points de page visibles après un changement de page
 #define FADE_MS        300    // fondu écran de démarrage <-> interface (sortie puis entrée)
 #define LINK_IN_MS     350    // connexion : l'arc qui tourne se resserre en cercle vers le centre...
 #define LINK_ANIM_MS   800    // ... puis éclate en pastille de validation, avant le fondu vers l'interface

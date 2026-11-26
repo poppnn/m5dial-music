@@ -36,6 +36,7 @@
 #include "clock.h"
 #include "settings.h"
 #include "text.h"
+#include "ui.h"
 #include "pages/pages.h"
 
 volatile bool dirty = true;
@@ -50,31 +51,42 @@ void haptic(int dir) {
   if (settings.haptic) M5Dial.Speaker.tone(dir < 0 ? 7000 : dir > 0 ? 6000 : 2000, 20);
 }
 
-// Changement de page : tout l'écran glisse verticalement (sortie easeIn, puis entrée easeOut), la page
-// bascule à mi-parcours. Le décalage est appliqué au moment de l'envoi (pushFrame), sans 2e tampon d'image.
-static int pageDir = 0;  // -1 = le contenu part vers le haut, +1 vers le bas, 0 = aucun glissement
+// Changement de page (design M5Dial Fluid) : la page part de 36 px en s'effaçant, puis la suivante monte de 44 px en
+// apparaissant, avec un léger rebond. Le décalage est appliqué au moment de l'envoi (pushFrame), sans 2e tampon
+// d'image ; l'effacement passe par uiAlpha (couleurs mêlées au fond). Les points de page s'affichent DOTS_MS.
+static int pageDir = 0;  // -1 = le contenu part vers le haut, +1 vers le bas, 0 = aucun changement
 static bool pageFlipped = false;
-static uint32_t pageStart = 0;
+static uint32_t pageStart = 0, dotsUntil = 0;
+static float pageAlpha = 1;
 
 static void startPageSlide(int dir) {
   if (pageDir) return;
   pageDir = dir;
   pageFlipped = false;
   pageStart = millis();
+  dotsUntil = pageStart + PAGE_OUT_MS + PAGE_IN_MS + DOTS_MS;
 }
 
 static float pageOffset(uint32_t now) {
+  pageAlpha = 1;
   if (!pageDir) return 0;
   uint32_t t = now - pageStart;
-  if (t < PAGE_OUT_MS) return pageDir * 240.f * easeInCubic(t / (float)PAGE_OUT_MS);
+  if (t < PAGE_OUT_MS) {
+    float e = easeInCubic(t / (float)PAGE_OUT_MS);
+    pageAlpha = 1 - e;
+    return pageDir * 36.f * e;
+  }
   if (!pageFlipped) {
     pageFlipped = true;
     pagePos = (pagePos + (pageDir < 0 ? 1 : PAGE_COUNT - 1)) % PAGE_COUNT;  // vers le haut = page suivante
     page = (Page)settings.pageOrder[pagePos];
     goveeRetry = 0;  // cherche les LED tout de suite
   }
-  if (t < PAGE_OUT_MS + PAGE_IN_MS)
-    return -pageDir * 240.f * (1.f - easeOutCubic((t - PAGE_OUT_MS) / (float)PAGE_IN_MS));
+  if (t < PAGE_OUT_MS + PAGE_IN_MS) {
+    float q = (t - PAGE_OUT_MS) / (float)PAGE_IN_MS;
+    pageAlpha = easeOutCubic(std::min(1.f, q * 1.4f));
+    return -pageDir * 44.f * (1.f - easeOutBackK(q, 1.1f));
+  }
   pageDir = 0;
   return 0;
 }
@@ -83,15 +95,16 @@ static float pageOffset(uint32_t now) {
 static bool draw(float dt) {
   uint32_t now = millis();
   updateSlide(now);
-  musicTick(dt, now);  // l'arc et les titres suivent même hors de la page Musique
-  canvas.fillScreen(TFT_BLACK);
+  musicTick(dt, now);  // l'arc, les titres et le volume suivent même hors de la page Musique
   updateFade(now);
   bool dimming = updateBacklight(now, dt);
-  frameShift = bootShown ? 0 : pageOffset(now);  // avant de dessiner : la page bascule à mi-glissement
+  uiAlpha = 1;
+  frameShift = bootShown ? 0 : pageOffset(now);  // avant de dessiner : la page bascule à mi-transition
   if (bootShown) {
+    uiBackground();
     drawBoot(now);
     pushFrame();
-    return true;  // spinner animé en continu
+    return true;  // logo animé en continu
   }
   std::string caller;
   if (ancsCall(caller)) {  // appel entrant : prioritaire sur toutes les pages
@@ -100,10 +113,25 @@ static bool draw(float dt) {
     pushFrame();
     return true;
   }
+  // Voile du volume (pages où la molette règle le volume) et carte de notification : la page dessous s'assombrit.
+  float va = PAGES[page]->wheel == volumeWheel ? volumeAlpha() : 0;
+  float under = pageAlpha * (1 - 0.96f * va) * (1 - 0.8f * toastScrim(now));
+  uiAlpha = under;
+  uiBackground();
   bool anim = PAGES[page]->draw(dt);
+  float dots = std::min(1.f, std::max(0, (int32_t)(dotsUntil - now)) / 400.f);
+  if (dots > 0) {
+    uiAlpha = under * dots;
+    uiPageDots(PAGE_COUNT, pagePos);
+  }
+  if (va > 0.01f) {
+    uiAlpha = pageAlpha * va;
+    drawVolumeOverlay();
+  }
+  uiAlpha = 1;
   anim |= drawToast(now);
   pushFrame();
-  return anim || dimming || fadeStart || slideDir || pageDir;
+  return anim || dimming || fadeStart || slideDir || pageDir || dots > 0 || volumeAnimating();
 }
 
 void setup() {
@@ -136,6 +164,7 @@ void setup() {
 
   M5Dial.Speaker.setVolume(255);  // pleine puissance, comme le firmware d'usine
   displayInit();  // buffers d'affichage AVANT le BLE : blocs contigus en SRAM interne
+  uiInit();       // polices Manrope (tables de glyphes en RAM, images en flash)
   bootAnimInit();
   startBle();
   goveeInit();
