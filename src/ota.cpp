@@ -10,6 +10,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Update.h>
+#include <esp_ota_ops.h>
 #include <NimBLEDevice.h>
 #include "ota.h"
 #include "ota_roots.h"
@@ -271,42 +272,62 @@ void otaRun() {
   client.setCACert(OTA_ROOTS);
   HTTPClient http;
   http.setTimeout(READ_TIMEOUT_MS);
+  http.setReuse(false);  // la connexion de la version est fermée (et sa mémoire TLS rendue) avant le téléchargement
   show("Checking", "Latest version...");
   if (!http.begin(client, OTA_BASE "version.txt")) finish("Error", "Bad address");
   int code = http.GET();
   if (code != HTTP_CODE_OK) finish("Error", "Version: " + std::string(code < 0 ? "no connection" : "HTTP " + std::to_string(code)));
   String v = http.getString();
   http.end();
+  client.stop();
   v.trim();
   if (v.isEmpty() || v.length() > 40) finish("Error", "Bad version file");
   std::string ver = "v" + std::string(v.c_str());
   if (v == FW_VERSION) finish("Up to date", ver);
 
+  // Emplacement et tampon d'écriture (4 Ko) réservés AVANT la connexion TLS du téléchargement : pendant qu'elle est
+  // ouverte (~45 Ko), sans PSRAM, ces 4 Ko pouvaient manquer ("No room for the firmware"). Taille exacte inconnue
+  // ici : l'emplacement entier, ramené à ce qui a été reçu par Update.end(true).
+  const esp_partition_t* slot = esp_ota_get_next_update_partition(nullptr);
+  if (!slot) finish("Error", "No update slot", "Install once over USB (web flasher)", 5000);
+  if (!Update.begin(UPDATE_SIZE_UNKNOWN))
+    finish("Error", std::string("Update: ") + Update.errorString(),
+           std::to_string(heap_caps_get_largest_free_block(MALLOC_CAP_8BIT) / 1024) + " KB free", 5000);
   show("Downloading", ver, 0);
-  if (!http.begin(client, OTA_BASE OTA_FILE)) finish("Error", "Bad address");
+  if (!http.begin(client, OTA_BASE OTA_FILE)) { Update.abort(); finish("Error", "Bad address"); }
   code = http.GET();
-  if (code != HTTP_CODE_OK) finish("Error", "Firmware: HTTP " + std::to_string(code));
-  int len = http.getSize();
-  if (len <= 0 || !Update.begin(len)) finish("Error", "No room for the firmware");
+  if (code != HTTP_CODE_OK) {
+    Update.abort();
+    finish("Error", "Firmware: " + std::string(code < 0 ? "no connection" : "HTTP " + std::to_string(code)));
+  }
+  int len = http.getSize();  // -1 : le serveur n'a pas donné la taille, on lit jusqu'à la fin de la connexion
+  if (len > (int)slot->size) { Update.abort(); finish("Error", "Firmware too big", std::to_string(len / 1024) + " KB"); }
   WiFiClient* s = http.getStreamPtr();
   static uint8_t buf[4096];
   int got = 0;
   uint32_t last = millis(), shown = 0;
-  while (got < len) {
+  while (len < 0 || got < len) {
     size_t avail = s->available();
     if (!avail) {
+      if (len < 0 && !s->connected()) break;  // taille inconnue : fin du fichier = connexion fermée
       if (millis() - last > READ_TIMEOUT_MS) { Update.abort(); finish("Error", "Download cut"); }
       delay(2);
       continue;
     }
     int n = s->readBytes(buf, min<size_t>(avail, sizeof(buf)));
-    if (n <= 0 || Update.write(buf, n) != (size_t)n) { Update.abort(); finish("Error", "Flash write"); }
+    if (n <= 0 || got + n > (int)slot->size || Update.write(buf, n) != (size_t)n) {
+      Update.abort();
+      finish("Error", "Flash write");
+    }
     got += n;
     last = millis();
-    if (last - shown > 150) { show("Downloading", ver, got / (float)len); shown = last; }
+    if (last - shown > 150) {
+      show("Downloading", ver, len > 0 ? got / (float)len : -1, len > 0 ? "" : std::to_string(got / 1024) + " KB");
+      shown = last;
+    }
   }
   http.end();
   // Vérifie l'image (en-tête, empreinte SHA-256) avant de la rendre démarrable : une image abîmée n'est jamais lancée
-  if (!Update.end(true)) finish("Error", Update.errorString());
+  if (!got || !Update.end(true)) { Update.abort(); finish("Error", got ? Update.errorString() : "Empty download"); }
   finish("Updated", ver + ", restarting");
 }
