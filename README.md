@@ -153,13 +153,12 @@ edge (0.8 s), and a fade leads to the UI. The Bluetooth setup (GATT discovery) r
 the screen never freezes.
 
 **Boot image or GIF from the browser** (no build needed): on https://poppnn.github.io/m5dial-music/, section 6, pick a
-picture or an animated GIF (up to 300 frames), pick the **size**: **inside the ring** (default: cropped round,
-212 px, a black gap keeps it off the spinning ring) or **full screen** (the ring drawn over it), then "Send to the
-M5Dial" with the M5Dial on USB-C (Chrome or Edge: Web Serial), or send it from the Web UI. The page decodes the GIF
+picture or an animated GIF (up to 300 frames), then "Send to the M5Dial" with the M5Dial on USB-C (Chrome or Edge: Web Serial), or send it from the Web UI. The page decodes the GIF
 itself (it does not rely on the browser: Safari and Firefox work too), turns it into JPEG frames, lowers the JPEG
 quality and then the frame count by itself if it does not fit, and the M5Dial stores them in its own flash partition
 (`bootanim`, 1.9 MB, `partitions.csv`: the rest holds two 3 MB app slots for the over-the-air update); it is then
-shown while waiting for the phone. "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
+shown full screen **in the background** while waiting for the phone: the spinning ring and the text are drawn over
+it (no cropping needed). "Remove the boot image" goes back to the logo. This needs firmware 1.1 or later
 installed with the web flasher's full install (it adds the partition; settings are kept).
 
 To build your own logo into the firmware instead (PNG or BMP, ideally on a transparent or black background):
