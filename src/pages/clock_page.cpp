@@ -3,8 +3,6 @@
 #include "../ble_phone.h"
 #include "../clock.h"
 #include "../display.h"
-#include "../imu.h"
-#include "../sensors.h"
 #include "../settings.h"
 
 static const char* DAYS[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -36,13 +34,6 @@ static bool draw(float) {
   canvas.setFont(&fonts::efontJA_16);
   canvas.setTextColor(0xAD55);
   canvas.drawString(b, c, 160);
-  float temp = sensors().temp;  // ENV III ou baromètre de l'IMU Pro Mini, sinon la puce de l'IMU ; sans capteur, rien
-  if (!isnan(temp) || imuTemp(temp)) {
-    snprintf(b, sizeof(b), "%.0f°C", temp);
-    canvas.setFont(&fonts::efontJA_24);
-    canvas.setTextColor(TFT_WHITE);
-    canvas.drawString(b, c, 54);
-  }
   return false;  // 4 images/s au repos suffisent pour l'anneau des secondes
 }
 

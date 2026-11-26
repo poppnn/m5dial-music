@@ -35,6 +35,9 @@
   #ba-prev { width:160px; height:160px; border-radius:50%; background:#000; border:6px solid var(--line); display:block; }
   #ba-prog { width:100%; height:8px; accent-color:var(--accent); }
   input[type=file] { font:inherit; max-width:100%; }
+  label.fit { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; }
+  label.fit select { font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:10px;
+          padding:8px 10px; min-height:44px; max-width:100%; }
   fieldset.fw { border:0; padding:0; margin:0 0 14px; display:flex; flex-wrap:wrap; gap:8px; }
   fieldset.fw legend { padding:0; margin-bottom:8px; font-weight:600; }
   fieldset.fw label { display:flex; align-items:center; gap:8px; min-height:44px; padding:0 14px; border:1px solid var(--line);
@@ -91,11 +94,11 @@
       <li>iPhone: tap the icons at the bottom = shuffle / repeat, tap elsewhere = play / pause</li>
       <li>Incoming call (iPhone, Android with Gadgetbridge): tap the green button = answer, the red one = decline (or press / hold the wheel)</li>
       <li>Notification: app name and sender (contact in messaging apps), message text optional · press / tap / swipe = close</li>
-      <li>Swipe up or down: Music, LED, Stopwatch, Clock, Sensors, System and Settings pages</li>
+      <li>Swipe up or down: Music, LED, Stopwatch, Clock, System and Settings pages (order set in the Web UI)</li>
+      <li>No phone connected: press, tap or swipe the waiting screen to open the pages anyway (LEDs, stopwatch...)</li>
       <li>Stopwatch: press = start / pause, swipe left or right = reset</li>
-      <li>Clock: time, date and cabin temperature (with a sensor unit)</li>
-      <li>Sensors: temperature, humidity, pressure and altitude from the M5Stack ENV III and IMU Pro Mini units (Port A or B, found at power on)</li>
-      <li>Settings: turn = choose, press = edit then done: IMU direction, wheel, delays, day / night / auto brightness from the iPhone time, notifications (off / sender / full), accent colour, paired devices</li>
+      <li>Clock: time and date</li>
+      <li>Settings: turn = choose, press = edit then done: wheel, delays, day / night / auto brightness from the iPhone time, notifications (off / sender / full), accent colour, paired devices</li>
     </ul>
   </section>
 
@@ -123,7 +126,7 @@
       <li><a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/cache_factice.stl">cache_factice.stl</a> ×1 (dummy cap that clips into the left spoke's hole), peg on the bed, supports under the dome rim</li>
       <li>Optional fit check first: <a href="https://github.com/poppnn/m5dial-music/blob/main/hardware/support_volant_test.stl">support_volant_test.stl</a> (the two pads only)</li>
     </ul>
-    <p><strong>Hardware</strong>: LiPo 103450 (50 × 34 × 10 mm); per spoke (bottom and right) an M5 × 14 hex screw, an M5 × 20 fender washer (a plain washer drops into the hole) and an M5 nut. Or for the removable cartridge: a 16350 850 mAh cell per cartridge (from a JNR disposable puff) and 4 Dupont jumper ends (2 female, 2 male). Optional: M5Stack IMU Pro Mini (Port A) and ENV III (Port B), fixed where you like (no printed holders any more).</p>
+    <p><strong>Hardware</strong>: LiPo 103450 (50 × 34 × 10 mm); per spoke (bottom and right) an M5 × 14 hex screw, an M5 × 20 fender washer (a plain washer drops into the hole) and an M5 nut. Or for the removable cartridge: a 16350 850 mAh cell per cartridge (from a JNR disposable puff) and 4 Dupont jumper ends (2 female, 2 male).</p>
     <p><strong>Assembly</strong>:</p>
     <ol>
       <li>M5Dial into the ring from the top, clamp ring screwed on from underneath through the tube windows.</li>
@@ -137,11 +140,17 @@
 
   <section>
     <h2>6. Boot image or GIF (optional)</h2>
-    <p>Shown full screen while the M5Dial waits for the phone. Plug the M5Dial in over USB-C (firmware 1.1 or later, installed with the button above), pick a picture or an animated GIF, then send it.</p>
-    <input type="file" id="ba-file" accept="image/*" aria-label="Boot image or GIF">
+    <p>Shown while the M5Dial waits for the phone, inside the spinning ring or full screen. Plug the M5Dial in over USB-C (firmware 1.1 or later, installed with the button above), pick a picture or an animated GIF, then send it.</p>
+    <input type="file" id="ba-file" accept="image/*,.gif" aria-label="Boot image or GIF">
+    <label class="fit">Size
+      <select id="ba-fit">
+        <option value="1">Inside the ring (round, the spinning ring stays clear)</option>
+        <option value="0">Full screen (the ring on top)</option>
+      </select>
+    </label>
     <div class="row">
       <canvas id="ba-prev" width="240" height="240" aria-label="Preview on the round screen"></canvas>
-      <p class="muted" id="ba-info" aria-live="polite">Square crop, 240 × 240. Animated GIF: up to 300 frames.</p>
+      <p class="muted" id="ba-info" aria-live="polite">Square crop. Animated GIF: up to 300 frames, quality and frame count lowered by itself if it does not fit.</p>
     </div>
     <div class="row">
       <button class="btn" id="ba-send" disabled>Send to the M5Dial</button>
@@ -153,7 +162,7 @@
 
   <section>
     <h2>7. Wireless updates (optional)</h2>
-    <p><strong>Web UI from the phone</strong>: on the M5Dial, Settings → Web UI, press twice, pick the hotspot, then open the address it shows in the phone's browser: every setting, LEDs, hotspot, export / import of the config file, paired devices and the boot image, without a computer.</p>
+    <p><strong>Web UI from the phone</strong>: on the M5Dial, Settings → Web UI, press twice, pick the hotspot, then open the address it shows in the phone's browser: every setting, page order, LEDs, hotspot, export / import of the config file, paired devices and the boot image or GIF, without a computer.</p>
     <p>The M5Dial can update itself through your phone's hotspot, no computer needed: on the M5Dial, <strong>Settings → Update</strong>, press twice, pick your hotspot in the list and type its password with the wheel (turn = character, press = add, hold = done). It is saved for next time. Optional: you can also send the hotspot name and password from here over USB-C.</p>
     <div class="row">
       <input type="text" id="wf-ssid" maxlength="32" placeholder="Hotspot name" aria-label="Hotspot name" autocomplete="off">
@@ -169,10 +178,8 @@
     <ul>
       <li>Print and fit the new mount, battery shell and lid on the wheel.</li>
       <li>Check the Android firmware with Gadgetbridge and the Windows firmware with the PC app.</li>
-      <li>Fix the boot GIF upload error.</li>
       <li>Publish the print files on MakerWorld.</li>
       <li>Photos, then release v1.2.0 with the three firmwares.</li>
-      <li>Check the ENV III and IMU Pro Mini readings on the Sensors page.</li>
       <li>Later: ambient light sensor, battery level.</li>
     </ul>
   </section>
@@ -196,56 +203,108 @@
 <script>
   // Image / GIF de démarrage : découpée ici en images JPEG 240 x 240, puis envoyée au M5Dial par le port USB
   // (Web Serial). Format et protocole : src/bootanim.h et src/bootanim.cpp.
-  const W = 240, MAX_FRAMES = 300, CHUNK = 4096;
+  const CHUNK = 4096;
   const $ = id => document.getElementById(id);
   let frames = [], previewTimer = 0;
 
   function status(t) { $("ba-status").textContent = t; }
 
+  // Même code que la Web UI (src/webui_page.h) : décodeur GIF, recadrage, réduction jusqu'à tenir dans la partition.
+  // Image / GIF de démarrage -> images JPEG 240 x 240 (format M5BA, src/bootanim.h). round : recadrée en rond dans
+  // l'anneau de l'écran d'attente (sinon plein écran, l'anneau par-dessus). GIF décodé ici (Safari et Firefox n'ont
+  // pas toujours ImageDecoder) ; autres formats animés : ImageDecoder s'il existe, sinon la première image. Qualité JPEG
+  // puis nombre d'images réduits jusqu'à tenir dans cap octets.
+  function lzw(d,min,n){const out=new Uint8Array(n),pre=new Uint16Array(4096),suf=new Uint8Array(4096),st=new Uint8Array(4097),clr=1<<min;
+   for(let i=0;i<clr;i++)suf[i]=i;let size=min+1,mask=(1<<size)-1,avail=clr+2,old=-1,first=0,bits=0,acc=0,di=0,op=0;
+   while(op<n){while(bits<size){if(di>=d.length)return out;acc|=d[di++]<<bits;bits+=8}
+    let c=acc&mask;acc>>>=size;bits-=size;
+    if(c===clr){size=min+1;mask=(1<<size)-1;avail=clr+2;old=-1;continue}
+    if(c===clr+1)break;
+    if(old<0){if(c>clr)break;out[op++]=first=c;old=c;continue}
+    const cur=c;let sp=0;if(c>avail)break;
+    if(c===avail){st[sp++]=first;c=old}
+    while(c>=clr){st[sp++]=suf[c];c=pre[c]}
+    first=c;st[sp++]=c;
+    if(avail<4096){pre[avail]=old;suf[avail]=first;avail++;if(!(avail&mask)&&avail<4096){size++;mask+=avail}}
+    old=cur;while(sp&&op<n)out[op++]=st[--sp]}
+   return out}
+  // Images complètes du GIF (pixels RGBA W x H, partagés : à utiliser avant l'image suivante), durée en ms.
+  function* gifFrames(v){const sig=String.fromCharCode(...v.subarray(0,6));if(sig!=="GIF87a"&&sig!=="GIF89a")throw new Error("not a GIF");
+   const W=v[6]|v[7]<<8,H=v[8]|v[9]<<8;if(!W||!H||W*H>16e6)throw new Error("GIF size");
+   let p=13,gct=null,ms=100,tr=-1,disp=0;if(v[10]&128){gct=v.subarray(p,p+(3<<((v[10]&7)+1)));p+=gct.length}
+   const pix=new Uint8ClampedArray(W*H*4),skip=()=>{while(p<v.length&&v[p])p+=v[p]+1;p++};
+   while(p<v.length){const b=v[p++];if(b===0x3B)break;
+    if(b===0x21){if(v[p]===0xF9&&v[p+1]>=4){const k=v[p+2];disp=k>>2&7;ms=(v[p+3]|v[p+4]<<8)*10;tr=k&1?v[p+5]:-1}p++;skip();continue}
+    if(b!==0x2C)break;
+    const x=v[p]|v[p+1]<<8,y=v[p+2]|v[p+3]<<8,w=v[p+4]|v[p+5]<<8,h=v[p+6]|v[p+7]<<8,f=v[p+8];p+=9;
+    let ct=gct;if(f&128){ct=v.subarray(p,p+(3<<((f&7)+1)));p+=ct.length}
+    const min=v[p++];if(min<1||min>11)throw new Error("bad GIF");
+    const parts=[];let len=0;while(p<v.length&&v[p]){parts.push(v.subarray(p+1,p+1+v[p]));len+=v[p];p+=v[p]+1}p++;
+    const data=new Uint8Array(len);len=0;for(const a of parts){data.set(a,len);len+=a.length}
+    const idx=lzw(data,min,w*h),save=disp===3?pix.slice():null,rows=[];
+    if(f&64){for(const [s,t] of [[0,8],[4,8],[2,4],[1,2]])for(let r=s;r<h;r+=t)rows.push(r)}else for(let r=0;r<h;r++)rows.push(r);
+    if(ct)for(let i=0;i<h;i++){const yy=y+rows[i];if(yy>=H)continue;
+     for(let j=0;j<w;j++){const k=idx[i*w+j],xx=x+j;if(k===tr||xx>=W||k*3>=ct.length)continue;const q=(yy*W+xx)*4;
+      pix[q]=ct[k*3];pix[q+1]=ct[k*3+1];pix[q+2]=ct[k*3+2];pix[q+3]=255}}
+    yield {pix,w:W,h:H,ms:ms>10?ms:100};
+    if(disp===2)for(let yy=y;yy<Math.min(y+h,H);yy++)pix.fill(0,(yy*W+x)*4,(yy*W+Math.min(x+w,W))*4);
+    else if(save)pix.set(save);
+    ms=100;tr=-1;disp=0}}
+  async function* imgFrames(file,buf){
+   if(buf[0]===71&&buf[1]===73&&buf[2]===70){const c=document.createElement("canvas");let g=null;
+    for(const f of gifFrames(buf)){if(!g){c.width=f.w;c.height=f.h;g=c.getContext("2d")}g.putImageData(new ImageData(f.pix,f.w,f.h),0,0);yield {img:c,w:f.w,h:f.h,ms:f.ms}}
+    if(!g)throw new Error("empty GIF");return}
+   if("ImageDecoder" in window&&await ImageDecoder.isTypeSupported(file.type)){const dec=new ImageDecoder({data:buf,type:file.type});
+    try{await dec.completed;for(let i=0;i<dec.tracks.selectedTrack.frameCount;i++){const {image}=await dec.decode({frameIndex:i});
+     try{yield {img:image,w:image.displayWidth,h:image.displayHeight,ms:Math.round((image.duration||100000)/1000)||100}}finally{image.close()}}}
+    finally{dec.close()}return}
+   const b=await createImageBitmap(file);yield {img:b,w:b.width,h:b.height,ms:1000}}
+  async function bootFrames(file,round,cap,say){const buf=new Uint8Array(await file.arrayBuffer());
+   const cv=document.createElement("canvas");cv.width=cv.height=240;const g=cv.getContext("2d");
+   const draw=f=>{g.fillStyle="#000";g.fillRect(0,0,240,240);g.save();const s=round?212:240,o=(240-s)/2;
+    if(round){g.beginPath();g.arc(120,120,106,0,2*Math.PI);g.clip()}
+    const k=Math.max(s/f.w,s/f.h);g.drawImage(f.img,o+(s-f.w*k)/2,o+(s-f.h*k)/2,f.w*k,f.h*k);g.restore()};
+   const jpg=q=>new Promise((ok,ko)=>cv.toBlob(b=>b?b.arrayBuffer().then(a=>ok(new Uint8Array(a)),ko):ko(new Error("JPEG")),"image/jpeg",q));
+   for(const [q,every] of [[.85,1],[.7,1],[.55,1],[.4,1],[.4,2],[.4,3],[.4,4],[.4,6],[.4,8],[.3,12]]){
+    const out=[];let i=0,size=12,big=false;
+    for await(const f of imgFrames(file,buf)){
+     if(i++%every){out[out.length-1].ms+=f.ms;continue}
+     if(out.length>=300)break;
+     draw(f);const j=await jpg(q);out.push({jpg:j,ms:f.ms});size+=12+j.length;
+     if(size>cap){big=true;break}}
+    if(!big){for(const f of out)f.ms=Math.min(Math.max(f.ms,20),10000);return out}
+    if(say)say("Too big, trying "+(every>1?"fewer frames":"a lower quality")+"...")}
+   throw new Error("too big even at low quality: use a shorter GIF")}
+
+  const BOOT_CAP = 0x1E0000;  // partition "bootanim" (partitions.csv)
+  let loadN = 0;  // fichier ou taille changé pendant le traitement : l'ancien résultat est jeté
   async function loadFile(file) {
+    const n = ++loadN;
     frames = [];
     $("ba-send").disabled = true;
     status("Reading the file...");
-    const work = new OffscreenCanvas(W, W), g = work.getContext("2d");
-    const draw = (src, sw, sh) => {  // recadrage carré au centre, fond noir
-      g.fillStyle = "#000"; g.fillRect(0, 0, W, W);
-      const k = Math.max(W / sw, W / sh);
-      g.drawImage(src, (W - sw * k) / 2, (W - sh * k) / 2, sw * k, sh * k);
-    };
-    const jpeg = async () => new Uint8Array(await (await work.convertToBlob({ type: "image/jpeg", quality: 0.85 })).arrayBuffer());
-    if ("ImageDecoder" in window && await ImageDecoder.isTypeSupported(file.type)) {
-      const dec = new ImageDecoder({ data: file.stream(), type: file.type });
-      await dec.completed;
-      const n = Math.min(dec.tracks.selectedTrack.frameCount, MAX_FRAMES);
-      for (let i = 0; i < n; i++) {
-        const { image } = await dec.decode({ frameIndex: i });
-        draw(image, image.displayWidth, image.displayHeight);
-        const ms = Math.round((image.duration || 100000) / 1000);
-        image.close();
-        frames.push({ jpg: await jpeg(), ms: Math.min(Math.max(ms || 100, 20), 10000) });
-      }
-      dec.close();
-    } else {  // navigateur sans ImageDecoder : première image seulement
-      const bmp = await createImageBitmap(file);
-      draw(bmp, bmp.width, bmp.height);
-      frames.push({ jpg: await jpeg(), ms: 1000 });
-    }
+    const fr = await bootFrames(file, $("ba-fit").value === "1", BOOT_CAP, t => n === loadN && status(t));
+    if (n !== loadN) return;
+    frames = fr;
     const kb = Math.round(pack().length / 1024);
-    $("ba-info").textContent = `${frames.length} frame${frames.length > 1 ? "s" : ""}, ${kb} KB` +
-      (frames.length === MAX_FRAMES ? " (cut to 300 frames)" : "");
+    $("ba-info").textContent = `${frames.length} frame${frames.length > 1 ? "s" : ""}, ${kb} KB`;
     status("");
     $("ba-send").disabled = !frames.length;
     preview();
   }
 
+  let previewN = 0;
   async function preview() {
     clearTimeout(previewTimer);
+    const n = ++previewN, fr = frames;  // un nouvel aperçu arrête l'ancien (images et durées du même fichier)
     const ctx = $("ba-prev").getContext("2d");
-    const bmps = await Promise.all(frames.map(f => createImageBitmap(new Blob([f.jpg], { type: "image/jpeg" }))));
+    const bmps = await Promise.all(fr.map(f => createImageBitmap(new Blob([f.jpg], { type: "image/jpeg" }))));
+    if (n !== previewN) return;
     let i = 0;
     const step = () => {
+      if (n !== previewN) return;
       ctx.drawImage(bmps[i], 0, 0);
-      const ms = frames[i].ms;
+      const ms = fr[i].ms;
       i = (i + 1) % bmps.length;
       if (bmps.length > 1) previewTimer = setTimeout(step, ms);
     };
@@ -322,10 +381,13 @@
     finally { button.disabled = button.id === "ba-send" && !frames.length; $("ba-prog").hidden = true; }
   }
 
-  $("ba-file").addEventListener("change", e => {
-    const f = e.target.files[0];
-    if (f) loadFile(f).catch(err => { frames = []; status("This file could not be read: " + err.message); });
-  });
+  const pick = () => {
+    const f = $("ba-file").files[0];
+    const n = loadN + 1;
+    if (f) loadFile(f).catch(err => { if (n === loadN) { frames = []; status("This file could not be read: " + err.message); } });
+  };
+  $("ba-file").addEventListener("change", pick);
+  $("ba-fit").addEventListener("change", pick);
 
   $("ba-send").addEventListener("click", () => run($("ba-send"), async ({ send, answer, cap }) => {
     const data = pack();

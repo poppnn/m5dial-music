@@ -90,7 +90,10 @@ static Key readKey() {
 // Liste à la molette (5 lignes autour de la sélection, comme les Réglages) ; appui = choisir.
 static int choose(const char* title, const std::vector<std::string>& items, int sel) {
   for (;;) {
-    sel = constrain(sel + readDetents(), 0, (int)items.size() - 1);
+    // Crans lus AVANT constrain : c'est une macro qui évalue son premier argument jusqu'à 3 fois (le 2e appel à
+    // readDetents() renvoyait 0, la sélection ne bougeait jamais).
+    int d = readDetents();
+    sel = constrain(sel + d, 0, (int)items.size() - 1);
     if (readKey() == K_CLICK) return sel;
     canvas.fillScreen(TFT_BLACK);
     canvas.setTextDatum(middle_center);

@@ -2,9 +2,9 @@
 #pragma once
 #include <stdint.h>
 #include <string>
+#include "pages/pages.h"
 
 struct Settings {
-  int8_t imuDir;           // +1 / -1 : sens de rotation de l'IMU
   uint8_t encSteps;        // impulsions de l'encodeur par cran (1..4)
   uint16_t dimAfterS;      // atténuation de l'écran sans geste (s, 0 = jamais)
   uint16_t sleepAfterMin;  // extinction sans appareil connecté (min, 0 = jamais)
@@ -14,6 +14,7 @@ struct Settings {
   uint8_t notifMode;       // notifications iPhone : 0 aucune, 1 app + expéditeur, 2 app + expéditeur + texte
   uint8_t accent;          // couleur d'accent de l'interface (index de ACCENT_COLORS)
   uint8_t haptic;          // clic du buzzer à chaque cran et appui (0 = non)
+  uint8_t pageOrder[PAGE_COUNT];  // ordre des pages au glissement vertical (Web UI) : chaque Page une fois
 };
 extern Settings settings;
 
@@ -26,6 +27,9 @@ uint16_t accent();  // couleur d'accent choisie (arcs, icônes actives, bordures
 void settingsLoad();
 void settingsSave();
 void settingsSelfTest();
+// Ordre des pages : "024135" (un chiffre par Page, chacune une fois). false si la chaîne n'en est pas un.
+bool pageOrderParse(const std::string& s, uint8_t* order);
+std::string pageOrderText(const uint8_t* order);
 bool settingsNight();         // luminosité de nuit en ce moment
 uint8_t settingsBacklight();  // luminosité de base de l'écran, 0..255 (jour ou nuit)
 

@@ -34,13 +34,15 @@ std::string configJson() {
   const Settings& s = settings;
   char b[512];
   snprintf(b, sizeof(b),
-           "{\"firmware\":\"%s %s\",\"imuDir\":%d,\"encSteps\":%u,\"dimAfterS\":%u,\"sleepAfterMin\":%u,\"briDay\":%u,"
+           "{\"firmware\":\"%s %s\",\"encSteps\":%u,\"dimAfterS\":%u,\"sleepAfterMin\":%u,\"briDay\":%u,"
            "\"briNight\":%u,\"briMode\":%u,\"nightFrom\":%u,\"nightTo\":%u,\"notifMode\":%u,\"accent\":%u,\"haptic\":%u,"
            "\"ledColor\":%d,\"ledHue\":%d,\"ledCustom\":%d,\"ledBri\":%d,",
-           FW_VERSION, FW_VARIANT, s.imuDir, s.encSteps, s.dimAfterS, s.sleepAfterMin, s.briDay, s.briNight, s.briMode,
+           FW_VERSION, FW_VARIANT, s.encSteps, s.dimAfterS, s.sleepAfterMin, s.briDay, s.briNight, s.briMode,
            s.nightFrom, s.nightTo, s.notifMode, s.accent, s.haptic, ledColor, ledHue, ledCustom ? 1 : 0, ledBri);
   std::string o = b, ssid, pass;
-  o += "\"wifiSsid\":" + jsonStr(wifiLoad(ssid, pass) ? ssid : "") + ",\"accents\":[";
+  o += "\"pageOrder\":" + jsonStr(pageOrderText(s.pageOrder)) + ",\"pages\":[";
+  for (int i = 0; i < PAGE_COUNT; i++) o += (i ? "," : "") + jsonStr(PAGE_NAMES[i]);
+  o += "],\"wifiSsid\":" + jsonStr(wifiLoad(ssid, pass) ? ssid : "") + ",\"accents\":[";
   for (int i = 0; i < ACCENT_COUNT; i++) o += (i ? "," : "") + jsonStr(ACCENT_NAMES[i]);
   o += "],\"ledColors\":[";
   for (int i = 0; i < LED_COLOR_COUNT; i++) o += (i ? "," : "") + jsonStr(LED_COLORS[i].name);
@@ -66,7 +68,6 @@ std::string configApply(const std::string& js) {
   Settings s = settings;
   long v, color = ledColor, hue = ledHue, custom = ledCustom, bri = ledBri;
   std::string err;
-  if (num(js, "imuDir", -1, 1, v, err)) { if (v) s.imuDir = v; else err = "imuDir"; }
   if (num(js, "encSteps", 1, 4, v, err)) s.encSteps = v;
   if (num(js, "dimAfterS", 0, 3600, v, err)) s.dimAfterS = v;
   if (num(js, "sleepAfterMin", 0, 600, v, err)) s.sleepAfterMin = v;
@@ -78,11 +79,13 @@ std::string configApply(const std::string& js) {
   if (num(js, "notifMode", 0, NOTIF_FULL, v, err)) s.notifMode = v;
   if (num(js, "accent", 0, ACCENT_COUNT - 1, v, err)) s.accent = v;
   if (num(js, "haptic", 0, 1, v, err)) s.haptic = v;
+  std::string t;
+  if (gbField(js, "pageOrder", t) && !pageOrderParse(t, s.pageOrder) && err.empty()) err = "pageOrder";
   num(js, "ledColor", 0, LED_COLOR_COUNT - 1, color, err);
   num(js, "ledHue", 0, 359, hue, err);
   num(js, "ledCustom", 0, 1, custom, err);
   num(js, "ledBri", 5, 100, bri, err);
-  std::string ssid, pass, oldSsid, oldPass, t;
+  std::string ssid, pass, oldSsid, oldPass;
   bool hasOld = wifiLoad(oldSsid, oldPass), setWifi = gbField(js, "wifiSsid", ssid) && !ssid.empty();
   if (setWifi) {  // mot de passe absent : celui déjà enregistré s'il s'agit du même réseau
     pass = gbField(js, "wifiPass", t) ? t : (hasOld && ssid == oldSsid ? oldPass : "");
@@ -175,4 +178,5 @@ void webuiSelfTest() {
   assert(!num("{\"x\":1}", "briDay", 5, 100, v, err) && err.empty());           // absent : rien
   assert(num("{\"briDay\":40,\"y\":1}", "briDay", 5, 100, v, err) && v == 40);
   assert(configApply("{\"briDay\":40,\"accent\":99}") == "accent" && settings.briDay == keep.briDay);  // rien appliqué
+  assert(configApply("{\"pageOrder\":\"001234\"}") == "pageOrder" && !memcmp(settings.pageOrder, keep.pageOrder, PAGE_COUNT));
 }

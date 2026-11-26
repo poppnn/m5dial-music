@@ -3,12 +3,11 @@
 #include "pages.h"
 #include "../ble_phone.h"
 #include "../display.h"
-#include "../imu.h"
 #include "../ota.h"
 #include "../settings.h"
 #include "../webui.h"
 
-enum { IT_IMU, IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_HAPTIC, IT_VALUES,
+enum { IT_ENC, IT_DIM, IT_SLEEP, IT_BRI_DAY, IT_BRI_NIGHT, IT_MODE, IT_NIGHT_FROM, IT_NIGHT_TO, IT_NOTIF, IT_ACCENT, IT_HAPTIC, IT_VALUES,
        IT_UPDATE = IT_VALUES, IT_WEBUI, IT_DEV0 };  // puis les appareils
 
 static const uint16_t DIM_OPTS[] = {0, 10, 20, 30, 60, 120};   // s
@@ -29,7 +28,7 @@ static int nearest(const T* opts, int n, int v) {  // index de l'option la plus 
 
 static int optCount(int it) {
   switch (it) {
-    case IT_IMU: case IT_HAPTIC: return 2;
+    case IT_HAPTIC: return 2;
     case IT_MODE: case IT_NOTIF: return 3;
     case IT_ACCENT: return ACCENT_COUNT;
     case IT_NIGHT_FROM: case IT_NIGHT_TO: return 24;
@@ -43,7 +42,6 @@ static int optCount(int it) {
 
 static int optIndex(int it) {
   switch (it) {
-    case IT_IMU: return settings.imuDir < 0;
     case IT_HAPTIC: return settings.haptic;
     case IT_NOTIF: return settings.notifMode;
     case IT_ACCENT: return settings.accent;
@@ -60,11 +58,6 @@ static int optIndex(int it) {
 
 static void setOpt(int it, int i) {
   switch (it) {
-    case IT_IMU: {
-      int8_t dir = i ? -1 : 1;
-      if (dir != settings.imuDir) { settings.imuDir = dir; imuFlipped(); }
-      break;
-    }
     case IT_HAPTIC: settings.haptic = i; break;
     case IT_MODE: settings.briMode = i; break;
     case IT_NOTIF: settings.notifMode = i; break;
@@ -83,7 +76,6 @@ static void setOpt(int it, int i) {
 static void valueText(int it, char* b, size_t n) {
   int i = optIndex(it);
   switch (it) {
-    case IT_IMU: snprintf(b, n, "%s", i ? "reversed" : "normal"); break;
     case IT_HAPTIC: snprintf(b, n, "%s", i ? "on" : "off"); break;
     case IT_NOTIF: snprintf(b, n, "%s", i == NOTIF_FULL ? "full" : i == NOTIF_SENDER ? "sender" : "off"); break;
     case IT_ACCENT: snprintf(b, n, "%s", ACCENT_NAMES[i]); break;
@@ -97,7 +89,7 @@ static void valueText(int it, char* b, size_t n) {
   }
 }
 
-static const char* LABELS[IT_VALUES] = {"IMU dir", "Wheel", "Dim after", "Power off", "Day level",
+static const char* LABELS[IT_VALUES] = {"Wheel", "Dim after", "Power off", "Day level",
                                         "Night level", "Brightness", "Night from", "Night until", "Notifs", "Accent",
                                         "Click"};
 

@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <string>
 
-enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CLOCK, PAGE_SENSORS, PAGE_SYS, PAGE_SET, PAGE_COUNT };
+// Numéros gardés dans les réglages (ordre des pages) : ne pas les renuméroter, ajouter à la fin.
+enum Page : uint8_t { PAGE_MUSIC, PAGE_LED, PAGE_CHRONO, PAGE_CLOCK, PAGE_SYS, PAGE_SET, PAGE_COUNT };
+extern const char* const PAGE_NAMES[PAGE_COUNT];  // noms affichés dans la Web UI
 
 struct PageOps {
   bool (*draw)(float dt);      // true tant qu'une animation propre à la page est en cours

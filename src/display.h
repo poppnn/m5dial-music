@@ -1,5 +1,5 @@
-// Rendu : l'UI est composée dans un sprite 240x240 (repère "droit"), puis tournée (IMU) bande par bande
-// dans 2 petits buffers envoyés en DMA. Tous les buffers sont en SRAM interne : la StampS3 n'a pas de PSRAM.
+// Rendu : l'UI est composée dans un sprite 240x240, puis recopiée (décalée pendant un changement de page) bande par
+// bande dans 2 petits buffers envoyés en DMA. Tous les buffers sont en SRAM interne : la StampS3 n'a pas de PSRAM.
 #pragma once
 #include <M5Dial.h>
 #include <string>
