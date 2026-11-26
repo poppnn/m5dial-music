@@ -39,11 +39,11 @@ static void drawLinked(uint32_t now, uint32_t t) {
   }
 }
 
-// Logo centré + arc qui tourne sur le bord de l'écran + texte discret. Appui = ouvrir les pages sans téléphone.
+// Logo (ou image en arrière-plan) + texte discret + arc qui tourne sur le bord de l'écran, dessiné par-dessus. Appui = ouvrir les pages sans téléphone.
 void drawBoot(uint32_t now) {
   const int c = 120;
   if (linkedAt) { drawLinked(now, now - linkedAt); return; }
-  bool custom = bootAnimDraw(now);  // image ou GIF envoyé depuis le web flasher, plein écran
+  bool custom = bootAnimDraw(now);  // image ou GIF envoyé (web flasher, Web UI) : plein écran, en arrière-plan
   if (!custom && LOGO_W) {
     canvas.pushImage(c - LOGO_W / 2, 100 - LOGO_H / 2, LOGO_W, LOGO_H, logo_data);
   } else if (!custom) {  // logo neutre par défaut (aucun logo.h personnalisé) : double croche, sans bitmap en flash
@@ -54,9 +54,6 @@ void drawBoot(uint32_t now) {
     canvas.fillTriangle(104, 68, 159, 58, 159, 72, TFT_WHITE);  // barre de liaison inclinée
     canvas.fillTriangle(104, 68, 159, 72, 104, 82, TFT_WHITE);
   }
-  float a = (now % 1200) * (360.f / 1200) - 180;  // 1 tour en 1,2 s
-  canvas.fillArc(c, c, 119, 114, 0, 360, 0x2104);
-  canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
   canvas.setTextDatum(middle_center);
   canvas.setFont(&fonts::efontJA_16);
   if (custom) canvas.fillRoundRect(c - 78, 164, 156, 60, 12, TFT_BLACK);  // textes lisibles sur l'image
@@ -66,4 +63,10 @@ void drawBoot(uint32_t now) {
   canvas.drawString(BLE_NAME, c, 194);  // nom à choisir dans les réglages Bluetooth
   canvas.setTextColor(accent());
   canvas.drawString("Press: open", c, 213);  // pages sans téléphone (LED, chrono...)
+  // Anneau en dernier, par-dessus tout : l'image (en arrière-plan) et les coins du cadre noir des textes, qui
+  // dépassent dans le bas de l'écran rond, passent dessous au lieu de le couper.
+  float a = (now % 1200) * (360.f / 1200) - 180;  // 1 tour en 1,2 s
+  if (custom) canvas.fillArc(c, c, 121, 119, 0, 360, TFT_BLACK);  // liseré d'image entre l'anneau et le bord
+  canvas.fillArc(c, c, 119, 114, 0, 360, 0x2104);
+  canvas.fillArc(c, c, 119, 114, a, a + 70, accent());
 }

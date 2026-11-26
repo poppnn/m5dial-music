@@ -1,6 +1,6 @@
 // Page de la Web UI (servie telle quelle par webui.cpp). Image de démarrage : même format "M5BA" que le web flasher
-// (src/bootanim.h), fabriqué ici dans le navigateur du téléphone : JPEG 240 x 240, dans l'anneau (rond) ou plein
-// écran ; GIF animé décodé par la page elle-même (Safari n'a pas ImageDecoder), qualité puis nombre d'images réduits
+// (src/bootanim.h), fabriqué ici dans le navigateur du téléphone : JPEG 240 x 240 plein écran (en arrière-plan, l'anneau
+// par-dessus) ; GIF animé décodé par la page elle-même (Safari n'a pas ImageDecoder), qualité puis nombre d'images réduits
 // jusqu'à tenir dans la partition. Même code que docs/index.html (bootFrames).
 #pragma once
 #include <pgmspace.h>
@@ -31,7 +31,6 @@ canvas{width:120px;height:120px;border-radius:50%;background:#000}progress{width
 <div class="row"><button id="save3">Save</button></div></section>
 <section><h2>Paired devices</h2><div id="devs"></div><p class="muted">Forgotten when the M5Dial restarts (after "Done").</p></section>
 <section><h2>Boot image or GIF</h2><input type="file" id="img" accept="image/*,.gif" aria-label="Boot image or GIF">
-<label>Size<select id="fit"><option value="1">Inside the ring</option><option value="0">Full screen</option></select></label>
 <div class="row"><canvas id="prev" width="240" height="240"></canvas><p class="muted" id="info">Square crop. Animated GIF: up to 300 frames.</p></div>
 <progress id="prog" max="1" value="0" hidden></progress>
 <div class="row"><button id="send" disabled>Send</button><button class="ghost" id="clear">Remove</button></div></section>
@@ -85,8 +84,8 @@ $("impb").onclick=()=>$("imp").click();
 $("imp").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const c=JSON.parse(await f.text());delete c.firmware;
  await post("/config",JSON.stringify(c),"application/json");msg("Imported.")}catch(err){msg("Import refused: "+err.message)}};
 // Image de démarrage (bootFrames : même code que docs/index.html)
-// Image / GIF de démarrage -> images JPEG 240 x 240 (format M5BA, src/bootanim.h). round : recadrée en rond dans
-// l'anneau de l'écran d'attente (sinon plein écran, l'anneau par-dessus). GIF décodé ici (Safari et Firefox n'ont
+// Image / GIF de démarrage -> images JPEG 240 x 240 (format M5BA, src/bootanim.h), plein écran : le M5Dial dessine
+// l'anneau par-dessus (l'image est en arrière-plan). GIF décodé ici (Safari et Firefox n'ont
 // pas toujours ImageDecoder) ; autres formats animés : ImageDecoder s'il existe, sinon la première image. Qualité JPEG
 // puis nombre d'images réduits jusqu'à tenir dans cap octets.
 function lzw(d,min,n){const out=new Uint8Array(n),pre=new Uint16Array(4096),suf=new Uint8Array(4096),st=new Uint8Array(4097),clr=1<<min;
@@ -134,11 +133,9 @@ async function* imgFrames(file,buf){
    try{yield {img:image,w:image.displayWidth,h:image.displayHeight,ms:Math.round((image.duration||100000)/1000)||100}}finally{image.close()}}}
   finally{dec.close()}return}
  const b=await createImageBitmap(file);yield {img:b,w:b.width,h:b.height,ms:1000}}
-async function bootFrames(file,round,cap,say){const buf=new Uint8Array(await file.arrayBuffer());
+async function bootFrames(file,cap,say){const buf=new Uint8Array(await file.arrayBuffer());
  const cv=document.createElement("canvas");cv.width=cv.height=240;const g=cv.getContext("2d");
- const draw=f=>{g.fillStyle="#000";g.fillRect(0,0,240,240);g.save();const s=round?212:240,o=(240-s)/2;
-  if(round){g.beginPath();g.arc(120,120,106,0,2*Math.PI);g.clip()}
-  const k=Math.max(s/f.w,s/f.h);g.drawImage(f.img,o+(s-f.w*k)/2,o+(s-f.h*k)/2,f.w*k,f.h*k);g.restore()};
+ const draw=f=>{g.fillStyle="#000";g.fillRect(0,0,240,240);const k=Math.max(240/f.w,240/f.h);g.drawImage(f.img,(240-f.w*k)/2,(240-f.h*k)/2,f.w*k,f.h*k)};
  const jpg=q=>new Promise((ok,ko)=>cv.toBlob(b=>b?b.arrayBuffer().then(a=>ok(new Uint8Array(a)),ko):ko(new Error("JPEG")),"image/jpeg",q));
  for(const [q,every] of [[.85,1],[.7,1],[.55,1],[.4,1],[.4,2],[.4,3],[.4,4],[.4,6],[.4,8],[.3,12]]){
   const out=[];let i=0,size=12,big=false;
@@ -152,11 +149,11 @@ async function bootFrames(file,round,cap,say){const buf=new Uint8Array(await fil
  throw new Error("too big even at low quality: use a shorter GIF")}
 let loadN=0;  // fichier ou taille changé pendant le traitement : l'ancien résultat est jeté
 async function loadImg(){const f=$("img").files[0];if(!f)return;const n=++loadN;frames=[];$("send").disabled=true;msg("Reading the picture...");
- try{const fr=await bootFrames(f,$("fit").value=="1",cfg.bootCapacity||1966080,t=>n==loadN&&msg(t));if(n!=loadN)return;frames=fr;const kb=Math.round(pack().length/1024);
+ try{const fr=await bootFrames(f,cfg.bootCapacity||1966080,t=>n==loadN&&msg(t));if(n!=loadN)return;frames=fr;const kb=Math.round(pack().length/1024);
   const b=await createImageBitmap(new Blob([frames[0].jpg],{type:"image/jpeg"}));$("prev").getContext("2d").drawImage(b,0,0);
   $("info").textContent=frames.length+" frame"+(frames.length>1?"s":"")+", "+kb+" KB";$("send").disabled=false;msg("")}
  catch(err){if(n==loadN)msg("This picture could not be read: "+err.message)}}
-$("img").onchange=$("fit").onchange=loadImg;
+$("img").onchange=loadImg;
 function pack(){const head=12+frames.length*12,total=head+frames.reduce((s,f)=>s+f.jpg.length,0),out=new Uint8Array(total),dv=new DataView(out.buffer);
  out.set([77,53,66,65],0);dv.setUint16(4,frames.length,true);dv.setUint32(8,total,true);let off=head;
  frames.forEach((f,i)=>{dv.setUint32(12+i*12,off,true);dv.setUint32(16+i*12,f.jpg.length,true);dv.setUint16(20+i*12,f.ms,true);out.set(f.jpg,off);off+=f.jpg.length});return out}

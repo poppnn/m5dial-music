@@ -35,9 +35,6 @@
   #ba-prev { width:160px; height:160px; border-radius:50%; background:#000; border:6px solid var(--line); display:block; }
   #ba-prog { width:100%; height:8px; accent-color:var(--accent); }
   input[type=file] { font:inherit; max-width:100%; }
-  label.fit { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:12px; }
-  label.fit select { font:inherit; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:10px;
-          padding:8px 10px; min-height:44px; max-width:100%; }
   fieldset.fw { border:0; padding:0; margin:0 0 14px; display:flex; flex-wrap:wrap; gap:8px; }
   fieldset.fw legend { padding:0; margin-bottom:8px; font-weight:600; }
   fieldset.fw label { display:flex; align-items:center; gap:8px; min-height:44px; padding:0 14px; border:1px solid var(--line);
@@ -140,14 +137,8 @@
 
   <section>
     <h2>6. Boot image or GIF (optional)</h2>
-    <p>Shown while the M5Dial waits for the phone, inside the spinning ring or full screen. Plug the M5Dial in over USB-C (firmware 1.1 or later, installed with the button above), pick a picture or an animated GIF, then send it.</p>
+    <p>Shown while the M5Dial waits for the phone, full screen behind the spinning ring. Plug the M5Dial in over USB-C (firmware 1.1 or later, installed with the button above), pick a picture or an animated GIF, then send it.</p>
     <input type="file" id="ba-file" accept="image/*,.gif" aria-label="Boot image or GIF">
-    <label class="fit">Size
-      <select id="ba-fit">
-        <option value="1">Inside the ring (round, the spinning ring stays clear)</option>
-        <option value="0">Full screen (the ring on top)</option>
-      </select>
-    </label>
     <div class="row">
       <canvas id="ba-prev" width="240" height="240" aria-label="Preview on the round screen"></canvas>
       <p class="muted" id="ba-info" aria-live="polite">Square crop. Animated GIF: up to 300 frames, quality and frame count lowered by itself if it does not fit.</p>
@@ -210,8 +201,8 @@
   function status(t) { $("ba-status").textContent = t; }
 
   // Même code que la Web UI (src/webui_page.h) : décodeur GIF, recadrage, réduction jusqu'à tenir dans la partition.
-  // Image / GIF de démarrage -> images JPEG 240 x 240 (format M5BA, src/bootanim.h). round : recadrée en rond dans
-  // l'anneau de l'écran d'attente (sinon plein écran, l'anneau par-dessus). GIF décodé ici (Safari et Firefox n'ont
+  // Image / GIF de démarrage -> images JPEG 240 x 240 (format M5BA, src/bootanim.h), plein écran : le M5Dial dessine
+  // l'anneau par-dessus (l'image est en arrière-plan). GIF décodé ici (Safari et Firefox n'ont
   // pas toujours ImageDecoder) ; autres formats animés : ImageDecoder s'il existe, sinon la première image. Qualité JPEG
   // puis nombre d'images réduits jusqu'à tenir dans cap octets.
   function lzw(d,min,n){const out=new Uint8Array(n),pre=new Uint16Array(4096),suf=new Uint8Array(4096),st=new Uint8Array(4097),clr=1<<min;
@@ -259,11 +250,9 @@
      try{yield {img:image,w:image.displayWidth,h:image.displayHeight,ms:Math.round((image.duration||100000)/1000)||100}}finally{image.close()}}}
     finally{dec.close()}return}
    const b=await createImageBitmap(file);yield {img:b,w:b.width,h:b.height,ms:1000}}
-  async function bootFrames(file,round,cap,say){const buf=new Uint8Array(await file.arrayBuffer());
+  async function bootFrames(file,cap,say){const buf=new Uint8Array(await file.arrayBuffer());
    const cv=document.createElement("canvas");cv.width=cv.height=240;const g=cv.getContext("2d");
-   const draw=f=>{g.fillStyle="#000";g.fillRect(0,0,240,240);g.save();const s=round?212:240,o=(240-s)/2;
-    if(round){g.beginPath();g.arc(120,120,106,0,2*Math.PI);g.clip()}
-    const k=Math.max(s/f.w,s/f.h);g.drawImage(f.img,o+(s-f.w*k)/2,o+(s-f.h*k)/2,f.w*k,f.h*k);g.restore()};
+   const draw=f=>{g.fillStyle="#000";g.fillRect(0,0,240,240);const k=Math.max(240/f.w,240/f.h);g.drawImage(f.img,(240-f.w*k)/2,(240-f.h*k)/2,f.w*k,f.h*k)};
    const jpg=q=>new Promise((ok,ko)=>cv.toBlob(b=>b?b.arrayBuffer().then(a=>ok(new Uint8Array(a)),ko):ko(new Error("JPEG")),"image/jpeg",q));
    for(const [q,every] of [[.85,1],[.7,1],[.55,1],[.4,1],[.4,2],[.4,3],[.4,4],[.4,6],[.4,8],[.3,12]]){
     const out=[];let i=0,size=12,big=false;
@@ -283,7 +272,7 @@
     frames = [];
     $("ba-send").disabled = true;
     status("Reading the file...");
-    const fr = await bootFrames(file, $("ba-fit").value === "1", BOOT_CAP, t => n === loadN && status(t));
+    const fr = await bootFrames(file, BOOT_CAP, t => n === loadN && status(t));
     if (n !== loadN) return;
     frames = fr;
     const kb = Math.round(pack().length / 1024);
@@ -387,7 +376,6 @@
     if (f) loadFile(f).catch(err => { if (n === loadN) { frames = []; status("This file could not be read: " + err.message); } });
   };
   $("ba-file").addEventListener("change", pick);
-  $("ba-fit").addEventListener("change", pick);
 
   $("ba-send").addEventListener("click", () => run($("ba-send"), async ({ send, answer, cap }) => {
     const data = pack();
